@@ -27,7 +27,7 @@ export default function ChatPanel({ onEndSession, isActive, setChatHistory, clie
     setTyping(true);
 
     try {
-      const res = await axios.post("http://127.0.0.1:8001/chat", {
+      const res = await axios.post("https://hypnotherapy-diagnostic-simulator.onrender.com/chat", {
         text: msg,
         clientType: clientType
       });
