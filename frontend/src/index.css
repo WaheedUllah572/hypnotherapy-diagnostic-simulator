@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🌫️ PREMIUM MEDICAL BACKGROUND */
+body {
+  background:
+    radial-gradient(1200px at 10% 0%, #dbeafe, transparent),
+    radial-gradient(900px at 90% 10%, #cffafe, transparent),
+    linear-gradient(#f8fafc, #ffffff);
+  font-family: ui-sans-serif, system-ui;
+}
+
+/* 🧊 GLASS SURFACE */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,.6);
+  box-shadow: 0 25px 60px rgba(2, 8, 23, 0.06);
+}
+
+/* ✨ FLOAT CARD */
+.surface {
+  background: white;
+  border-radius: 26px;
+  box-shadow: 0 30px 80px rgba(2, 8, 23, 0.08);
+  border: 1px solid rgba(226,232,240,.6);
+}
+
+/* 🌈 PREMIUM HEADER BAR */
+.header-bar {
+  background: linear-gradient(90deg, #0f172a, #0369a1, #06b6d4);
+  box-shadow: 0 8px 30px rgba(2, 8, 23, 0.3);
+}
+
+/* 💫 HOVER LIFT */
+.lift {
+  transition: all .25s ease;
+}
+.lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 80px rgba(2, 8, 23, 0.15);
+}
