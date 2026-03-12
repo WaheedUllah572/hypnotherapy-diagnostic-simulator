@@ -10,7 +10,7 @@ export default function TutorMode({ submission, chatHistory, resetSession }) {
       try {
 
         const res = await axios.post(
-          "http://localhost:8001/tutor-review",
+          "https://hypnotherapy-diagnostic-simulator.onrender.com/tutor-review",
           {
             submission,
             chatHistory
