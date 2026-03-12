@@ -8,7 +8,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow all origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -16,6 +16,7 @@ app.add_middleware(
 
 api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=api_key)
+
 
 class Message(BaseModel):
     text: str
@@ -25,7 +26,6 @@ class Message(BaseModel):
 @app.post("/chat")
 async def chat(msg: Message):
 
-    # 🔴 SAFETY INTERRUPT
     safety_keywords = ["kill myself", "end my life", "suicide", "self harm"]
     if any(k in msg.text.lower() for k in safety_keywords):
         return {
@@ -33,48 +33,40 @@ async def chat(msg: Message):
             "safety_flag": True
         }
 
-    # 🟢 STRONG CLIENT CHARACTER SYSTEM
     if msg.clientType == "CBH":
         persona = """
 You are a client suited to Cognitive Behavioural Hypnotherapy.
-
-• Focus heavily on thoughts, beliefs, worries, predictions.
-• Use phrases like “I keep thinking…”, “What if…”, “I worry that…”
-• Speak in clear cognitive patterns.
-• Stay rational but anxious.
+Focus on thoughts, beliefs and worries.
+Use phrases like “I keep thinking…”, “What if…”
+Progress conversation gradually.
+Avoid repeating identical emotional phrases.
 """
 
     elif msg.clientType == "SH":
         persona = """
-You are a Solution-Focused / Emotion-focused client.
-
-• Speak about feelings and emotional states.
-• Use emotional language (overwhelmed, heavy, drained, hopeful).
-• Focus less on past causes and more on current emotional experience.
+You are a Solution-Focused client.
+Speak about emotional states.
+Progress emotional narrative gradually.
+Avoid repeating the same wording unless adding new detail.
 """
 
     elif msg.clientType == "Ericksonian":
         persona = """
-You are an Ericksonian-style client.
-
-• Speak indirectly and metaphorically.
-• Use imagery (fog, weight, cliff, storm, shadow).
-• Do not give direct logical explanations.
+You are an indirect, metaphorical client.
+Use imagery.
+Allow narrative to evolve naturally.
+Avoid repetition.
 """
 
     elif msg.clientType == "Regression":
         persona = """
-You are a Regression-style client.
-
-• Link current problems to earlier memories or childhood.
-• Mention “when I was younger…”, “growing up…”
-• Connect present anxiety to past experiences.
+You link present anxiety to earlier life memories.
+Develop narrative progressively.
+Do not repeat the same explanation twice.
 """
 
     else:
-        persona = """
-You are an anxious client unsure how to explain what is happening.
-"""
+        persona = "You are an anxious client unsure how to explain what is happening."
 
     system = f"""
 You are a therapy training simulation client.
@@ -83,6 +75,8 @@ Stay strictly in character.
 Do NOT give advice.
 Do NOT act like a therapist.
 Respond naturally in 1–3 sentences.
+Avoid repetition of previously stated emotional phrases.
+Progress the narrative gradually.
 
 Client behaviour style:
 {persona}
@@ -107,6 +101,37 @@ class TutorSubmission(BaseModel):
     chatHistory: list
 
 
+# ---------------- PHASE 3 SCORING ENGINE ----------------
+
+def evaluate_submission(submission):
+
+    score = {
+        "approach": 0,
+        "modality": 0,
+        "objective": 0,
+        "safety": 0
+    }
+
+    if submission.get("chosenApproach"):
+        score["approach"] = 1
+
+    if submission.get("clientModality"):
+        score["modality"] = 1
+
+    if submission.get("clientObjective"):
+        score["objective"] = 1
+
+    if submission.get("clientReassurance"):
+        score["safety"] = 1
+
+    total = sum(score.values())
+
+    return {
+        "breakdown": score,
+        "total": total
+    }
+
+
 @app.post("/tutor-review")
 async def tutor_review(data: TutorSubmission):
 
@@ -116,14 +141,17 @@ async def tutor_review(data: TutorSubmission):
     system = """
 You are a clinical hypnotherapy training tutor.
 
-Evaluate:
-• Whether the chosen approach fits the client presentation  
-• Whether modality identification is supported by dialogue evidence  
-• Whether the student reassured the client and confirmed readiness  
-• Whether safety boundaries were respected  
+Structure your feedback clearly with headings:
 
-Quote specific conversation excerpts.
+Approach Fit
+Modality Identification
+Client Objective
+Safety & Reassurance
+Overall Comments
+
+Quote specific dialogue excerpts.
 Be supportive but corrective.
+Use clean spacing and short paragraphs.
 """
 
     user = f"""
@@ -134,7 +162,7 @@ Student Reflection:
 Approach: {s.get("chosenApproach")}
 Modality: {s.get("clientModality")}
 Objective: {s.get("clientObjective")}
-Client reassurance: {s.get("clientReassurance")}
+Safety/Reassurance: {s.get("clientReassurance")}
 """
 
     response = client.chat.completions.create(
@@ -145,4 +173,9 @@ Client reassurance: {s.get("clientReassurance")}
         ]
     )
 
-    return {"feedback": response.choices[0].message.content}
+    score = evaluate_submission(s)
+
+    return {
+        "feedback": response.choices[0].message.content,
+        "score": score
+    }
