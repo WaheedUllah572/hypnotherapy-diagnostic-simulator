@@ -4,6 +4,13 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 
+from services.session_tracker import save_session, get_sessions
+from services.progress_engine import calculate_progress
+
+# NEW IMPORTS
+from services.persona_engine import get_persona_response
+from services.conversation_engine import get_stage, advance_stage, detect_stage_from_question
+
 app = FastAPI()
 
 app.add_middleware(
@@ -21,6 +28,7 @@ client = OpenAI(api_key=api_key)
 class Message(BaseModel):
     text: str
     clientType: str
+    history: list = []
 
 
 @app.post("/chat")
@@ -33,62 +41,48 @@ async def chat(msg: Message):
             "safety_flag": True
         }
 
-    if msg.clientType == "CBH":
-        persona = """
-You are a client suited to Cognitive Behavioural Hypnotherapy.
-Focus on thoughts, beliefs and worries.
-Use phrases like “I keep thinking…”, “What if…”
-Progress conversation gradually.
-Avoid repeating identical emotional phrases.
-"""
+    session_id = msg.clientType
 
-    elif msg.clientType == "SH":
-        persona = """
-You are a Solution-Focused client.
-Speak about emotional states.
-Progress emotional narrative gradually.
-Avoid repeating the same wording unless adding new detail.
-"""
-
-    elif msg.clientType == "Ericksonian":
-        persona = """
-You are an indirect, metaphorical client.
-Use imagery.
-Allow narrative to evolve naturally.
-Avoid repetition.
-"""
-
-    elif msg.clientType == "Regression":
-        persona = """
-You link present anxiety to earlier life memories.
-Develop narrative progressively.
-Do not repeat the same explanation twice.
-"""
-
+    detected_stage = detect_stage_from_question(msg.text)
+    if detected_stage:
+        stage = detected_stage
     else:
-        persona = "You are an anxious client unsure how to explain what is happening."
+        stage = get_stage(session_id)
+
+    persona_reply = get_persona_response(msg.clientType, stage)
 
     system = f"""
-You are a therapy training simulation client.
+You are role-playing as a therapy client in a pre-hypnosis assessment session.
 
-Stay strictly in character.
-Do NOT give advice.
-Do NOT act like a therapist.
-Respond naturally in 1–3 sentences.
-Avoid repetition of previously stated emotional phrases.
-Progress the narrative gradually.
+IMPORTANT:
+• Respond directly to the therapist’s question.
+• Keep answers to 1–3 sentences.
+• Speak naturally like a real client.
+• Do not repeat previous answers.
+• Reveal information gradually.
 
-Client behaviour style:
-{persona}
+Current session stage: {stage}
+
+Client information to use in your answer:
+{persona_reply}
 """
+
+    messages = [{"role": "system", "content": system}]
+
+    for m in msg.history:
+        if m["role"] == "therapist":
+            messages.append({"role": "user", "content": m["text"]})
+        elif m["role"] == "client":
+            messages.append({"role": "assistant", "content": m["text"]})
+
+    messages.append({"role": "user", "content": msg.text})
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": msg.text}
-        ]
+        messages=messages
     )
+
+    advance_stage(session_id)
 
     return {
         "reply": response.choices[0].message.content,
@@ -99,9 +93,8 @@ Client behaviour style:
 class TutorSubmission(BaseModel):
     submission: dict
     chatHistory: list
+    clientName: str
 
-
-# ---------------- PHASE 3 SCORING ENGINE ----------------
 
 def evaluate_submission(submission):
 
@@ -114,13 +107,10 @@ def evaluate_submission(submission):
 
     if submission.get("chosenApproach"):
         score["approach"] = 1
-
     if submission.get("clientModality"):
         score["modality"] = 1
-
     if submission.get("clientObjective"):
         score["objective"] = 1
-
     if submission.get("clientReassurance"):
         score["safety"] = 1
 
@@ -136,6 +126,10 @@ def evaluate_submission(submission):
 async def tutor_review(data: TutorSubmission):
 
     s = data.submission
+    score = evaluate_submission(s)
+
+    save_session(data.clientName, score["total"])
+
     chat_text = "\n".join([f"{m['role'].upper()}: {m['text']}" for m in data.chatHistory])
 
     system = """
@@ -148,10 +142,6 @@ Modality Identification
 Client Objective
 Safety & Reassurance
 Overall Comments
-
-Quote specific dialogue excerpts.
-Be supportive but corrective.
-Use clean spacing and short paragraphs.
 """
 
     user = f"""
@@ -173,9 +163,13 @@ Safety/Reassurance: {s.get("clientReassurance")}
         ]
     )
 
-    score = evaluate_submission(s)
-
     return {
         "feedback": response.choices[0].message.content,
         "score": score
     }
+
+
+@app.get("/progress")
+async def get_progress():
+    sessions = get_sessions()
+    return calculate_progress(sessions)

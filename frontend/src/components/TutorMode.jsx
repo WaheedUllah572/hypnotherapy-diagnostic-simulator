@@ -1,26 +1,32 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
-export default function TutorMode({ submission, chatHistory, resetSession }) {
+export default function TutorMode({ submission, chatHistory, resetSession, client }) {
   const [feedback, setFeedback] = useState("Tutor analysing clinical reasoning…");
   const [score, setScore] = useState(null);
+  const hasSubmitted = useRef(false); // ✅ prevents double submission
 
   useEffect(() => {
+    if (hasSubmitted.current) return; // ✅ stop multiple calls
+    hasSubmitted.current = true;
+
     const fetchFeedback = async () => {
       try {
 
         const res = await axios.post(
-          "https://hypnotherapy-diagnostic-simulator.onrender.com/tutor-review",
+          "http://127.0.0.1:8001/tutor-review",
           {
             submission,
-            chatHistory
+            chatHistory,
+            clientName: client.name
           }
         );
 
-        const formatted = res.data.feedback.replace(/\n/g, "\n\n");
-
-        setFeedback(formatted);
+        setFeedback(res.data.feedback);
         setScore(res.data.score);
+
+        // ✅ IMPORTANT: trigger progress refresh
+        window.dispatchEvent(new Event("progressUpdated"));
 
       } catch {
         setFeedback("Tutor feedback unavailable.");
@@ -28,7 +34,7 @@ export default function TutorMode({ submission, chatHistory, resetSession }) {
     };
 
     fetchFeedback();
-  }, [submission, chatHistory]);
+  }, []); // ✅ run only once
 
   return (
     <div className="space-y-8">
@@ -38,33 +44,13 @@ export default function TutorMode({ submission, chatHistory, resetSession }) {
 
       {score && (
         <div className="bg-white border border-slate-200 p-6 rounded-xl text-sm">
-          <h4 className="font-semibold mb-4">Clinical Evaluation Score</h4>
-
-          <div className="space-y-2">
-            <p>
-              Treatment Approach: {score.breakdown.approach ? "✓ Identified" : "⚠ Missing"}
-            </p>
-
-            <p>
-              Client Modality: {score.breakdown.modality ? "✓ Identified" : "⚠ Missing"}
-            </p>
-
-            <p>
-              Client Objective: {score.breakdown.objective ? "✓ Identified" : "⚠ Missing"}
-            </p>
-
-            <p>
-              Safety & Reassurance: {score.breakdown.safety ? "✓ Present" : "⚠ Missing"}
-            </p>
-
-            <p className="mt-4 font-semibold">
-              Total Score: {score.total} / 4
-            </p>
-          </div>
+          <p className="font-semibold">
+            Total Score: {score.total} / 4
+          </p>
         </div>
       )}
 
-      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm leading-relaxed whitespace-pre-line">
+      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm">
         {feedback}
       </div>
 

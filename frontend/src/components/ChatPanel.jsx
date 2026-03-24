@@ -9,11 +9,11 @@ export default function ChatPanel({
 }) {
   const [msg, setMsg] = useState("");
   const [chat, setChat] = useState([
-    {
-      role: "client",
-      text: "I’ve been feeling constantly anxious and overwhelmed lately."
-    }
-  ]);
+  {
+    role: "client",
+    text: "Hello"
+  }
+]);
   const [typing, setTyping] = useState(false);
   const bottomRef = useRef(null);
 
@@ -26,7 +26,8 @@ export default function ChatPanel({
     if (!msg.trim() || !isActive) return;
 
     const userMessage = msg;
-    setChat(c => [...c, { role: "therapist", text: userMessage }]);
+    const updatedChat = [...chat, { role: "therapist", text: userMessage }];
+    setChat(updatedChat);
     setMsg("");
     setTyping(true);
 
@@ -35,7 +36,8 @@ export default function ChatPanel({
         "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
         {
           text: userMessage,
-          clientType: clientType
+          clientType: clientType,
+          history: updatedChat  // ✅ SEND HISTORY
         }
       );
 
@@ -44,7 +46,6 @@ export default function ChatPanel({
         setTyping(false);
         onEndSession();
       } else {
-        // Artificial client thinking delay
         setTimeout(() => {
           setChat(c => [...c, { role: "client", text: res.data.reply }]);
           setTyping(false);

@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import ChatPanel from "../components/ChatPanel";
 import ReflectionForm from "../components/ReflectionForm";
 import TutorMode from "../components/TutorMode";
+import ProgressDashboard from "../components/ProgressDashboard"; // ✅ ADDED
 
 const clientProfiles = [
   { name: "Claire", problem: "Fear of driving on motorways", type: "CBH" },
@@ -99,14 +100,17 @@ export default function SessionSimulator() {
                   submission={submission}
                   chatHistory={chatHistory}
                   resetSession={resetSession}
+                  client={client} // ✅ REQUIRED FIX
                 />
               )}
 
             </div>
           </main>
 
-          {/* RIGHT PANEL (INTENTIONALLY EMPTY DURING SESSION) */}
-          <aside className="col-span-3" />
+          {/* RIGHT PANEL (NOW PROGRESS DASHBOARD) */}
+          <aside className="col-span-3">
+            <ProgressDashboard /> {/* ✅ ADDED */}
+          </aside>
 
         </div>
       </div>
