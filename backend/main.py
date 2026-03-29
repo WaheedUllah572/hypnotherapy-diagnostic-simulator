@@ -43,12 +43,15 @@ async def chat(msg: Message):
 
     session_id = msg.clientType
 
+    # ✅ Detect stage from therapist question
     detected_stage = detect_stage_from_question(msg.text)
+
     if detected_stage:
         stage = detected_stage
     else:
         stage = get_stage(session_id)
 
+    # ✅ Get persona-specific content for that stage
     persona_reply = get_persona_response(msg.clientType, stage)
 
     system = f"""
@@ -60,6 +63,7 @@ IMPORTANT:
 • Speak naturally like a real client.
 • Do not repeat previous answers.
 • Reveal information gradually.
+• Only talk about the current topic.
 
 Current session stage: {stage}
 
@@ -69,6 +73,7 @@ Client information to use in your answer:
 
     messages = [{"role": "system", "content": system}]
 
+    # ✅ Conversation memory
     for m in msg.history:
         if m["role"] == "therapist":
             messages.append({"role": "user", "content": m["text"]})
@@ -82,6 +87,7 @@ Client information to use in your answer:
         messages=messages
     )
 
+    # ✅ Advance stage AFTER response
     advance_stage(session_id)
 
     return {

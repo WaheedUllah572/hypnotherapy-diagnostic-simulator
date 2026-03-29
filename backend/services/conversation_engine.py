@@ -1,38 +1,49 @@
 # backend/services/conversation_engine.py
 
-# Track session stages per conversation
 session_stages = {}
+
+stages_order = [
+    "presenting_problem",
+    "timeline",
+    "thoughts",
+    "feelings",
+    "body",
+    "past",
+    "goal",
+    "hypnosis_question"
+]
 
 
 def get_stage(session_id):
-    return session_stages.get(session_id, 1)
+    if session_id not in session_stages:
+        session_stages[session_id] = 0
+    return stages_order[session_stages[session_id]]
 
 
 def advance_stage(session_id):
-    current = session_stages.get(session_id, 1)
-    if current < 8:
-        session_stages[session_id] = current + 1
-    return session_stages[session_id]
+    if session_id in session_stages:
+        if session_stages[session_id] < len(stages_order) - 1:
+            session_stages[session_id] += 1
 
 
-def detect_stage_from_question(question):
-    q = question.lower()
+def detect_stage_from_question(text):
+    text = text.lower()
 
-    if "what brings" in q or "why are you here" in q:
-        return 1
-    elif "when did" in q or "when did this start" in q:
-        return 2
-    elif "what do you think" in q or "goes through your mind" in q:
-        return 3
-    elif "how do you feel" in q:
-        return 4
-    elif "body" in q or "feel in your body" in q:
-        return 5
-    elif "past" in q or "before" in q:
-        return 6
-    elif "what would you like" in q or "goal" in q:
-        return 7
-    elif "hypnosis" in q:
-        return 8
+    if "what brings" in text or "hello" in text:
+        return "presenting_problem"
+    elif "when did" in text or "how long" in text:
+        return "timeline"
+    elif "what goes through" in text or "what do you think" in text:
+        return "thoughts"
+    elif "how do you feel" in text:
+        return "feelings"
+    elif "body" in text:
+        return "body"
+    elif "before" in text or "childhood" in text or "past" in text:
+        return "past"
+    elif "what would you like" in text or "goal" in text:
+        return "goal"
+    elif "hypnotherapy" in text:
+        return "hypnosis_question"
     else:
         return None

@@ -1,0 +1,49 @@
+{
+  "Claire": {
+    "type": "CBH",
+    "presenting_problem": "I have developed a fear of driving on motorways after experiencing a panic attack while driving last year.",
+    "timeline": "It started about 8 months ago after a very stressful period at work.",
+    "thoughts": "I keep thinking I might lose control of the car or cause an accident.",
+    "feelings": "I feel anxious and trapped when I think about driving on motorways.",
+    "body": "My chest feels tight, my hands sweat, and my heart starts racing.",
+    "past": "I had a panic attack in a supermarket a few years ago during a stressful time.",
+    "goal": "I want to feel calm and confident when driving again.",
+    "hypnosis_question": "Will I still be in control during hypnosis?"
+  },
+
+  "Daniel": {
+    "type": "SH",
+    "presenting_problem": "I’ve been struggling with anxiety about my performance at work.",
+    "timeline": "It started after I was promoted last year and given more responsibility.",
+    "thoughts": "I sometimes think I’m going to fail or disappoint people.",
+    "feelings": "I feel overwhelmed and under a lot of pressure.",
+    "body": "I feel a heavy sensation in my chest and tension in my shoulders.",
+    "past": "I’ve always put a lot of pressure on myself to succeed since I was younger.",
+    "goal": "I want to feel calmer and more confident in my role.",
+    "hypnosis_question": "How can hypnotherapy help with confidence?"
+  },
+
+  "Sophie": {
+    "type": "Ericksonian",
+    "presenting_problem": "It feels like I’m surrounded by noise and pressure when I’m in crowded places.",
+    "timeline": "It’s been building over the past couple of years.",
+    "thoughts": "It’s like my mind starts to spiral when I’m surrounded by too much activity.",
+    "feelings": "I feel overwhelmed, like I need to escape.",
+    "body": "It feels like a wave rising in my chest and everything becomes too much.",
+    "past": "I remember feeling something similar at school when I felt judged.",
+    "goal": "I want to feel calm and in control in busy environments.",
+    "hypnosis_question": "What does hypnosis feel like when you are in it?"
+  },
+
+  "Mark": {
+    "type": "Regression",
+    "presenting_problem": "I’ve been having trouble sleeping and feel anxious at night.",
+    "timeline": "It started during a stressful time at work about a year ago.",
+    "thoughts": "At night my mind goes over everything that could go wrong.",
+    "feelings": "I feel uneasy and on edge at night.",
+    "body": "My stomach feels tight and I can’t relax.",
+    "past": "It reminds me of when I was younger and used to worry a lot about school and expectations.",
+    "goal": "I want to be able to relax and sleep peacefully.",
+    "hypnosis_question": "Can hypnosis help me switch off my mind at night?"
+  }
+}
