@@ -4,15 +4,15 @@ import { useEffect, useState, useRef } from "react";
 export default function TutorMode({ submission, chatHistory, resetSession, client }) {
   const [feedback, setFeedback] = useState("Tutor analysing clinical reasoning…");
   const [score, setScore] = useState(null);
-  const hasSubmitted = useRef(false); // ✅ prevents double submission
+  const [detectedModality, setDetectedModality] = useState(null);
+  const hasSubmitted = useRef(false);
 
   useEffect(() => {
-    if (hasSubmitted.current) return; // ✅ stop multiple calls
+    if (hasSubmitted.current) return;
     hasSubmitted.current = true;
 
     const fetchFeedback = async () => {
       try {
-
         const res = await axios.post(
           "http://127.0.0.1:8001/tutor-review",
           {
@@ -24,8 +24,8 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
 
         setFeedback(res.data.feedback);
         setScore(res.data.score);
+        setDetectedModality(res.data.detected_modality);
 
-        // ✅ IMPORTANT: trigger progress refresh
         window.dispatchEvent(new Event("progressUpdated"));
 
       } catch {
@@ -34,7 +34,7 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
     };
 
     fetchFeedback();
-  }, []); // ✅ run only once
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -46,6 +46,14 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
         <div className="bg-white border border-slate-200 p-6 rounded-xl text-sm">
           <p className="font-semibold">
             Total Score: {score.total} / 4
+          </p>
+        </div>
+      )}
+
+      {detectedModality && (
+        <div className="bg-white border border-slate-200 p-6 rounded-xl text-sm">
+          <p className="font-semibold">
+            Detected Client Modality: {detectedModality}
           </p>
         </div>
       )}

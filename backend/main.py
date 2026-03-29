@@ -43,7 +43,6 @@ async def chat(msg: Message):
 
     session_id = msg.clientType
 
-    # ✅ Detect stage from therapist question
     detected_stage = detect_stage_from_question(msg.text)
 
     if detected_stage:
@@ -51,7 +50,6 @@ async def chat(msg: Message):
     else:
         stage = get_stage(session_id)
 
-    # ✅ Get persona-specific content for that stage
     persona_reply = get_persona_response(msg.clientType, stage)
 
     system = f"""
@@ -73,7 +71,6 @@ Client information to use in your answer:
 
     messages = [{"role": "system", "content": system}]
 
-    # ✅ Conversation memory
     for m in msg.history:
         if m["role"] == "therapist":
             messages.append({"role": "user", "content": m["text"]})
@@ -87,7 +84,6 @@ Client information to use in your answer:
         messages=messages
     )
 
-    # ✅ Advance stage AFTER response
     advance_stage(session_id)
 
     return {
@@ -128,6 +124,26 @@ def evaluate_submission(submission):
     }
 
 
+# ✅ NEW MODALITY DETECTION FUNCTION
+def detect_modality(chat_text):
+    text = chat_text.lower()
+
+    visual_words = ["see", "look", "picture", "imagine", "vision"]
+    auditory_words = ["hear", "sound", "listen"]
+    kinaesthetic_words = ["feel", "felt", "tight", "heavy", "pressure", "weight", "tense", "stress", "overwhelmed"]
+
+    visual = sum(text.count(word) for word in visual_words)
+    auditory = sum(text.count(word) for word in auditory_words)
+    kinaesthetic = sum(text.count(word) for word in kinaesthetic_words)
+
+    if visual > auditory and visual > kinaesthetic:
+        return "Visual"
+    elif auditory > visual and auditory > kinaesthetic:
+        return "Auditory"
+    else:
+        return "Kinaesthetic"
+
+
 @app.post("/tutor-review")
 async def tutor_review(data: TutorSubmission):
 
@@ -137,6 +153,9 @@ async def tutor_review(data: TutorSubmission):
     save_session(data.clientName, score["total"])
 
     chat_text = "\n".join([f"{m['role'].upper()}: {m['text']}" for m in data.chatHistory])
+
+    # ✅ Detect modality from conversation
+    detected_modality = detect_modality(chat_text)
 
     system = """
 You are a clinical hypnotherapy training tutor.
@@ -159,6 +178,8 @@ Approach: {s.get("chosenApproach")}
 Modality: {s.get("clientModality")}
 Objective: {s.get("clientObjective")}
 Safety/Reassurance: {s.get("clientReassurance")}
+
+System Detected Modality: {detected_modality}
 """
 
     response = client.chat.completions.create(
@@ -171,7 +192,8 @@ Safety/Reassurance: {s.get("clientReassurance")}
 
     return {
         "feedback": response.choices[0].message.content,
-        "score": score
+        "score": score,
+        "detected_modality": detected_modality  # ✅ RETURN THIS
     }
 
 
