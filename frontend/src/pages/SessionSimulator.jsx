@@ -3,7 +3,7 @@ import Sidebar from "../components/Sidebar";
 import ChatPanel from "../components/ChatPanel";
 import ReflectionForm from "../components/ReflectionForm";
 import TutorMode from "../components/TutorMode";
-import ProgressDashboard from "../components/ProgressDashboard"; // ✅ ADDED
+import ProgressDashboard from "../components/ProgressDashboard";
 
 const clientProfiles = [
   { name: "Claire", problem: "Fear of driving on motorways", type: "CBH" },
@@ -49,7 +49,9 @@ export default function SessionSimulator() {
 
   return (
     <div className="min-h-screen">
-      <div className="header-bar text-white px-8 py-5">
+
+      {/* STICKY HEADER */}
+      <div className="header-bar text-white px-8 py-5 sticky top-0 z-50">
         <div className="max-w-[1500px] mx-auto flex justify-between">
           <h1 className="text-lg tracking-wider font-medium">
             HYPNOTHERAPY DIAGNOSTIC TRAINING SIMULATOR
@@ -65,10 +67,11 @@ export default function SessionSimulator() {
           Client Presentation Session
         </h2>
 
+        {/* UPDATED GRID LAYOUT */}
         <div className="grid grid-cols-12 gap-12">
 
-          {/* LEFT PANEL */}
-          <aside className="col-span-3">
+          {/* LEFT PANEL — WIDER */}
+          <aside className="col-span-4">
             <div className="surface p-7 lift">
               <Sidebar client={client} />
             </div>
@@ -100,16 +103,16 @@ export default function SessionSimulator() {
                   submission={submission}
                   chatHistory={chatHistory}
                   resetSession={resetSession}
-                  client={client} // ✅ REQUIRED FIX
+                  client={client}
                 />
               )}
 
             </div>
           </main>
 
-          {/* RIGHT PANEL (NOW PROGRESS DASHBOARD) */}
-          <aside className="col-span-3">
-            <ProgressDashboard /> {/* ✅ ADDED */}
+          {/* RIGHT PANEL — SMALLER (REMOVES DEAD SPACE) */}
+          <aside className="col-span-2">
+            <ProgressDashboard />
           </aside>
 
         </div>

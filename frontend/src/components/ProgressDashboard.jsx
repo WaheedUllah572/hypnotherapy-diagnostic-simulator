@@ -6,7 +6,7 @@ export default function ProgressDashboard() {
 
   const fetchProgress = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8001/progress");
+      const res = await axios.get("https://hypnotherapy-diagnostic-simulator.onrender.com/progress");
       setProgress(res.data);
     } catch {
       setProgress(null);
@@ -16,7 +16,7 @@ export default function ProgressDashboard() {
   useEffect(() => {
     fetchProgress();
 
-    // ✅ Listen for updates
+    // Listen for updates after tutor review
     const handleUpdate = () => {
       fetchProgress();
     };

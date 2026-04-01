@@ -33,6 +33,10 @@ export default function Sidebar({ client }) {
             This is an assessment stage only — no induction or treatment should occur.
           </p>
 
+          <p className="text-slate-700 font-medium">
+            Keep notes of client responses and your decisions as you will be questioned about them in TUTOR MODE.
+          </p>
+
           <p>
             Use the conversation to gather structured clinical information and determine:
           </p>
@@ -41,9 +45,9 @@ export default function Sidebar({ client }) {
             <li>
               The most appropriate treatment approach:
               <br />
-              Cognitive Behavioural Hypnotherapy (CBH)  
-              Solution-Focused Hypnotherapy  
-              Ericksonian / Indirect Hypnotherapy  
+              Cognitive Behavioural Hypnotherapy (CBH)<br/>
+              Solution-Focused Hypnotherapy<br/>
+              Ericksonian / Indirect Hypnotherapy<br/>
               Regression (Level 2 only)
             </li>
             <li>
@@ -66,9 +70,7 @@ export default function Sidebar({ client }) {
           </ul>
 
           <p>
-            When you believe all objectives have been achieved, type
-            <strong> TUTOR MODE </strong>
-            in the chat to conclude the session.
+            Click on <strong>TUTOR MODE</strong> button in the chat to conclude the session.
           </p>
 
           <p className="text-slate-500">

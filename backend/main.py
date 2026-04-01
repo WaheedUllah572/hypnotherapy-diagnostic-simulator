@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 from services.session_tracker import save_session, get_sessions
 from services.progress_engine import calculate_progress
-
-# NEW IMPORTS
 from services.persona_engine import get_persona_response
 from services.conversation_engine import get_stage, advance_stage, detect_stage_from_question
 
@@ -21,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Load API Key
 api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=api_key)
 
@@ -34,15 +37,21 @@ class Message(BaseModel):
 @app.post("/chat")
 async def chat(msg: Message):
 
-    safety_keywords = ["kill myself", "end my life", "suicide", "self harm"]
+    # Safety check
+    safety_keywords = [
+        "kill myself", "end my life", "suicide", "self harm",
+        "i want to die", "i don't want to live"
+    ]
+
     if any(k in msg.text.lower() for k in safety_keywords):
         return {
-            "reply": "Safety threshold reached. Pre-induction cannot continue.",
+            "reply": "Safety threshold reached. Pre-induction cannot continue. Please refer this client to appropriate support services.",
             "safety_flag": True
         }
 
     session_id = msg.clientType
 
+    # Detect stage from therapist question
     detected_stage = detect_stage_from_question(msg.text)
 
     if detected_stage:
@@ -50,18 +59,21 @@ async def chat(msg: Message):
     else:
         stage = get_stage(session_id)
 
+    # Get persona info for this stage
     persona_reply = get_persona_response(msg.clientType, stage)
 
     system = f"""
 You are role-playing as a therapy client in a pre-hypnosis assessment session.
 
-IMPORTANT:
+IMPORTANT RULES:
 • Respond directly to the therapist’s question.
 • Keep answers to 1–3 sentences.
 • Speak naturally like a real client.
 • Do not repeat previous answers.
 • Reveal information gradually.
 • Only talk about the current topic.
+• Do NOT give all information at once.
+• Wait for therapist questions.
 
 Current session stage: {stage}
 
@@ -71,6 +83,7 @@ Client information to use in your answer:
 
     messages = [{"role": "system", "content": system}]
 
+    # Add conversation history
     for m in msg.history:
         if m["role"] == "therapist":
             messages.append({"role": "user", "content": m["text"]})
@@ -84,11 +97,14 @@ Client information to use in your answer:
         messages=messages
     )
 
-    advance_stage(session_id)
+    # Advance stage only if therapist asked relevant question
+    if detected_stage:
+        advance_stage(session_id)
 
     return {
         "reply": response.choices[0].message.content,
-        "safety_flag": False
+        "safety_flag": False,
+        "stage": stage
     }
 
 
@@ -99,7 +115,6 @@ class TutorSubmission(BaseModel):
 
 
 def evaluate_submission(submission):
-
     score = {
         "approach": 0,
         "modality": 0,
@@ -124,7 +139,7 @@ def evaluate_submission(submission):
     }
 
 
-# ✅ NEW MODALITY DETECTION FUNCTION
+# Modality detection
 def detect_modality(chat_text):
     text = chat_text.lower()
 
@@ -154,7 +169,6 @@ async def tutor_review(data: TutorSubmission):
 
     chat_text = "\n".join([f"{m['role'].upper()}: {m['text']}" for m in data.chatHistory])
 
-    # ✅ Detect modality from conversation
     detected_modality = detect_modality(chat_text)
 
     system = """
@@ -193,7 +207,7 @@ System Detected Modality: {detected_modality}
     return {
         "feedback": response.choices[0].message.content,
         "score": score,
-        "detected_modality": detected_modality  # ✅ RETURN THIS
+        "detected_modality": detected_modality
     }
 
 
