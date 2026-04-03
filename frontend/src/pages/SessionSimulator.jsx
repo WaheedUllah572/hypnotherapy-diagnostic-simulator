@@ -29,10 +29,20 @@ export default function SessionSimulator() {
     randomiseClient();
   }, []);
 
+  // Always scroll to top when stage changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [stage]);
+
+  // ✅ FIXED: Never repeat same client twice
   const randomiseClient = () => {
-    const random =
-      clientProfiles[Math.floor(Math.random() * clientProfiles.length)];
-    setClient(random);
+    let newClient;
+    do {
+      newClient =
+        clientProfiles[Math.floor(Math.random() * clientProfiles.length)];
+    } while (newClient.name === client.name);
+
+    setClient(newClient);
   };
 
   const resetSession = () => {
@@ -49,7 +59,6 @@ export default function SessionSimulator() {
 
   return (
     <div className="min-h-screen">
-
       {/* STICKY HEADER */}
       <div className="header-bar text-white px-8 py-5 sticky top-0 z-50">
         <div className="max-w-[1500px] mx-auto flex justify-between">
@@ -67,10 +76,8 @@ export default function SessionSimulator() {
           Client Presentation Session
         </h2>
 
-        {/* UPDATED GRID LAYOUT */}
         <div className="grid grid-cols-12 gap-12">
-
-          {/* LEFT PANEL — WIDER */}
+          {/* LEFT PANEL */}
           <aside className="col-span-4">
             <div className="surface p-7 lift">
               <Sidebar client={client} />
@@ -80,7 +87,6 @@ export default function SessionSimulator() {
           {/* MAIN PANEL */}
           <main className="col-span-6">
             <div className="glass p-8 lift">
-
               {stage === "session" && (
                 <ChatPanel
                   isActive={true}
@@ -106,15 +112,13 @@ export default function SessionSimulator() {
                   client={client}
                 />
               )}
-
             </div>
           </main>
 
-          {/* RIGHT PANEL — SMALLER (REMOVES DEAD SPACE) */}
+          {/* RIGHT PANEL */}
           <aside className="col-span-2">
             <ProgressDashboard />
           </aside>
-
         </div>
       </div>
     </div>

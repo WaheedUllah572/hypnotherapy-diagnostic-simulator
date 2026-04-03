@@ -51,8 +51,7 @@ export default function Sidebar({ client }) {
               Regression (Level 2 only)
             </li>
             <li>
-              The dominant client modality:
-              Visual / Auditory / Kinaesthetic
+              The client relaxation modality: Visual / Auditory / Kinaesthetic
             </li>
             <li>
               The client’s core objective

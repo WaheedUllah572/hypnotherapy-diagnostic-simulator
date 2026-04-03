@@ -1,9 +1,7 @@
-# backend/services/persona_engine.py
-
 import json
 import os
+import random
 
-# Load case histories
 DATA_PATH = os.path.join(os.path.dirname(__file__), "../data/case_histories.json")
 
 with open(DATA_PATH, "r") as f:
@@ -11,10 +9,6 @@ with open(DATA_PATH, "r") as f:
 
 
 def get_persona_response(client_name, stage):
-    """
-    Returns the correct case history text for the current stage
-    and adds persona communication style and modality language.
-    """
 
     case = case_histories.get(client_name)
 
@@ -24,90 +18,69 @@ def get_persona_response(client_name, stage):
     info = case.get(stage, "")
     persona_type = case.get("type", "")
 
-    # Strong communication rules per persona
+    # Communication style per persona
     if persona_type == "CBH":
         style = """
 You are a Cognitive Behavioural client.
-You MUST speak using thought-based language.
-Focus on thoughts, worries, predictions, and overthinking.
-
-Use phrases like:
-• "I keep thinking..."
-• "I worry that..."
-• "My mind goes to..."
-• "I start imagining..."
-• "What if..."
-
-Respond directly to the therapist’s question using this thinking style.
-Keep answers to 1–3 sentences.
+Speak using thought-based language like:
+"I keep thinking..."
+"I worry that..."
+"My mind goes to..."
 """
+        dominant_modality = "Visual"
+
     elif persona_type == "SH":
         style = """
 You are an emotional / solution-focused client.
-You MUST speak using feeling and emotional language.
-
-Use phrases like:
-• "I feel overwhelmed..."
-• "I feel under pressure..."
-• "I feel anxious..."
-• "I feel stressed..."
-• "I feel drained..."
-
-Focus on emotions and how situations feel emotionally.
-Respond directly to the therapist’s question.
-Keep answers to 1–3 sentences.
+Speak using feeling and emotional language like:
+"I feel overwhelmed..."
+"I feel under pressure..."
 """
+        dominant_modality = "Auditory"
+
     elif persona_type == "Ericksonian":
         style = """
 You are an Ericksonian-style client.
-You MUST speak using metaphor, imagery, and descriptive language.
-
-Use phrases like:
-• "It feels like..."
-• "It's like..."
-• "It's as if..."
-• "I feel like I'm..."
-
-Describe your experience like a story, image, or metaphor.
-Do NOT speak in a direct clinical way — speak in metaphor.
-Respond to the therapist’s question using metaphor.
-Keep answers to 1–3 sentences.
+Speak using metaphor and imagery like:
+"It's like..."
+"I feel like I'm..."
 """
+        dominant_modality = "Kinaesthetic"
+
     elif persona_type == "Regression":
         style = """
 You are a regression-style client.
-You MUST link current problems to past experiences, childhood, or earlier life events.
+Link present problems to past experiences.
+"""
+        dominant_modality = "Kinaesthetic"
 
-Use phrases like:
-• "This reminds me of when I was younger..."
-• "I remember at school..."
-• "This goes back to my childhood..."
-• "I've felt this before earlier in my life..."
+    else:
+        style = "Speak naturally."
+        dominant_modality = "Kinaesthetic"
 
-Connect present feelings to past memories.
-Respond directly to the therapist’s question.
-Keep answers to 1–3 sentences.
+    # 🔥 FIXED: Clear modality most of the time
+    if random.random() < 0.8:
+        modality_instruction = f"""
+Use CLEAR {dominant_modality} sensory language in your response.
+Do NOT mix modalities.
 """
     else:
-        style = "Speak naturally like a real client."
-
-    # Modality language instruction (important for client requirement)
-    modality = """
-Where natural, include sensory language sometimes:
-• Visual: "I see", "I picture", "It looks like"
-• Auditory: "I hear", "It sounds like"
-• Kinaesthetic: "I feel", "It feels like", "There is a weight in my chest"
-
-Do not use all of them at once — use them naturally in conversation.
+        modality_instruction = f"""
+Use MOSTLY {dominant_modality} language but include ONE other sensory hint.
+This should create slight ambiguity.
 """
 
     return f"""
-Client background information for this topic:
+Client background information:
 {info}
 
-Communication style rules:
+Communication style:
 {style}
 
-Modality language:
-{modality}
+Modality instruction:
+{modality_instruction}
+
+Respond naturally to the therapist.
+Keep responses 1–3 sentences.
+Do not explain too much at once.
 """

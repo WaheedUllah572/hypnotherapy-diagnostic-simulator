@@ -2,21 +2,24 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 
 export default function ProgressDashboard() {
-  const [progress, setProgress] = useState(null);
+  const [progress, setProgress] = useState({
+    sessionsCompleted: 0,
+    averageScore: 0,
+    personasCompleted: []
+  });
 
   const fetchProgress = async () => {
     try {
       const res = await axios.get("https://hypnotherapy-diagnostic-simulator.onrender.com/progress");
       setProgress(res.data);
     } catch {
-      setProgress(null);
+      // keep default values so box still shows
     }
   };
 
   useEffect(() => {
     fetchProgress();
 
-    // Listen for updates after tutor review
     const handleUpdate = () => {
       fetchProgress();
     };
@@ -27,10 +30,6 @@ export default function ProgressDashboard() {
       window.removeEventListener("progressUpdated", handleUpdate);
     };
   }, []);
-
-  if (!progress) {
-    return <div>Loading progress...</div>;
-  }
 
   return (
     <div className="surface p-6 lift">

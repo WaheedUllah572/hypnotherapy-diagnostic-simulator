@@ -11,7 +11,7 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
     if (hasSubmitted.current) return;
     hasSubmitted.current = true;
 
-    const fetchFeedback = async () => {
+    const fetchFeedback = async (retry = 0) => {
       try {
         const res = await axios.post(
           "https://hypnotherapy-diagnostic-simulator.onrender.com/tutor-review",
@@ -27,9 +27,12 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
         setDetectedModality(res.data.detected_modality);
 
         window.dispatchEvent(new Event("progressUpdated"));
-
       } catch {
-        setFeedback("Tutor feedback unavailable.");
+        if (retry < 2) {
+          setTimeout(() => fetchFeedback(retry + 1), 2000);
+        } else {
+          setFeedback("Tutor feedback unavailable.");
+        }
       }
     };
 
@@ -53,12 +56,12 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
       {detectedModality && (
         <div className="bg-white border border-slate-200 p-6 rounded-xl text-sm">
           <p className="font-semibold">
-            Detected Client Modality: {detectedModality}
+            Client Relaxation Modality: {detectedModality}
           </p>
         </div>
       )}
 
-      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm">
+      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm whitespace-pre-line">
         {feedback}
       </div>
 

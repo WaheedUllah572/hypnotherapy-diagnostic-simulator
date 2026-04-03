@@ -9,18 +9,62 @@ export default function ChatPanel({
 }) {
   const [msg, setMsg] = useState("");
   const [chat, setChat] = useState([
-  {
-    role: "client",
-    text: "Hello"
-  }
-]);
+    {
+      role: "client",
+      text: "Hello"
+    }
+  ]);
   const [typing, setTyping] = useState(false);
+  const [listening, setListening] = useState(false);
   const bottomRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
     setChatHistory(chat);
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat, typing]);
+
+  // 🎤 Improved Microphone Speech-to-Text
+  const startListening = () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      alert("Microphone not supported in this browser");
+      return;
+    }
+
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.continuous = true;          // Keep listening
+    recognition.interimResults = true;      // Show words while speaking
+    recognition.lang = "en-GB";             // More accurate English recognition
+
+    recognition.onstart = () => {
+      setListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setMsg(transcript); // Fill textbox but DO NOT send
+    };
+
+    recognition.onerror = () => {
+      setListening(false);
+      recognition.stop();
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+
+    // Auto-stop after 6 seconds
+    setTimeout(() => {
+      recognition.stop();
+    }, 6000);
+  };
 
   const send = async () => {
     if (!msg.trim() || !isActive) return;
@@ -37,7 +81,7 @@ export default function ChatPanel({
         {
           text: userMessage,
           clientType: clientType,
-          history: updatedChat  // ✅ SEND HISTORY
+          history: updatedChat
         }
       );
 
@@ -49,7 +93,7 @@ export default function ChatPanel({
         setTimeout(() => {
           setChat(c => [...c, { role: "client", text: res.data.reply }]);
           setTyping(false);
-        }, 1500);
+        }, 1200);
       }
     } catch {
       setTimeout(() => {
@@ -58,7 +102,15 @@ export default function ChatPanel({
           { role: "client", text: "Client pauses and seems unsure…" }
         ]);
         setTyping(false);
-      }, 1500);
+      }, 1200);
+    }
+  };
+
+  // ⌨️ Press Enter to Send
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
     }
   };
 
@@ -109,6 +161,7 @@ export default function ChatPanel({
           value={msg}
           disabled={!isActive}
           onChange={e => setMsg(e.target.value)}
+          onKeyDown={handleKeyDown}
           className="w-full rounded-2xl border border-slate-300 p-4 text-sm"
           placeholder="Give an appropriate diagnostic response based on the client’s presentation..."
         />
@@ -122,13 +175,26 @@ export default function ChatPanel({
             TUTOR MODE
           </button>
 
-          <button
-            onClick={send}
-            disabled={!isActive}
-            className="bg-brand-600 text-white px-6 py-2 rounded-xl text-sm"
-          >
-            Respond
-          </button>
+          <div className="flex gap-3 items-center">
+            <button
+              onClick={startListening}
+              className="bg-slate-500 text-white px-4 py-2 rounded-xl text-sm"
+            >
+              🎤 Speak
+            </button>
+
+            {listening && (
+              <span className="text-xs text-red-500">Listening...</span>
+            )}
+
+            <button
+              onClick={send}
+              disabled={!isActive}
+              className="bg-brand-600 text-white px-6 py-2 rounded-xl text-sm"
+            >
+              Respond
+            </button>
+          </div>
         </div>
       </div>
     </div>

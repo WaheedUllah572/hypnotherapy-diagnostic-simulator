@@ -22,10 +22,10 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         End-of-Session Clinical Reflection
       </h3>
 
-      {/* BOX 1 */}
+      {/* QUESTION 1 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
-          BOX 1 — Identify the most appropriate treatment approach and describe what information from the client informed this.
+          QUESTION 1 — Identify the most appropriate treatment approach and describe what information from the client informed this.
         </label>
         <textarea
           className="w-full p-3 border rounded-xl"
@@ -35,10 +35,10 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         />
       </div>
 
-      {/* BOX 2 */}
+      {/* QUESTION 2 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
-          BOX 2 — Describe the dominant client modality (Visual / Auditory / Kinaesthetic) and how you identified this.
+          QUESTION 2 — Describe the client relaxation modality (Visual / Auditory / Kinaesthetic) and how you identified this.
         </label>
         <textarea
           className="w-full p-3 border rounded-xl"
@@ -48,10 +48,10 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         />
       </div>
 
-      {/* BOX 3 */}
+      {/* QUESTION 3 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
-          BOX 3 — State the client’s core objective.
+          QUESTION 3 — State the client’s core objective.
         </label>
         <textarea
           className="w-full p-3 border rounded-xl"
@@ -61,10 +61,10 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         />
       </div>
 
-      {/* BOX 4 */}
+      {/* QUESTION 4 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
-          BOX 4 — Demonstrate how you:
+          QUESTION 4 — Demonstrate how you:
         </label>
         <ul className="text-xs text-slate-600 mb-2 list-disc ml-5 space-y-1">
           <li>Clarified suitability and screened for safety concerns</li>
