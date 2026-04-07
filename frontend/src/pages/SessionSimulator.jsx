@@ -24,17 +24,11 @@ export default function SessionSimulator() {
     clientReassurance: ""
   });
 
-  // Randomise client on first load
   useEffect(() => {
     randomiseClient();
   }, []);
 
-  // Always scroll to top when stage changes
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [stage]);
-
-  // ✅ FIXED: Never repeat same client twice
+  // Never repeat same client twice
   const randomiseClient = () => {
     let newClient;
     do {
@@ -58,8 +52,8 @@ export default function SessionSimulator() {
   };
 
   return (
-    <div className="min-h-screen">
-      {/* STICKY HEADER */}
+    <div className="min-h-screen bg-gradient-to-r from-slate-100 to-teal-100">
+      {/* HEADER */}
       <div className="header-bar text-white px-8 py-5 sticky top-0 z-50">
         <div className="max-w-[1500px] mx-auto flex justify-between">
           <h1 className="text-lg tracking-wider font-medium">
@@ -71,22 +65,22 @@ export default function SessionSimulator() {
         </div>
       </div>
 
-      <div className="max-w-[1500px] mx-auto px-8 py-12">
-        <h2 className="text-3xl font-semibold mb-12">
+      <div className="max-w-[1500px] mx-auto px-8 py-6">
+        <h2 className="text-3xl font-semibold mb-6">
           Client Presentation Session
         </h2>
 
-        <div className="grid grid-cols-12 gap-12">
-          {/* LEFT PANEL */}
+        <div className="grid grid-cols-12 gap-8">
+          {/* LEFT */}
           <aside className="col-span-4">
-            <div className="surface p-7 lift">
+            <div className="surface p-7 lift h-[650px] overflow-y-auto">
               <Sidebar client={client} />
             </div>
           </aside>
 
-          {/* MAIN PANEL */}
+          {/* CENTER */}
           <main className="col-span-6">
-            <div className="glass p-8 lift">
+            <div className="glass p-6 lift h-[650px]">
               {stage === "session" && (
                 <ChatPanel
                   isActive={true}
@@ -115,7 +109,7 @@ export default function SessionSimulator() {
             </div>
           </main>
 
-          {/* RIGHT PANEL */}
+          {/* RIGHT */}
           <aside className="col-span-2">
             <ProgressDashboard />
           </aside>

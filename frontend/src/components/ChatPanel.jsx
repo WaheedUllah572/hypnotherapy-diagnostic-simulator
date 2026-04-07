@@ -16,15 +16,18 @@ export default function ChatPanel({
   ]);
   const [typing, setTyping] = useState(false);
   const [listening, setListening] = useState(false);
-  const bottomRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const recognitionRef = useRef(null);
 
   useEffect(() => {
     setChatHistory(chat);
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
   }, [chat, typing]);
 
-  // 🎤 Improved Microphone Speech-to-Text
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window)) {
       alert("Microphone not supported in this browser");
@@ -32,20 +35,18 @@ export default function ChatPanel({
     }
 
     const recognition = new window.webkitSpeechRecognition();
-    recognition.continuous = true;          // Keep listening
-    recognition.interimResults = true;      // Show words while speaking
-    recognition.lang = "en-GB";             // More accurate English recognition
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-GB";
 
-    recognition.onstart = () => {
-      setListening(true);
-    };
+    recognition.onstart = () => setListening(true);
 
     recognition.onresult = (event) => {
       let transcript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
       }
-      setMsg(transcript); // Fill textbox but DO NOT send
+      setMsg(transcript);
     };
 
     recognition.onerror = () => {
@@ -53,14 +54,11 @@ export default function ChatPanel({
       recognition.stop();
     };
 
-    recognition.onend = () => {
-      setListening(false);
-    };
+    recognition.onend = () => setListening(false);
 
     recognition.start();
     recognitionRef.current = recognition;
 
-    // Auto-stop after 6 seconds
     setTimeout(() => {
       recognition.stop();
     }, 6000);
@@ -77,7 +75,7 @@ export default function ChatPanel({
 
     try {
       const res = await axios.post(
-        "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
+        "http://127.0.0.1:8001/chat",
         {
           text: userMessage,
           clientType: clientType,
@@ -106,7 +104,6 @@ export default function ChatPanel({
     }
   };
 
-  // ⌨️ Press Enter to Send
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -115,8 +112,12 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="flex flex-col h-[640px]">
-      <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+    <div className="flex flex-col h-full">
+      {/* CHAT AREA */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto space-y-6 pr-2 pt-2"
+      >
         {chat.map((c, i) => (
           <div
             key={i}
@@ -151,11 +152,10 @@ export default function ChatPanel({
             Client is thinking…
           </div>
         )}
-
-        <div ref={bottomRef} />
       </div>
 
-      <div className="pt-6 border-t border-slate-200 mt-6">
+      {/* INPUT AREA */}
+      <div className="pt-4 border-t border-slate-200">
         <textarea
           rows={3}
           value={msg}

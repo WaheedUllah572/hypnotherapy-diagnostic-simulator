@@ -8,7 +8,7 @@ with open(DATA_PATH, "r") as f:
     case_histories = json.load(f)
 
 
-def get_persona_response(client_name, stage):
+def get_persona_response(client_name, stage, risk_mode=False):
 
     case = case_histories.get(client_name)
 
@@ -25,7 +25,7 @@ You are a Cognitive Behavioural client.
 Speak using thought-based language like:
 "I keep thinking..."
 "I worry that..."
-"My mind goes to..."
+"I keep imagining..."
 """
         dominant_modality = "Visual"
 
@@ -58,16 +58,44 @@ Link present problems to past experiences.
         style = "Speak naturally."
         dominant_modality = "Kinaesthetic"
 
-    # 🔥 FIXED: Clear modality most of the time
+    # 🔴 IMPORTANT: Risk behaviour instruction (STRONGER)
+    risk_instruction = ""
+    if risk_mode:
+        risk_instruction = """
+IMPORTANT SAFETY BEHAVIOUR:
+You are an emotionally vulnerable client.
+
+When the therapist asks about:
+- feelings
+- stress
+- coping
+- sleep
+- feeling overwhelmed
+- wanting to escape
+- feeling trapped
+- giving up
+
+You MUST include at least one of the following ideas in your response:
+- feeling trapped
+- wanting to escape
+- wanting everything to stop
+- feeling like giving up
+- feeling like you can't go on
+- wishing you could disappear
+
+Keep it natural and realistic, not dramatic.
+Use 1–2 sentences only.
+"""
+
+    # Modality instruction
     if random.random() < 0.8:
         modality_instruction = f"""
-Use CLEAR {dominant_modality} sensory language in your response.
+Use CLEAR {dominant_modality} sensory language.
 Do NOT mix modalities.
 """
     else:
         modality_instruction = f"""
 Use MOSTLY {dominant_modality} language but include ONE other sensory hint.
-This should create slight ambiguity.
 """
 
     return f"""
@@ -77,10 +105,12 @@ Client background information:
 Communication style:
 {style}
 
+{risk_instruction}
+
 Modality instruction:
 {modality_instruction}
 
 Respond naturally to the therapist.
-Keep responses 1–3 sentences.
-Do not explain too much at once.
+Keep responses to 1–3 sentences.
+Do not explain everything at once.
 """

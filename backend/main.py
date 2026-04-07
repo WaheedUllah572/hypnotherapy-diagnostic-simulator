@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 import os
+import random
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 from services.session_tracker import save_session, get_sessions
@@ -23,13 +23,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load API Key
 api_key = os.getenv("OPENAI_API_KEY")
-
-if not api_key:
-    raise ValueError("OPENAI_API_KEY is not set in environment variables")
-
 client = OpenAI(api_key=api_key)
+
+risk_sessions = {}
 
 
 class Message(BaseModel):
@@ -41,21 +38,40 @@ class Message(BaseModel):
 @app.post("/chat")
 async def chat(msg: Message):
 
-    # Safety check
-    safety_keywords = [
-        "kill myself", "end my life", "suicide", "self harm",
-        "i want to die", "i don't want to live"
-    ]
+    # ✅ TEST MODE
+    text = msg.text.strip().lower()
 
-    if any(k in msg.text.lower() for k in safety_keywords):
+    if "test safety" in text:
+        return {
+            "reply": "I've been feeling really overwhelmed lately… sometimes I feel like I just want everything to stop.",
+            "safety_flag": False
+        }
+
+    if "test end" in text:
         return {
             "reply": "Safety threshold reached. Pre-induction cannot continue. Please refer this client to appropriate support services.",
             "safety_flag": True
         }
 
-    session_id = msg.clientType
+    # Student safety keywords
+    safety_keywords = [
+        "kill myself", "end my life", "suicide", "self harm",
+        "i want to die", "i don't want to live"
+    ]
 
-    # Detect stage from therapist question
+    if any(k in text for k in safety_keywords):
+        return {
+            "reply": "Safety threshold reached. Pre-induction cannot continue. Please refer this client to appropriate support services.",
+            "safety_flag": True
+        }
+
+    session_id = msg.clientType + "_session"
+
+    if session_id not in risk_sessions:
+        risk_sessions[session_id] = (random.randint(1, 15) == 3)
+
+    risk_mode = risk_sessions[session_id]
+
     detected_stage = detect_stage_from_question(msg.text)
 
     if detected_stage:
@@ -63,31 +79,24 @@ async def chat(msg: Message):
     else:
         stage = get_stage(session_id)
 
-    # Get persona info for this stage
-    persona_reply = get_persona_response(msg.clientType, stage)
+    persona_reply = get_persona_response(msg.clientType, stage, risk_mode)
 
     system = f"""
 You are role-playing as a therapy client in a pre-hypnosis assessment session.
 
 IMPORTANT RULES:
-• Respond directly to the therapist’s question.
-• Keep answers to 1–3 sentences.
-• Speak naturally like a real client.
-• Do not repeat previous answers.
+• Respond naturally to the therapist.
+• Keep answers 1–3 sentences.
 • Reveal information gradually.
-• Only talk about the current topic.
-• Do NOT give all information at once.
-• Wait for therapist questions.
 
 Current session stage: {stage}
 
-Client information to use in your answer:
+Client information:
 {persona_reply}
 """
 
     messages = [{"role": "system", "content": system}]
 
-    # Add conversation history
     for m in msg.history:
         if m["role"] == "therapist":
             messages.append({"role": "user", "content": m["text"]})
@@ -96,126 +105,44 @@ Client information to use in your answer:
 
     messages.append({"role": "user", "content": msg.text})
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages
-    )
+    # ✅ Safe OpenAI call
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages
+        )
+    except Exception as e:
+        print("❌ OPENAI ERROR:", e)
+        return {
+            "reply": "System temporarily unavailable.",
+            "safety_flag": False
+        }
 
-    # Advance stage only if therapist asked relevant question
+    reply_content = response.choices[0].message.content
+    reply_text = reply_content.lower()
+
+    # ✅ FINAL RISK DETECTION (KEYWORDS ONLY)
+    risk_words = [
+        "hurt myself", "kill myself", "end my life", "suicide",
+        "want to die", "don't want to live", "giving up",
+        "can't go on", "no point", "feel trapped", "want to escape",
+        "escape from everything", "wish i could disappear",
+        "everything to stop", "too much to handle",
+        "i can't cope", "i can't handle this anymore",
+        "i want to get away", "i want to disappear"
+    ]
+
+    if any(word in reply_text for word in risk_words):
+        return {
+            "reply": reply_content,
+            "safety_flag": True
+        }
+
     if detected_stage:
         advance_stage(session_id)
 
     return {
-        "reply": response.choices[0].message.content,
+        "reply": reply_content,
         "safety_flag": False,
         "stage": stage
     }
-
-
-class TutorSubmission(BaseModel):
-    submission: dict
-    chatHistory: list
-    clientName: str
-
-
-def evaluate_submission(submission):
-    score = {
-        "approach": 0,
-        "modality": 0,
-        "objective": 0,
-        "safety": 0
-    }
-
-    if submission.get("chosenApproach"):
-        score["approach"] = 1
-    if submission.get("clientModality"):
-        score["modality"] = 1
-    if submission.get("clientObjective"):
-        score["objective"] = 1
-    if submission.get("clientReassurance"):
-        score["safety"] = 1
-
-    total = sum(score.values())
-
-    return {
-        "breakdown": score,
-        "total": total
-    }
-
-
-# Modality detection
-def detect_modality(chat_text):
-    text = chat_text.lower()
-
-    visual_words = ["see", "look", "picture", "imagine", "vision"]
-    auditory_words = ["hear", "sound", "listen"]
-    kinaesthetic_words = ["feel", "felt", "tight", "heavy", "pressure", "weight", "tense", "stress", "overwhelmed"]
-
-    visual = sum(text.count(word) for word in visual_words)
-    auditory = sum(text.count(word) for word in auditory_words)
-    kinaesthetic = sum(text.count(word) for word in kinaesthetic_words)
-
-    if visual > auditory and visual > kinaesthetic:
-        return "Visual"
-    elif auditory > visual and auditory > kinaesthetic:
-        return "Auditory"
-    else:
-        return "Kinaesthetic"
-
-
-@app.post("/tutor-review")
-async def tutor_review(data: TutorSubmission):
-
-    s = data.submission
-    score = evaluate_submission(s)
-
-    save_session(data.clientName, score["total"])
-
-    chat_text = "\n".join([f"{m['role'].upper()}: {m['text']}" for m in data.chatHistory])
-
-    detected_modality = detect_modality(chat_text)
-
-    system = """
-You are a clinical hypnotherapy training tutor.
-
-Structure your feedback clearly with headings:
-
-Approach Fit
-Modality Identification
-Client Objective
-Safety & Reassurance
-Overall Comments
-"""
-
-    user = f"""
-Conversation:
-{chat_text}
-
-Student Reflection:
-Approach: {s.get("chosenApproach")}
-Modality: {s.get("clientModality")}
-Objective: {s.get("clientObjective")}
-Safety/Reassurance: {s.get("clientReassurance")}
-
-System Detected Modality: {detected_modality}
-"""
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user}
-        ]
-    )
-
-    return {
-        "feedback": response.choices[0].message.content,
-        "score": score,
-        "detected_modality": detected_modality
-    }
-
-
-@app.get("/progress")
-async def get_progress():
-    sessions = get_sessions()
-    return calculate_progress(sessions)
