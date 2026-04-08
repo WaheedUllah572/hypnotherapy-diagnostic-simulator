@@ -9,35 +9,35 @@ def evaluate_response(student_text: str):
         "objective": False
     }
 
+    modality_label = "Unknown"
+
     # Treatment approach
-    if "cognitive behavioural" in text or "cbh" in text:
-        score["treatment_approach"] = True
-    if "solution focused" in text:
-        score["treatment_approach"] = True
-    if "ericksonian" in text:
-        score["treatment_approach"] = True
-    if "regression" in text:
+    if any(x in text for x in ["cognitive behavioural", "cbt", "cbh", "solution focused", "ericksonian", "regression"]):
         score["treatment_approach"] = True
 
-    # Modality detection
-    if "visual" in text or "see" in text:
+    # Modality
+    if any(x in text for x in ["visual", "see", "image"]):
         score["modality"] = True
-    if "auditory" in text or "hear" in text:
+        modality_label = "Visual"
+    elif any(x in text for x in ["hear", "sound", "auditory"]):
         score["modality"] = True
-    if "kinaesthetic" in text or "feel" in text:
+        modality_label = "Auditory"
+    elif any(x in text for x in ["feel", "kinaesthetic", "pressure", "tense"]):
         score["modality"] = True
+        modality_label = "Kinaesthetic"
 
-    # Safety screening
-    if "medical history" in text or "safety" in text or "risk" in text:
+    # Safety
+    if any(x in text for x in ["risk", "safety", "medical", "history"]):
         score["safety"] = True
 
-    # Client objective
-    if "panic" in text or "anxiety" in text:
+    # Objective
+    if any(x in text for x in ["anxiety", "panic", "goal", "want to feel", "objective"]):
         score["objective"] = True
 
     total = sum(score.values())
 
     return {
         "scores": score,
-        "total": total
+        "total": total,
+        "modality_label": modality_label
     }

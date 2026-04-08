@@ -47,3 +47,24 @@ def detect_stage_from_question(text):
         return "hypnosis_question"
     else:
         return None
+
+
+# ✅ NEW: CLINICAL RESPONSE CHECK (THIS IS THE KEY FEATURE)
+def detect_bad_response(student_text: str):
+    text = student_text.lower()
+
+    # ❌ No empathy
+    empathy_keywords = ["understand", "that sounds", "i hear", "that must"]
+    has_empathy = any(k in text for k in empathy_keywords)
+
+    # ❌ No question / engagement
+    asking_question = "?" in text
+
+    # ❌ Inappropriate suggestion (too early)
+    bad_suggestions = ["just relax", "you should", "don't worry"]
+    inappropriate = any(k in text for k in bad_suggestions)
+
+    if not has_empathy or not asking_question or inappropriate:
+        return True
+
+    return False

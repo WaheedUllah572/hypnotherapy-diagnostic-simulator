@@ -10,7 +10,7 @@ export default function ProgressDashboard() {
 
   const fetchProgress = async () => {
     try {
-      const res = await axios.get("https://hypnotherapy-diagnostic-simulator.onrender.com/progress");
+      const res = await axios.get("http://127.0.0.1:8001/progress");
       setProgress(res.data);
     } catch {
       // keep default values so box still shows

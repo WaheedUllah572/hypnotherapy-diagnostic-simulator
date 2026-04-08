@@ -83,10 +83,56 @@ export default function ChatPanel({
         }
       );
 
+      // ✅ FIXED EVALUATION LOGIC ONLY
+      const lower = userMessage.toLowerCase();
+
+      const hasEmpathy =
+        lower.includes("understand") ||
+        lower.includes("that sounds") ||
+        lower.includes("i hear");
+
+      const askedQuestion = userMessage.includes("?");
+
+      const hasEngagement =
+        askedQuestion ||
+        lower.includes("tell me") ||
+        lower.includes("can you") ||
+        lower.includes("what") ||
+        lower.includes("how");
+
+      const isGreeting =
+        lower.includes("hello") ||
+        lower.includes("hi");
+
+      const inappropriate =
+        lower.includes("just relax") ||
+        lower.includes("don't worry") ||
+        lower.includes("you should");
+
+      const bad =
+        (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
+
+      if (bad) {
+        setChat(c => [
+          ...c,
+          {
+            role: "tutor",
+            text:
+              "⚠️ Your response may lack empathy or clinical direction. Consider acknowledging the client’s experience and asking an open-ended question."
+          }
+        ]);
+      }
+
       if (res.data.safety_flag) {
-        setChat(c => [...c, { role: "tutor", text: res.data.reply }]);
+        setChat(c => [
+          ...c,
+          {
+            role: "tutor",
+            text:
+              "⚠️ Potential risk detected. Continue the session and respond appropriately."
+          }
+        ]);
         setTyping(false);
-        onEndSession();
       } else {
         setTimeout(() => {
           setChat(c => [...c, { role: "client", text: res.data.reply }]);
