@@ -75,7 +75,7 @@ export default function ChatPanel({
 
     try {
       const res = await axios.post(
-        "http://127.0.0.1:8001/chat",
+        "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
         {
           text: userMessage,
           clientType: clientType,
