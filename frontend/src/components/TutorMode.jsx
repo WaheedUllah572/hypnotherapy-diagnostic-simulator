@@ -22,12 +22,18 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
           }
         );
 
-        setFeedback(res.data.feedback);
-        setScore(res.data.score);
-        setDetectedModality(res.data.detected_modality);
+        // ✅ SAFE HANDLING
+        if (!res || !res.data) {
+          throw new Error("Invalid response");
+        }
+
+        setFeedback(res.data.feedback || "No feedback available.");
+        setScore(res.data.score || null);
+        setDetectedModality(res.data.detected_modality || null);
 
         window.dispatchEvent(new Event("progressUpdated"));
-      } catch {
+
+      } catch (err) {
         if (retry < 2) {
           setTimeout(() => fetchFeedback(retry + 1), 2000);
         } else {

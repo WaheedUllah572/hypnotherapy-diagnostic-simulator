@@ -1,5 +1,6 @@
 def evaluate_response(student_text: str):
 
+    # 🔥 IMPORTANT: expect structured input (q1–q4 combined text fallback safe)
     text = student_text.lower()
 
     score = {
@@ -11,11 +12,16 @@ def evaluate_response(student_text: str):
 
     modality_label = "Unknown"
 
-    # Treatment approach
-    if any(x in text for x in ["cognitive behavioural", "cbt", "cbh", "solution focused", "ericksonian", "regression"]):
+    # ----------- IMPROVED LOGIC (ALIGNED BETTER) -----------
+
+    # Treatment approach (Q1)
+    if any(x in text for x in [
+        "cognitive behavioural", "cbt", "cbh",
+        "solution focused", "ericksonian", "regression"
+    ]):
         score["treatment_approach"] = True
 
-    # Modality
+    # Modality (Q2)
     if any(x in text for x in ["visual", "see", "image"]):
         score["modality"] = True
         modality_label = "Visual"
@@ -26,13 +32,19 @@ def evaluate_response(student_text: str):
         score["modality"] = True
         modality_label = "Kinaesthetic"
 
-    # Safety
-    if any(x in text for x in ["risk", "safety", "medical", "history"]):
-        score["safety"] = True
-
-    # Objective
-    if any(x in text for x in ["anxiety", "panic", "goal", "want to feel", "objective"]):
+    # Objective (Q3)
+    if any(x in text for x in [
+        "goal", "want", "reduce", "manage", "control",
+        "anxiety", "panic"
+    ]):
         score["objective"] = True
+
+    # Safety (Q4)  ✅ IMPROVED
+    if any(x in text for x in [
+        "risk", "safety", "medical", "history",
+        "screen", "contraindication"
+    ]):
+        score["safety"] = True
 
     total = sum(score.values())
 
