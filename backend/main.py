@@ -108,105 +108,52 @@ Stage: {stage}
     }
 
 
-# ✅ TUTOR REVIEW (FIXED + IMPROVED)
-# ✅ TUTOR REVIEW (ENHANCED — CONTEXT AWARE, SAFE)
+# ✅ FIXED TUTOR REVIEW (PER QUESTION EVALUATION)
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
 
     try:
-        time.sleep(1.5)  # simulate thinking
+        time.sleep(1.5)
 
-        combined_text = " ".join(req.submission.values())
-        result = evaluate_response(combined_text)
+        s = req.submission
 
-        # ✅ NEW: ANALYSE CHAT HISTORY FOR CLINICAL QUALITY
-        therapist_lines = [
-            m["text"].lower()
-            for m in req.chatHistory
-            if m["role"] == "therapist"
-        ]
+        # ✅ Evaluate EACH QUESTION separately
+        q1 = evaluate_response(s.get("chosenApproach", ""))
+        q2 = evaluate_response(s.get("clientModality", ""))
+        q3 = evaluate_response(s.get("clientObjective", ""))
+        q4 = evaluate_response(s.get("clientReassurance", ""))
 
-        empathy_issues = []
-        risk_missed = False
+        # ✅ Build structured feedback
+        feedback = f"""
+QUESTION 1 — Treatment Approach
+{"✔ Good alignment with a therapeutic model." if q1["scores"]["treatment_approach"] else "✘ Needs clearer link to a recognised therapeutic approach (e.g. CBH, Solution-Focused)."}
 
-        for line in therapist_lines:
-            if "just relax" in line or "calm down" in line:
-                empathy_issues.append(
-                    "At one point you used a phrase such as 'just relax', which may feel dismissive to the client’s experience."
-                )
+QUESTION 2 — Client Relaxation Modality
+{"✔ Correctly identified client modality." if q2["scores"]["modality"] else "✘ Modality identification needs improvement. Look for visual, auditory, kinaesthetic cues."}
 
-            if "escape" in line or "disappear" in line:
-                risk_missed = True
+QUESTION 3 — Client Objective
+{"✔ Clear understanding of client goal." if q3["scores"]["objective"] else "✘ Client objective not clearly defined. Summarise what the client wants."}
 
-        # ✅ BUILD HUMAN-LIKE FEEDBACK
-        feedback_parts = []
+QUESTION 4 — Safety & Reassurance
+{"✔ Demonstrates awareness of safety and reassurance." if q4["scores"]["safety"] else "✘ Safety and reassurance not clearly addressed. Must assess suitability and reassure client."}
 
-        feedback_parts.append(
-            "You demonstrated a thoughtful attempt at analysing the client’s presentation."
-        )
+OVERALL COMMENTS
+You are developing good clinical reasoning. Focus on clarity, structure, and linking responses directly to clinical models.
+"""
 
-        # Treatment
-        if result["scores"]["treatment_approach"]:
-            feedback_parts.append(
-                "You clearly linked the client's issues to an appropriate therapeutic model."
-            )
-        else:
-            feedback_parts.append(
-                "Your treatment approach could be strengthened by explicitly aligning your observations with a recognised model such as CBT or Solution-Focused Therapy."
-            )
+        total = (
+            q1["total"] +
+            q2["total"] +
+            q3["total"] +
+            q4["total"]
+        ) // 4  # keep score out of 4
 
-        # Modality
-        if result["scores"]["modality"]:
-            feedback_parts.append(
-                "You showed good awareness of how the client experiences their problem, correctly identifying their modality."
-            )
-        else:
-            feedback_parts.append(
-                "Try to pay closer attention to the client’s language to identify whether their experience is visual, auditory, or kinaesthetic."
-            )
-
-        # Safety
-        if result["scores"]["safety"]:
-            feedback_parts.append(
-                "You demonstrated awareness of safety and suitability, which is important in early assessment."
-            )
-        else:
-            feedback_parts.append(
-                "Safety considerations were not clearly addressed. It is important to assess risk and suitability during early stages."
-            )
-
-        # Objective
-        if result["scores"]["objective"]:
-            feedback_parts.append(
-                "You identified the client’s core objective clearly, which supports effective treatment planning."
-            )
-        else:
-            feedback_parts.append(
-                "The client’s core objective could be clarified further by summarising what they want to achieve."
-            )
-
-        # ✅ NEW: ADD CLINICAL OBSERVATION FROM SESSION
-        if empathy_issues:
-            feedback_parts.extend(empathy_issues)
-
-        # Overall
-        feedback_parts.append(
-            f"\nOverall, you scored {result['total']} out of 4."
-        )
-
-        feedback_parts.append(
-            "This was a solid clinical attempt with clear strengths. With further refinement, your responses will become more structured, empathetic, and clinically precise."
-        )
-
-        feedback = "\n\n".join(feedback_parts)
-
-        # SAVE SESSION
-        save_session(req.clientName, result["total"])
+        save_session(req.clientName, total)
 
         return {
-            "feedback": feedback,
-            "score": {"total": result["total"]},
-            "detected_modality": result["modality_label"]
+            "feedback": feedback.strip(),
+            "score": {"total": total},
+            "detected_modality": q2["modality_label"]
         }
 
     except Exception as e:
@@ -218,7 +165,6 @@ async def tutor_review(req: TutorRequest):
         }
 
 
-# ✅ PROGRESS ENDPOINT (FIXES 404)
 @app.get("/progress")
 async def get_progress():
 

@@ -22,7 +22,6 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
           }
         );
 
-        // ✅ SAFE HANDLING
         if (!res || !res.data) {
           throw new Error("Invalid response");
         }
@@ -67,7 +66,8 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
         </div>
       )}
 
-      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm whitespace-pre-line">
+      {/* ✅ FIXED FEEDBACK DISPLAY */}
+      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm whitespace-pre-line leading-relaxed">
         {feedback}
       </div>
 
