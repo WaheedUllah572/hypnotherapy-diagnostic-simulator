@@ -108,7 +108,7 @@ Stage: {stage}
     }
 
 
-# ✅ FIXED TUTOR REVIEW (PER QUESTION EVALUATION)
+# ✅ FINAL FIXED TUTOR REVIEW
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
 
@@ -117,28 +117,43 @@ async def tutor_review(req: TutorRequest):
 
         s = req.submission
 
-        # ✅ Evaluate EACH QUESTION separately
         q1 = evaluate_response(s.get("chosenApproach", ""))
         q2 = evaluate_response(s.get("clientModality", ""))
         q3 = evaluate_response(s.get("clientObjective", ""))
         q4 = evaluate_response(s.get("clientReassurance", ""))
 
-        # ✅ Build structured feedback
+        # -------- CHAT ANALYSIS --------
+        therapist_lines = [
+            m["text"].lower()
+            for m in req.chatHistory
+            if m["role"] == "therapist"
+        ]
+
+        empathy_issue = False
+
+        for line in therapist_lines:
+            if "just relax" in line or "calm down" in line or "you can relax" in line:
+                empathy_issue = True
+
+        # -------- FEEDBACK --------
         feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ Good alignment with a therapeutic model." if q1["scores"]["treatment_approach"] else "✘ Needs clearer link to a recognised therapeutic approach (e.g. CBH, Solution-Focused)."}
+{"✔ Clear and appropriate therapeutic model identified." if q1["scores"]["treatment_approach"] else "✘ You need to clearly link the client’s presentation to a recognised therapeutic model (e.g. CBH, Solution-Focused)."}
 
 QUESTION 2 — Client Relaxation Modality
-{"✔ Correctly identified client modality." if q2["scores"]["modality"] else "✘ Modality identification needs improvement. Look for visual, auditory, kinaesthetic cues."}
+{"✔ Correct identification of modality based on client language." if q2["scores"]["modality"] else "✘ Modality identification needs improvement. Focus on sensory language (visual, auditory, kinaesthetic)."}
 
 QUESTION 3 — Client Objective
-{"✔ Clear understanding of client goal." if q3["scores"]["objective"] else "✘ Client objective not clearly defined. Summarise what the client wants."}
+{"✔ Client objective clearly defined." if q3["scores"]["objective"] else "✘ The client’s objective is not clearly defined. Summarise what they want to achieve."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ Demonstrates awareness of safety and reassurance." if q4["scores"]["safety"] else "✘ Safety and reassurance not clearly addressed. Must assess suitability and reassure client."}
+{"✔ Good awareness of safety, suitability, and reassurance." if q4["scores"]["safety"] else "✘ Safety and suitability are not clearly demonstrated. You must assess risk, screen appropriately, and reassure the client before proceeding."}
 
-OVERALL COMMENTS
-You are developing good clinical reasoning. Focus on clarity, structure, and linking responses directly to clinical models.
+CLINICAL INTERACTION OBSERVATIONS
+{"⚠ Some responses lacked empathy or were too directive. Focus on validation and open-ended exploration." if empathy_issue else "✔ Your interaction style was appropriate and supportive."}
+
+OVERALL
+You are developing strong clinical reasoning. Continue improving structure, empathy, and clarity in your responses.
 """
 
         total = (
@@ -146,7 +161,7 @@ You are developing good clinical reasoning. Focus on clarity, structure, and lin
             q2["total"] +
             q3["total"] +
             q4["total"]
-        ) // 4  # keep score out of 4
+        ) // 4
 
         save_session(req.clientName, total)
 

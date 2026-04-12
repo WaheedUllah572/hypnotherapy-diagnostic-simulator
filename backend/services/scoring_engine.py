@@ -1,6 +1,5 @@
 def evaluate_response(student_text: str):
 
-    # 🔥 IMPORTANT: expect structured input (q1–q4 combined text fallback safe)
     text = student_text.lower()
 
     score = {
@@ -12,37 +11,37 @@ def evaluate_response(student_text: str):
 
     modality_label = "Unknown"
 
-    # ----------- IMPROVED LOGIC (ALIGNED BETTER) -----------
-
-    # Treatment approach (Q1)
+    # ----------- TREATMENT APPROACH (Q1) -----------
     if any(x in text for x in [
         "cognitive behavioural", "cbt", "cbh",
         "solution focused", "ericksonian", "regression"
     ]):
         score["treatment_approach"] = True
 
-    # Modality (Q2)
+    # ----------- MODALITY (Q2) -----------
     if any(x in text for x in ["visual", "see", "image"]):
         score["modality"] = True
         modality_label = "Visual"
+
     elif any(x in text for x in ["hear", "sound", "auditory"]):
         score["modality"] = True
         modality_label = "Auditory"
-    elif any(x in text for x in ["feel", "kinaesthetic", "pressure", "tense"]):
+
+    elif any(x in text for x in ["feel", "kinaesthetic", "pressure", "tense", "tight"]):
         score["modality"] = True
         modality_label = "Kinaesthetic"
 
-    # Objective (Q3)
+    # ----------- OBJECTIVE (Q3) -----------
     if any(x in text for x in [
         "goal", "want", "reduce", "manage", "control",
-        "anxiety", "panic"
+        "improve", "cope", "anxiety", "panic"
     ]):
         score["objective"] = True
 
-    # Safety (Q4)  ✅ IMPROVED
+    # ----------- SAFETY (Q4) — STRICT -----------
     if any(x in text for x in [
         "risk", "safety", "medical", "history",
-        "screen", "contraindication"
+        "screen", "contraindication", "suitability"
     ]):
         score["safety"] = True
 
