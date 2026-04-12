@@ -122,6 +122,31 @@ async def tutor_review(req: TutorRequest):
         q3 = evaluate_response(s.get("clientObjective", ""))
         q4 = evaluate_response(s.get("clientReassurance", ""))
 
+        # -------- FIXED MODALITY (COUNT-BASED FROM CHAT) --------
+        full_chat_text = " ".join([m["text"].lower() for m in req.chatHistory if m["role"] == "client"])
+
+        visual_score = sum(word in full_chat_text for word in ["see", "image", "visual", "picture"])
+        auditory_score = sum(word in full_chat_text for word in ["hear", "sound", "auditory", "listen"])
+        kinaesthetic_score = sum(word in full_chat_text for word in [
+            "feel", "felt", "feeling",
+            "tight", "tension", "pressure",
+            "chest", "stomach", "body",
+            "heavy", "relax", "tense",
+            "heart", "breath"
+        ])
+
+        modality_label = "Unknown"
+
+        max_score = max(visual_score, auditory_score, kinaesthetic_score)
+
+        if max_score > 0:
+            if max_score == kinaesthetic_score:
+                modality_label = "Kinaesthetic"
+            elif max_score == auditory_score:
+                modality_label = "Auditory"
+            else:
+                modality_label = "Visual"
+
         # -------- CHAT ANALYSIS --------
         therapist_lines = [
             m["text"].lower()
@@ -156,19 +181,20 @@ OVERALL
 You are developing strong clinical reasoning. Continue improving structure, empathy, and clarity in your responses.
 """
 
-        total = (
-            q1["total"] +
-            q2["total"] +
-            q3["total"] +
-            q4["total"]
-        ) // 4
+        # ✅ FIXED SCORING (CORRECT OUT OF 4)
+        total = sum([
+            1 if q1["scores"]["treatment_approach"] else 0,
+            1 if q2["scores"]["modality"] else 0,
+            1 if q3["scores"]["objective"] else 0,
+            1 if q4["scores"]["safety"] else 0
+        ])
 
         save_session(req.clientName, total)
 
         return {
             "feedback": feedback.strip(),
             "score": {"total": total},
-            "detected_modality": q2["modality_label"]
+            "detected_modality": modality_label  # ✅ FIXED
         }
 
     except Exception as e:
