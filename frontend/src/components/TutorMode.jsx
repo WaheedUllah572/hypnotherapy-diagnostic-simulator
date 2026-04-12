@@ -44,6 +44,29 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
     fetchFeedback();
   }, []);
 
+  // ✅ NEW: STRUCTURE FEEDBACK INTO SECTIONS
+  const parseFeedback = () => {
+    if (!feedback) return [];
+
+    const sections = feedback.split("\n\n");
+
+    return sections.map((section, index) => {
+      const lines = section.split("\n");
+      const title = lines[0];
+      const content = lines.slice(1).join("\n");
+
+      return (
+        <div
+          key={index}
+          className="bg-white border border-slate-200 p-4 rounded-lg mb-4"
+        >
+          <p className="font-semibold mb-2">{title}</p>
+          <p className="text-slate-700 whitespace-pre-line">{content}</p>
+        </div>
+      );
+    });
+  };
+
   return (
     <div className="space-y-8">
       <h3 className="text-lg font-semibold text-slate-900">
@@ -66,9 +89,9 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
         </div>
       )}
 
-      {/* ✅ FIXED FEEDBACK DISPLAY */}
-      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm whitespace-pre-line leading-relaxed">
-        {feedback}
+      {/* ✅ FIXED STRUCTURED FEEDBACK DISPLAY */}
+      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm">
+        {parseFeedback()}
       </div>
 
       <div className="flex justify-end">
