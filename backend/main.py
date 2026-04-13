@@ -113,98 +113,66 @@ Stage: {stage}
 async def tutor_review(req: TutorRequest):
 
     try:
-        time.sleep(1.5)
+        time.sleep(1)
 
         s = req.submission
 
-        q1 = evaluate_response(s.get("chosenApproach", ""))
-        q2 = evaluate_response(s.get("clientModality", ""))
-        q3 = evaluate_response(s.get("clientObjective", ""))
-        q4 = evaluate_response(s.get("clientReassurance", ""))
+        q1 = evaluate_response(s.get("chosenApproach", ""), "approach")
+        q2 = evaluate_response(s.get("clientModality", ""), "modality")
+        q3 = evaluate_response(s.get("clientObjective", ""), "objective")
+        q4 = evaluate_response(s.get("clientReassurance", ""), "safety")
 
-        # -------- FIXED MODALITY (COUNT-BASED FROM CHAT) --------
-        full_chat_text = " ".join([m["text"].lower() for m in req.chatHistory if m["role"] == "client"])
-
-        visual_score = sum(word in full_chat_text for word in ["see", "image", "visual", "picture"])
-        auditory_score = sum(word in full_chat_text for word in ["hear", "sound", "auditory", "listen"])
-        kinaesthetic_score = sum(word in full_chat_text for word in [
-            "feel", "felt", "feeling",
-            "tight", "tension", "pressure",
-            "chest", "stomach", "body",
-            "heavy", "relax", "tense",
-            "heart", "breath"
+        # -------- MODALITY FROM CHAT (ONLY SOURCE) --------
+        full_chat = " ".join([
+            m["text"].lower()
+            for m in req.chatHistory if m["role"] == "client"
         ])
 
-        modality_label = "Unknown"
+        kinaesthetic = sum(w in full_chat for w in ["feel", "tight", "tense", "pressure", "body"])
+        auditory = sum(w in full_chat for w in ["hear", "sound"])
+        visual = sum(w in full_chat for w in ["see", "image"])
 
-        max_score = max(visual_score, auditory_score, kinaesthetic_score)
+        modality = "Kinaesthetic"
+        if auditory > kinaesthetic:
+            modality = "Auditory"
+        elif visual > kinaesthetic:
+            modality = "Visual"
 
-        if max_score > 0:
-            if max_score == kinaesthetic_score:
-                modality_label = "Kinaesthetic"
-            elif max_score == auditory_score:
-                modality_label = "Auditory"
-            else:
-                modality_label = "Visual"
-
-        # -------- CHAT ANALYSIS --------
-        therapist_lines = [
-            m["text"].lower()
-            for m in req.chatHistory
-            if m["role"] == "therapist"
-        ]
-
-        empathy_issue = False
-
-        for line in therapist_lines:
-            if "just relax" in line or "calm down" in line or "you can relax" in line:
-                empathy_issue = True
-
-        # -------- FEEDBACK --------
+        # -------- FEEDBACK (STRICT FORMAT) --------
         feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ Clear and appropriate therapeutic model identified." if q1["scores"]["treatment_approach"] else "✘ You need to clearly link the client’s presentation to a recognised therapeutic model (e.g. CBH, Solution-Focused)."}
+{"✔ Clear appropriate model identified." if q1 else "✘ Must clearly link to a recognised model (CBH, Solution-Focused)."}
 
 QUESTION 2 — Client Relaxation Modality
-{"✔ Correct identification of modality based on client language." if q2["scores"]["modality"] else "✘ Modality identification needs improvement. Focus on sensory language (visual, auditory, kinaesthetic)."}
+{"✔ Correct modality identified." if q2 else "✘ Needs clearer identification of modality from language."}
 
 QUESTION 3 — Client Objective
-{"✔ Client objective clearly defined." if q3["scores"]["objective"] else "✘ The client’s objective is not clearly defined. Summarise what they want to achieve."}
+{"✔ Clear client goal identified." if q3 else "✘ Objective not clearly defined."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ Good awareness of safety, suitability, and reassurance." if q4["scores"]["safety"] else "✘ Safety and suitability are not clearly demonstrated. You must assess risk, screen appropriately, and reassure the client before proceeding."}
-
-CLINICAL INTERACTION OBSERVATIONS
-{"⚠ Some responses lacked empathy or were too directive. Focus on validation and open-ended exploration." if empathy_issue else "✔ Your interaction style was appropriate and supportive."}
+{"✔ Safety and reassurance addressed." if q4 else "✘ Safety and suitability not clearly addressed."}
 
 OVERALL
-You are developing strong clinical reasoning. Continue improving structure, empathy, and clarity in your responses.
+Continue improving structure, clarity, and clinical reasoning.
 """
 
-        # ✅ FIXED SCORING (CORRECT OUT OF 4)
-        total = sum([
-            1 if q1["scores"]["treatment_approach"] else 0,
-            1 if q2["scores"]["modality"] else 0,
-            1 if q3["scores"]["objective"] else 0,
-            1 if q4["scores"]["safety"] else 0
-        ])
+        total = sum([q1, q2, q3, q4])
 
         save_session(req.clientName, total)
 
         return {
             "feedback": feedback.strip(),
             "score": {"total": total},
-            "detected_modality": modality_label  # ✅ FIXED
+            "detected_modality": modality
         }
 
     except Exception as e:
-        print("TUTOR ERROR:", e)
+        print(e)
         return {
             "feedback": "Tutor feedback unavailable.",
             "score": {"total": 0},
             "detected_modality": None
         }
-
 
 @app.get("/progress")
 async def get_progress():

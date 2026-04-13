@@ -1,54 +1,26 @@
-def evaluate_response(student_text: str):
+def evaluate_response(student_text: str, mode: str):
 
     text = student_text.lower()
 
-    score = {
-        "treatment_approach": False,
-        "modality": False,
-        "safety": False,
-        "objective": False
-    }
+    if mode == "approach":
+        return any(x in text for x in [
+            "cognitive behavioural", "cbt", "cbh",
+            "solution focused", "ericksonian", "regression"
+        ])
 
-    modality_label = "Unknown"
+    if mode == "modality":
+        return any(x in text for x in [
+            "visual", "auditory", "kinaesthetic", "feel", "see", "hear"
+        ])
 
-    # ----------- TREATMENT APPROACH (Q1) -----------
-    if any(x in text for x in [
-        "cognitive behavioural", "cbt", "cbh",
-        "solution focused", "ericksonian", "regression"
-    ]):
-        score["treatment_approach"] = True
+    if mode == "objective":
+        return any(x in text for x in [
+            "want", "goal", "reduce", "manage", "control", "cope"
+        ])
 
-    # ----------- MODALITY (Q2) -----------
-    if any(x in text for x in ["visual", "see", "image"]):
-        score["modality"] = True
-        modality_label = "Visual"
+    if mode == "safety":
+        return any(x in text for x in [
+            "risk", "safety", "medical", "history", "screen", "suitability"
+        ])
 
-    elif any(x in text for x in ["hear", "sound", "auditory"]):
-        score["modality"] = True
-        modality_label = "Auditory"
-
-    elif any(x in text for x in ["feel", "kinaesthetic", "pressure", "tense", "tight"]):
-        score["modality"] = True
-        modality_label = "Kinaesthetic"
-
-    # ----------- OBJECTIVE (Q3) -----------
-    if any(x in text for x in [
-        "goal", "want", "reduce", "manage", "control",
-        "improve", "cope", "anxiety", "panic"
-    ]):
-        score["objective"] = True
-
-    # ----------- SAFETY (Q4) — STRICT -----------
-    if any(x in text for x in [
-        "risk", "safety", "medical", "history",
-        "screen", "contraindication", "suitability"
-    ]):
-        score["safety"] = True
-
-    total = sum(score.values())
-
-    return {
-        "scores": score,
-        "total": total,
-        "modality_label": modality_label
-    }
+    return False

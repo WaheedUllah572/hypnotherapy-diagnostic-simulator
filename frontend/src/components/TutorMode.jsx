@@ -22,9 +22,7 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
           }
         );
 
-        if (!res || !res.data) {
-          throw new Error("Invalid response");
-        }
+        if (!res || !res.data) throw new Error("Invalid response");
 
         setFeedback(res.data.feedback || "No feedback available.");
         setScore(res.data.score || null);
@@ -44,24 +42,17 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
     fetchFeedback();
   }, []);
 
-  // ✅ NEW: STRUCTURE FEEDBACK INTO SECTIONS
+  // ✅ STRONGER PARSER (FIXED)
   const parseFeedback = () => {
-    if (!feedback) return [];
+    if (!feedback) return null;
 
-    const sections = feedback.split("\n\n");
-
-    return sections.map((section, index) => {
-      const lines = section.split("\n");
-      const title = lines[0];
-      const content = lines.slice(1).join("\n");
+    return feedback.split("\n\n").map((block, i) => {
+      const [title, ...rest] = block.split("\n");
 
       return (
-        <div
-          key={index}
-          className="bg-white border border-slate-200 p-4 rounded-lg mb-4"
-        >
-          <p className="font-semibold mb-2">{title}</p>
-          <p className="text-slate-700 whitespace-pre-line">{content}</p>
+        <div key={i} className="mb-4">
+          <p className="font-semibold text-slate-800 mb-1">{title}</p>
+          <p className="text-slate-700 whitespace-pre-line">{rest.join("\n")}</p>
         </div>
       );
     });
@@ -75,9 +66,7 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
 
       {score && (
         <div className="bg-white border border-slate-200 p-6 rounded-xl text-sm">
-          <p className="font-semibold">
-            Total Score: {score.total} / 4
-          </p>
+          <p className="font-semibold">Total Score: {score.total} / 4</p>
         </div>
       )}
 
@@ -89,7 +78,6 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
         </div>
       )}
 
-      {/* ✅ FIXED STRUCTURED FEEDBACK DISPLAY */}
       <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm">
         {parseFeedback()}
       </div>
