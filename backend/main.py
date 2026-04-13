@@ -13,7 +13,6 @@ from services.session_tracker import save_session, get_sessions
 from services.progress_engine import calculate_progress
 from services.persona_engine import get_persona_response
 from services.conversation_engine import get_stage, advance_stage, detect_stage_from_question
-from services.scoring_engine import evaluate_response
 
 app = FastAPI()
 
@@ -108,7 +107,6 @@ Stage: {stage}
     }
 
 
-# ✅ FINAL FIXED TUTOR REVIEW
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
 
@@ -122,7 +120,18 @@ async def tutor_review(req: TutorRequest):
         q3 = evaluate_response(s.get("clientObjective", ""), "objective")
         q4 = evaluate_response(s.get("clientReassurance", ""), "safety")
 
-        # -------- MODALITY FROM CHAT (ONLY SOURCE) --------
+        # ✅ DEFINE empathy_issue (FIXED)
+        therapist_lines = [
+            m["text"].lower()
+            for m in req.chatHistory if m["role"] == "therapist"
+        ]
+
+        empathy_issue = any(
+            x in line for line in therapist_lines
+            for x in ["just relax", "calm down", "you can relax"]
+        )
+
+        # -------- MODALITY FROM CHAT --------
         full_chat = " ".join([
             m["text"].lower()
             for m in req.chatHistory if m["role"] == "client"
@@ -138,45 +147,40 @@ async def tutor_review(req: TutorRequest):
         elif visual > kinaesthetic:
             modality = "Visual"
 
-        # -------- FEEDBACK (STRICT FORMAT) --------
+        # -------- FIXED FEEDBACK --------
         feedback = f"""
 QUESTION 1 — Treatment Approach
 {"✔ You identified an appropriate therapeutic model and linked it well to the client’s presentation. This shows good clinical reasoning and understanding of how the client’s difficulties are maintained." 
-if q1["scores"]["treatment_approach"] 
+if q1 
 else 
 "✘ The treatment approach needs to be more clearly defined. Try explicitly linking the client’s symptoms and thinking patterns to a recognised therapeutic model such as CBH, Solution-Focused, or Ericksonian approaches."}
 
 QUESTION 2 — Client Relaxation Modality
 {"✔ You correctly identified the client’s primary modality based on their language. This demonstrates good attention to how the client experiences their internal world." 
-if q2["scores"]["modality"] 
+if q2 
 else 
-"✘ The client’s modality was not clearly identified. Focus more closely on sensory language (e.g. visual images, internal dialogue, or physical sensations) to determine whether they are visual, auditory, or kinaesthetic."}
+"✘ The client’s modality was not clearly identified. Focus more closely on sensory language to determine whether they are visual, auditory, or kinaesthetic."}
 
 QUESTION 3 — Client Objective
-{"✔ The client’s objective is clearly defined and relevant to their presenting issue. This provides a solid foundation for therapeutic work." 
-if q3["scores"]["objective"] 
+{"✔ The client’s objective is clearly defined and relevant to their presenting issue." 
+if q3 
 else 
-"✘ The client’s objective needs to be clearer. Try summarising what the client wants to change or achieve in practical, outcome-focused terms."}
+"✘ The client’s objective needs to be clearer. Try summarising what the client wants to change or achieve."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ You demonstrated appropriate awareness of safety, suitability, and client reassurance. This is essential in pre-hypnosis assessment." 
-if q4["scores"]["safety"] 
+{"✔ You demonstrated appropriate awareness of safety and reassurance." 
+if q4 
 else 
-"✘ Safety and suitability were not sufficiently addressed. You should explicitly explore health history, potential risks, and ensure the client feels safe and informed before proceeding."}
+"✘ Safety and suitability were not sufficiently addressed. You should explore health history and reassure the client."}
 
 CLINICAL INTERACTION OBSERVATIONS
-{"⚠ Some of your responses were slightly directive or lacked emotional validation. Try to acknowledge the client’s experience more explicitly and use open-ended questions to deepen exploration." 
+{"⚠ Some responses were slightly directive. Focus more on empathy and validation." 
 if empathy_issue 
 else 
-"✔ Your interaction style was supportive, appropriately paced, and aligned with a client-centred approach."}
+"✔ Your interaction style was supportive and appropriate."}
 
 OVERALL CLINICAL IMPRESSION
-You are developing solid clinical reasoning skills. To progress further, focus on:
-• Making your reasoning more explicit  
-• Strengthening empathy and validation  
-• Maintaining a clear structure throughout the assessment  
-
-Overall, this is a strong and promising performance.
+You are developing solid clinical reasoning. Continue refining structure, empathy, and clarity.
 """
 
         total = sum([q1, q2, q3, q4])
@@ -190,12 +194,14 @@ Overall, this is a strong and promising performance.
         }
 
     except Exception as e:
-        print(e)
+        import traceback
+        traceback.print_exc()
         return {
             "feedback": "Tutor feedback unavailable.",
             "score": {"total": 0},
             "detected_modality": None
         }
+
 
 @app.get("/progress")
 async def get_progress():
@@ -211,3 +217,43 @@ async def get_progress():
             "averageScore": 0,
             "personasCompleted": []
         }
+
+
+def evaluate_response(student_text: str, mode: str):
+
+    text = student_text.lower()
+
+    if mode == "approach":
+        return any(x in text for x in [
+            "cognitive behavioural", "cbt", "cbh",
+            "solution focused", "ericksonian", "regression"
+        ])
+
+    if mode == "modality":
+        return any(x in text for x in [
+            "visual", "auditory", "kinaesthetic", "feel", "see", "hear"
+        ])
+
+    if mode == "objective":
+        return any(x in text for x in [
+            "want", "goal", "reduce", "manage", "control", "cope"
+        ])
+
+    if mode == "safety":
+        return any(x in text for x in [
+            "risk", "safety", "medical", "history", "screen", "suitability"
+        ])
+
+    return False
+
+
+sessions_db = []
+
+def save_session(client, score):
+    sessions_db.append({
+        "client": client,
+        "score": score,
+    })
+
+def get_sessions():
+    return sessions_db
