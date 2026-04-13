@@ -141,19 +141,42 @@ async def tutor_review(req: TutorRequest):
         # -------- FEEDBACK (STRICT FORMAT) --------
         feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ Clear appropriate model identified." if q1 else "✘ Must clearly link to a recognised model (CBH, Solution-Focused)."}
+{"✔ You identified an appropriate therapeutic model and linked it well to the client’s presentation. This shows good clinical reasoning and understanding of how the client’s difficulties are maintained." 
+if q1["scores"]["treatment_approach"] 
+else 
+"✘ The treatment approach needs to be more clearly defined. Try explicitly linking the client’s symptoms and thinking patterns to a recognised therapeutic model such as CBH, Solution-Focused, or Ericksonian approaches."}
 
 QUESTION 2 — Client Relaxation Modality
-{"✔ Correct modality identified." if q2 else "✘ Needs clearer identification of modality from language."}
+{"✔ You correctly identified the client’s primary modality based on their language. This demonstrates good attention to how the client experiences their internal world." 
+if q2["scores"]["modality"] 
+else 
+"✘ The client’s modality was not clearly identified. Focus more closely on sensory language (e.g. visual images, internal dialogue, or physical sensations) to determine whether they are visual, auditory, or kinaesthetic."}
 
 QUESTION 3 — Client Objective
-{"✔ Clear client goal identified." if q3 else "✘ Objective not clearly defined."}
+{"✔ The client’s objective is clearly defined and relevant to their presenting issue. This provides a solid foundation for therapeutic work." 
+if q3["scores"]["objective"] 
+else 
+"✘ The client’s objective needs to be clearer. Try summarising what the client wants to change or achieve in practical, outcome-focused terms."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ Safety and reassurance addressed." if q4 else "✘ Safety and suitability not clearly addressed."}
+{"✔ You demonstrated appropriate awareness of safety, suitability, and client reassurance. This is essential in pre-hypnosis assessment." 
+if q4["scores"]["safety"] 
+else 
+"✘ Safety and suitability were not sufficiently addressed. You should explicitly explore health history, potential risks, and ensure the client feels safe and informed before proceeding."}
 
-OVERALL
-Continue improving structure, clarity, and clinical reasoning.
+CLINICAL INTERACTION OBSERVATIONS
+{"⚠ Some of your responses were slightly directive or lacked emotional validation. Try to acknowledge the client’s experience more explicitly and use open-ended questions to deepen exploration." 
+if empathy_issue 
+else 
+"✔ Your interaction style was supportive, appropriately paced, and aligned with a client-centred approach."}
+
+OVERALL CLINICAL IMPRESSION
+You are developing solid clinical reasoning skills. To progress further, focus on:
+• Making your reasoning more explicit  
+• Strengthening empathy and validation  
+• Maintaining a clear structure throughout the assessment  
+
+Overall, this is a strong and promising performance.
 """
 
         total = sum([q1, q2, q3, q4])
