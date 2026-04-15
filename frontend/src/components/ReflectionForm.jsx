@@ -34,7 +34,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
       {/* QUESTION 1 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
-          QUESTION 1 — Identify the most appropriate treatment approach and describe what information from the client informed this.
+          QUESTION 1 — Identify the most appropriate treatment approach and describe what informed this.
         </label>
         <textarea
           className="w-full p-3 border rounded-xl"
@@ -47,7 +47,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
       {/* QUESTION 2 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
-          QUESTION 2 — Describe the client relaxation modality (Visual / Auditory / Kinaesthetic) and how you identified this.
+          QUESTION 2 — Describe the client relaxation modality and how you identified it.
         </label>
         <textarea
           className="w-full p-3 border rounded-xl"
@@ -78,15 +78,16 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
 
         <ul className="text-xs text-slate-600 mb-2 list-disc ml-5 space-y-1">
           <li>Clarified suitability and screened for safety concerns</li>
-          <li>Responded to client questions about hypnotherapy</li>
-          <li>Provided reassurance and confirmed readiness before proceeding</li>
+          <li>Responded to client questions</li>
+          <li>Provided reassurance and confirmed readiness</li>
         </ul>
 
         <textarea
           className="w-full p-3 border rounded-xl"
-          rows={4}
+          rows={5}
           value={local.clientReassurance}
           onChange={e => update("clientReassurance", e.target.value)}
+          placeholder="Describe how you assessed safety (risk/medical history), reassured the client, and confirmed readiness to proceed..."
         />
       </div>
 

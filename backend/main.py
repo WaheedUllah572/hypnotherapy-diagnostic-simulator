@@ -107,7 +107,29 @@ Stage: {stage}
     }
 
 
-# (ONLY relevant parts changed — rest untouched)
+# ✅ NEW — PROPER Q4 EVALUATION (CLIENT REQUIREMENT)
+def evaluate_q4(student_text: str):
+
+    text = student_text.lower()
+
+    safety = any(x in text for x in [
+        "risk", "safety", "medical", "history", "screen", "contraindication"
+    ])
+
+    reassurance = any(x in text for x in [
+        "reassure", "safe", "comfortable", "support"
+    ])
+
+    readiness = any(x in text for x in [
+        "ready", "proceed", "continue", "before we begin"
+    ])
+
+    return {
+        "safety": safety,
+        "reassurance": reassurance,
+        "readiness": readiness
+    }
+
 
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
@@ -120,9 +142,11 @@ async def tutor_review(req: TutorRequest):
         q1 = evaluate_response(s.get("chosenApproach", ""), "approach")
         q2 = evaluate_response(s.get("clientModality", ""), "modality")
         q3 = evaluate_response(s.get("clientObjective", ""), "objective")
-        q4 = evaluate_response(s.get("clientReassurance", ""), "safety")
 
-        # ✅ Conversation extraction (NEW - IMPORTANT)
+        q4_data = evaluate_q4(s.get("clientReassurance", ""))
+        q4 = all(q4_data.values())
+
+        # Conversation extraction
         therapist_lines = [
             m["text"]
             for m in req.chatHistory if m["role"] == "therapist"
@@ -136,13 +160,12 @@ async def tutor_review(req: TutorRequest):
         last_therapist = therapist_lines[-2] if len(therapist_lines) >= 2 else ""
         last_client = client_lines[-1] if client_lines else ""
 
-        # ✅ Empathy detection (IMPROVED)
         empathy_issue = not any(
             x in last_therapist.lower()
             for x in ["understand", "that sounds", "i hear", "that must"]
         )
 
-        # -------- MODALITY --------
+        # Modality
         full_chat = " ".join(client_lines).lower()
 
         kinaesthetic = sum(w in full_chat for w in ["feel", "tight", "tense", "pressure", "body"])
@@ -155,45 +178,29 @@ async def tutor_review(req: TutorRequest):
         elif visual > kinaesthetic:
             modality = "Visual"
 
-        # -------- FEEDBACK (PRO LEVEL) --------
+        # ✅ IMPROVED FEEDBACK (CLINICAL + STRUCTURED)
         feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ You identified an appropriate therapeutic model and linked it to the client’s presentation." 
-if q1 
-else 
-"✘ The treatment approach needs clearer justification. Try linking the client’s symptoms and patterns to a recognised model such as CBH or Solution-Focused approaches."}
+{"✔ Appropriate model selected and clinically justified." if q1 else "✘ Treatment approach needs clearer clinical reasoning."}
 
 QUESTION 2 — Client Relaxation Modality
-{"✔ You correctly identified the client’s modality based on their language patterns." 
-if q2 
-else 
-f"✘ The modality was not clearly identified. For example, the client said: \"{last_client[:80]}...\" — focus on sensory language to determine modality."}
+{"✔ Modality correctly identified." if q2 else f"✘ Modality unclear. Example client language: \"{last_client[:80]}...\""}
 
 QUESTION 3 — Client Objective
-{"✔ The client’s objective is clear and clinically relevant." 
-if q3 
-else 
-"✘ The objective needs to be more specific. Clearly define what the client wants to change or achieve."}
+{"✔ Objective clearly defined." if q3 else "✘ Objective needs to be more specific and outcome-focused."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ You demonstrated appropriate awareness of safety and suitability." 
-if q4 
-else 
-"✘ Safety and reassurance were not sufficiently explored. You should assess risk, relevant history, and ensure the client feels safe before proceeding."}
+{"✔ All key components addressed (safety, reassurance, readiness)." if q4 else f"""✘ Incomplete safety assessment:
+
+• Safety screening: {"✔" if q4_data["safety"] else "✘ missing"}
+• Reassurance: {"✔" if q4_data["reassurance"] else "✘ missing"}
+• Readiness to proceed: {"✔" if q4_data["readiness"] else "✘ missing"}"""}
 
 CLINICAL INTERACTION OBSERVATIONS
-{"• Your responses could include more explicit empathy. For example, instead of moving quickly into direction, acknowledge the client’s experience first before guiding the session." 
-if empathy_issue 
-else 
-"✔ Your interaction style was supportive, appropriately paced, and client-centred."}
+{"• Increase empathy — acknowledge client experience before guiding." if empathy_issue else "✔ Interaction was supportive and client-centred."}
 
 OVERALL CLINICAL IMPRESSION
-You are developing good clinical reasoning skills. To improve further, focus on:
-• Making your reasoning more explicit  
-• Strengthening empathy and validation  
-• Maintaining structured clinical thinking throughout  
-
-Overall, this is a solid performance with clear potential.
+You are developing well. Continue strengthening structure, clarity, and clinical reasoning.
 """
 
         total = sum([q1, q2, q3, q4])
@@ -214,7 +221,8 @@ Overall, this is a solid performance with clear potential.
             "score": {"total": 0},
             "detected_modality": None
         }
-    
+
+
 @app.get("/progress")
 async def get_progress():
 
@@ -249,11 +257,6 @@ def evaluate_response(student_text: str, mode: str):
     if mode == "objective":
         return any(x in text for x in [
             "want", "goal", "reduce", "manage", "control", "cope"
-        ])
-
-    if mode == "safety":
-        return any(x in text for x in [
-            "risk", "safety", "medical", "history", "screen", "suitability"
         ])
 
     return False
