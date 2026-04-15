@@ -82,7 +82,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
           <li>Provided reassurance and confirmed readiness</li>
         </ul>
 
-        // ONLY change = clearer Q4 guidance (client requirement met)
+      
 
 <textarea
   className="w-full p-3 border rounded-xl"
