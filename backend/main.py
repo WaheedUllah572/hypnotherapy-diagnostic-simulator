@@ -107,6 +107,8 @@ Stage: {stage}
     }
 
 
+# (ONLY relevant parts changed — rest untouched)
+
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
 
@@ -120,22 +122,28 @@ async def tutor_review(req: TutorRequest):
         q3 = evaluate_response(s.get("clientObjective", ""), "objective")
         q4 = evaluate_response(s.get("clientReassurance", ""), "safety")
 
-        # ✅ DEFINE empathy_issue (FIXED)
+        # ✅ Conversation extraction (NEW - IMPORTANT)
         therapist_lines = [
-            m["text"].lower()
+            m["text"]
             for m in req.chatHistory if m["role"] == "therapist"
         ]
 
-        empathy_issue = any(
-            x in line for line in therapist_lines
-            for x in ["just relax", "calm down", "you can relax"]
+        client_lines = [
+            m["text"]
+            for m in req.chatHistory if m["role"] == "client"
+        ]
+
+        last_therapist = therapist_lines[-2] if len(therapist_lines) >= 2 else ""
+        last_client = client_lines[-1] if client_lines else ""
+
+        # ✅ Empathy detection (IMPROVED)
+        empathy_issue = not any(
+            x in last_therapist.lower()
+            for x in ["understand", "that sounds", "i hear", "that must"]
         )
 
-        # -------- MODALITY FROM CHAT --------
-        full_chat = " ".join([
-            m["text"].lower()
-            for m in req.chatHistory if m["role"] == "client"
-        ])
+        # -------- MODALITY --------
+        full_chat = " ".join(client_lines).lower()
 
         kinaesthetic = sum(w in full_chat for w in ["feel", "tight", "tense", "pressure", "body"])
         auditory = sum(w in full_chat for w in ["hear", "sound"])
@@ -147,40 +155,45 @@ async def tutor_review(req: TutorRequest):
         elif visual > kinaesthetic:
             modality = "Visual"
 
-        # -------- FIXED FEEDBACK --------
+        # -------- FEEDBACK (PRO LEVEL) --------
         feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ You identified an appropriate therapeutic model and linked it well to the client’s presentation. This shows good clinical reasoning and understanding of how the client’s difficulties are maintained." 
+{"✔ You identified an appropriate therapeutic model and linked it to the client’s presentation." 
 if q1 
 else 
-"✘ The treatment approach needs to be more clearly defined. Try explicitly linking the client’s symptoms and thinking patterns to a recognised therapeutic model such as CBH, Solution-Focused, or Ericksonian approaches."}
+"✘ The treatment approach needs clearer justification. Try linking the client’s symptoms and patterns to a recognised model such as CBH or Solution-Focused approaches."}
 
 QUESTION 2 — Client Relaxation Modality
-{"✔ You correctly identified the client’s primary modality based on their language. This demonstrates good attention to how the client experiences their internal world." 
+{"✔ You correctly identified the client’s modality based on their language patterns." 
 if q2 
 else 
-"✘ The client’s modality was not clearly identified. Focus more closely on sensory language to determine whether they are visual, auditory, or kinaesthetic."}
+f"✘ The modality was not clearly identified. For example, the client said: \"{last_client[:80]}...\" — focus on sensory language to determine modality."}
 
 QUESTION 3 — Client Objective
-{"✔ The client’s objective is clearly defined and relevant to their presenting issue." 
+{"✔ The client’s objective is clear and clinically relevant." 
 if q3 
 else 
-"✘ The client’s objective needs to be clearer. Try summarising what the client wants to change or achieve."}
+"✘ The objective needs to be more specific. Clearly define what the client wants to change or achieve."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ You demonstrated appropriate awareness of safety and reassurance." 
+{"✔ You demonstrated appropriate awareness of safety and suitability." 
 if q4 
 else 
-"✘ Safety and suitability were not sufficiently addressed. You should explore health history and reassure the client."}
+"✘ Safety and reassurance were not sufficiently explored. You should assess risk, relevant history, and ensure the client feels safe before proceeding."}
 
 CLINICAL INTERACTION OBSERVATIONS
-{"⚠ Some responses were slightly directive. Focus more on empathy and validation." 
+{"• Your responses could include more explicit empathy. For example, instead of moving quickly into direction, acknowledge the client’s experience first before guiding the session." 
 if empathy_issue 
 else 
-"✔ Your interaction style was supportive and appropriate."}
+"✔ Your interaction style was supportive, appropriately paced, and client-centred."}
 
 OVERALL CLINICAL IMPRESSION
-You are developing solid clinical reasoning. Continue refining structure, empathy, and clarity.
+You are developing good clinical reasoning skills. To improve further, focus on:
+• Making your reasoning more explicit  
+• Strengthening empathy and validation  
+• Maintaining structured clinical thinking throughout  
+
+Overall, this is a solid performance with clear potential.
 """
 
         total = sum([q1, q2, q3, q4])
@@ -201,8 +214,7 @@ You are developing solid clinical reasoning. Continue refining structure, empath
             "score": {"total": 0},
             "detected_modality": None
         }
-
-
+    
 @app.get("/progress")
 async def get_progress():
 

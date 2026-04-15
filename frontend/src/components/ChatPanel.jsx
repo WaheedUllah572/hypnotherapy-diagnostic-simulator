@@ -83,7 +83,6 @@ export default function ChatPanel({
         }
       );
 
-      // ✅ FIXED EVALUATION LOGIC ONLY
       const lower = userMessage.toLowerCase();
 
       const hasEmpathy =
@@ -112,13 +111,14 @@ export default function ChatPanel({
       const bad =
         (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
 
+      // ✅ SOFTER, PROFESSIONAL TUTOR MESSAGE
       if (bad) {
         setChat(c => [
           ...c,
           {
             role: "tutor",
             text:
-              "⚠️ Your response may lack empathy or clinical direction. Consider acknowledging the client’s experience and asking an open-ended question."
+              "Consider briefly acknowledging the client’s experience and using an open-ended question to guide the conversation."
           }
         ]);
       }
@@ -129,7 +129,7 @@ export default function ChatPanel({
           {
             role: "tutor",
             text:
-              "⚠️ Potential risk detected. Continue the session and respond appropriately."
+              "⚠️ A potential risk indicator has been detected. Continue the session carefully and respond appropriately."
           }
         ]);
         setTyping(false);
@@ -174,7 +174,7 @@ export default function ChatPanel({
             <div
               className={`max-w-[75%] p-5 rounded-2xl shadow-sm border ${
                 c.role === "tutor"
-                  ? "bg-red-50 border-red-300"
+                  ? "bg-amber-50 border-amber-200" // ✅ FIXED (SOFT COLOR)
                   : "bg-white border-slate-200"
               }`}
             >
