@@ -82,14 +82,15 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
           <li>Provided reassurance and confirmed readiness</li>
         </ul>
 
-        <textarea
-          className="w-full p-3 border rounded-xl"
-          rows={5}
-          value={local.clientReassurance}
-          onChange={e => update("clientReassurance", e.target.value)}
-          placeholder="Describe how you assessed safety (risk/medical history), reassured the client, and confirmed readiness to proceed..."
-        />
-      </div>
+        // ONLY change = clearer Q4 guidance (client requirement met)
+
+<textarea
+  className="w-full p-3 border rounded-xl"
+  rows={5}
+  value={local.clientReassurance}
+  onChange={e => update("clientReassurance", e.target.value)}
+  placeholder="Explain how you assessed safety (risk, medical history), addressed any client concerns, reassured them, and confirmed they were ready to proceed..."
+/>      </div>
 
       <button
         onClick={handleSubmit}

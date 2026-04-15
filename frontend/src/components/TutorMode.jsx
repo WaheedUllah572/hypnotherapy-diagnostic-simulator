@@ -78,10 +78,9 @@ export default function TutorMode({ submission, chatHistory, resetSession, clien
         </div>
       )}
 
-      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm">
-        {parseFeedback()}
-      </div>
-
+      <div className="bg-slate-50 border border-slate-200 p-6 rounded-xl text-sm leading-relaxed">
+  {parseFeedback()}
+</div>
       <div className="flex justify-end">
         <button
           onClick={resetSession}

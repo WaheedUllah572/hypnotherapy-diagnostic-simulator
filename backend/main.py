@@ -107,7 +107,7 @@ Stage: {stage}
     }
 
 
-# ✅ NEW — PROPER Q4 EVALUATION (CLIENT REQUIREMENT)
+# ✅ Q4 STRUCTURED EVALUATION
 def evaluate_q4(student_text: str):
 
     text = student_text.lower()
@@ -146,7 +146,7 @@ async def tutor_review(req: TutorRequest):
         q4_data = evaluate_q4(s.get("clientReassurance", ""))
         q4 = all(q4_data.values())
 
-        # Conversation extraction
+        # -------- CONVERSATION CONTEXT --------
         therapist_lines = [
             m["text"]
             for m in req.chatHistory if m["role"] == "therapist"
@@ -157,15 +157,16 @@ async def tutor_review(req: TutorRequest):
             for m in req.chatHistory if m["role"] == "client"
         ]
 
-        last_therapist = therapist_lines[-2] if len(therapist_lines) >= 2 else ""
+        last_therapist = therapist_lines[-1] if therapist_lines else ""
         last_client = client_lines[-1] if client_lines else ""
 
+        # -------- EMPATHY CHECK --------
         empathy_issue = not any(
             x in last_therapist.lower()
             for x in ["understand", "that sounds", "i hear", "that must"]
         )
 
-        # Modality
+        # -------- MODALITY --------
         full_chat = " ".join(client_lines).lower()
 
         kinaesthetic = sum(w in full_chat for w in ["feel", "tight", "tense", "pressure", "body"])
@@ -178,29 +179,41 @@ async def tutor_review(req: TutorRequest):
         elif visual > kinaesthetic:
             modality = "Visual"
 
-        # ✅ IMPROVED FEEDBACK (CLINICAL + STRUCTURED)
+        # -------- Q4 FEEDBACK (DETAILED) --------
+        if q4:
+            q4_feedback = "✔ You addressed safety, reassurance, and readiness appropriately."
+        else:
+            q4_feedback = f"""✘ Safety & reassurance could be strengthened:
+
+• Safety screening: {"✔ addressed" if q4_data["safety"] else "✘ not clearly addressed"}
+• Reassurance: {"✔ provided" if q4_data["reassurance"] else "✘ could be clearer"}
+• Readiness to proceed: {"✔ confirmed" if q4_data["readiness"] else "✘ not explicitly confirmed"}"""
+
+        # -------- EMPATHY FEEDBACK (CONTEXTUAL) --------
+        if empathy_issue:
+            empathy_feedback = f'• Your response "{last_therapist[:80]}..." could include a brief acknowledgment of the client’s experience before guiding further.'
+        else:
+            empathy_feedback = "✔ Your interaction style was supportive and appropriately paced."
+
+        # -------- FINAL FEEDBACK --------
         feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ Appropriate model selected and clinically justified." if q1 else "✘ Treatment approach needs clearer clinical reasoning."}
+{"✔ Appropriate model selected and linked to the client’s presentation." if q1 else "✘ Treatment approach needs clearer clinical reasoning."}
 
 QUESTION 2 — Client Relaxation Modality
 {"✔ Modality correctly identified." if q2 else f"✘ Modality unclear. Example client language: \"{last_client[:80]}...\""}
 
 QUESTION 3 — Client Objective
-{"✔ Objective clearly defined." if q3 else "✘ Objective needs to be more specific and outcome-focused."}
+{"✔ Objective clearly defined and relevant." if q3 else "✘ Objective needs to be more specific and outcome-focused."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ All key components addressed (safety, reassurance, readiness)." if q4 else f"""✘ Incomplete safety assessment:
-
-• Safety screening: {"✔" if q4_data["safety"] else "✘ missing"}
-• Reassurance: {"✔" if q4_data["reassurance"] else "✘ missing"}
-• Readiness to proceed: {"✔" if q4_data["readiness"] else "✘ missing"}"""}
+{q4_feedback}
 
 CLINICAL INTERACTION OBSERVATIONS
-{"• Increase empathy — acknowledge client experience before guiding." if empathy_issue else "✔ Interaction was supportive and client-centred."}
+{empathy_feedback}
 
 OVERALL CLINICAL IMPRESSION
-You are developing well. Continue strengthening structure, clarity, and clinical reasoning.
+You are developing solid clinical reasoning. Continue refining clarity, empathy, and structure for stronger client outcomes.
 """
 
         total = sum([q1, q2, q3, q4])
