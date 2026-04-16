@@ -22,7 +22,7 @@ export default function ChatPanel({
   useEffect(() => {
     setChatHistory(chat);
 
-    // ✅ SMOOTH AUTO-SCROLL (UPGRADE)
+    // ✅ smooth scroll
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
@@ -114,7 +114,6 @@ export default function ChatPanel({
       const bad =
         (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
 
-      // ✅ SLIGHT DELAY → FEELS MORE NATURAL
       if (bad) {
         setTimeout(() => {
           setChat(c => [
@@ -135,7 +134,7 @@ export default function ChatPanel({
             {
               role: "tutor",
               text:
-                "⚠️ A potential risk indicator has been detected. Continue the session carefully and respond appropriately."
+                "⚠️ A potential risk indicator has been detected. Continue carefully."
             }
           ]);
           setTyping(false);
@@ -167,16 +166,18 @@ export default function ChatPanel({
   return (
     <div className="h-full flex flex-col">
       
-      {/* ✅ SCROLL AREA (NO FORCED STRETCH) */}
+      {/* ✅ KEY FIX: justify-end when short */}
       <div
         ref={chatContainerRef}
-        className="flex flex-col gap-6 overflow-y-auto px-2 pt-2 pb-4"
+        className={`flex flex-col overflow-y-auto px-2 pt-2 pb-4 ${
+          chat.length < 2 ? "justify-end" : "justify-start"
+        }`}
       >
-        {/* CHAT MESSAGES */}
+        {/* CHAT */}
         {chat.map((c, i) => (
           <div
             key={i}
-            className={`flex ${
+            className={`flex mb-6 ${
               c.role === "therapist" ? "justify-end" : "justify-start"
             }`}
           >
@@ -202,15 +203,14 @@ export default function ChatPanel({
           </div>
         ))}
 
-        {/* ✅ BETTER TYPING FEEDBACK */}
         {typing && (
           <div className="text-xs text-slate-400 italic animate-pulse">
             Client is typing…
           </div>
         )}
 
-        {/* ✅ INPUT — LOCKED TO LAST MESSAGE */}
-        <div className="mt-2 pt-4 border-t border-slate-200">
+        {/* INPUT */}
+        <div className="pt-4 border-t border-slate-200">
           <textarea
             rows={3}
             value={msg}
