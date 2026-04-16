@@ -22,10 +22,12 @@ export default function ChatPanel({
   useEffect(() => {
     setChatHistory(chat);
 
-    // ✅ ALWAYS SCROLL TO LATEST MESSAGE
+    // ✅ SMOOTH AUTO-SCROLL (UPGRADE)
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }, [chat, typing]);
 
@@ -112,27 +114,32 @@ export default function ChatPanel({
       const bad =
         (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
 
+      // ✅ SLIGHT DELAY → FEELS MORE NATURAL
       if (bad) {
-        setChat(c => [
-          ...c,
-          {
-            role: "tutor",
-            text:
-              "Consider briefly acknowledging the client’s experience and using an open-ended question to guide the conversation."
-          }
-        ]);
+        setTimeout(() => {
+          setChat(c => [
+            ...c,
+            {
+              role: "tutor",
+              text:
+                "Consider briefly acknowledging the client’s experience and using an open-ended question to guide the conversation."
+            }
+          ]);
+        }, 400);
       }
 
       if (res.data.safety_flag) {
-        setChat(c => [
-          ...c,
-          {
-            role: "tutor",
-            text:
-              "⚠️ A potential risk indicator has been detected. Continue the session carefully and respond appropriately."
-          }
-        ]);
-        setTyping(false);
+        setTimeout(() => {
+          setChat(c => [
+            ...c,
+            {
+              role: "tutor",
+              text:
+                "⚠️ A potential risk indicator has been detected. Continue the session carefully and respond appropriately."
+            }
+          ]);
+          setTyping(false);
+        }, 400);
       } else {
         setTimeout(() => {
           setChat(c => [...c, { role: "client", text: res.data.reply }]);
@@ -158,12 +165,12 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="h-full flex flex-col">
       
-      {/* ✅ CHAT + INPUT TOGETHER (KEY FIX) */}
+      {/* ✅ SCROLL AREA (NO FORCED STRETCH) */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto space-y-6 pr-2 pt-2"
+        className="flex flex-col gap-6 overflow-y-auto px-2 pt-2 pb-4"
       >
         {/* CHAT MESSAGES */}
         {chat.map((c, i) => (
@@ -195,14 +202,15 @@ export default function ChatPanel({
           </div>
         ))}
 
+        {/* ✅ BETTER TYPING FEEDBACK */}
         {typing && (
-          <div className="text-xs text-slate-400 italic">
-            Client is thinking…
+          <div className="text-xs text-slate-400 italic animate-pulse">
+            Client is typing…
           </div>
         )}
 
-        {/* ✅ INPUT NOW PART OF FLOW (IMPORTANT FIX) */}
-        <div className="pt-4 border-t border-slate-200 mt-6">
+        {/* ✅ INPUT — LOCKED TO LAST MESSAGE */}
+        <div className="mt-2 pt-4 border-t border-slate-200">
           <textarea
             rows={3}
             value={msg}
