@@ -22,6 +22,7 @@ export default function ChatPanel({
   useEffect(() => {
     setChatHistory(chat);
 
+    // ✅ ALWAYS SCROLL TO LATEST MESSAGE
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
         chatContainerRef.current.scrollHeight;
@@ -111,7 +112,6 @@ export default function ChatPanel({
       const bad =
         (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
 
-      // ✅ SOFTER, PROFESSIONAL TUTOR MESSAGE
       if (bad) {
         setChat(c => [
           ...c,
@@ -159,11 +159,13 @@ export default function ChatPanel({
 
   return (
     <div className="flex flex-col h-full">
-      {/* CHAT AREA */}
+      
+      {/* ✅ CHAT + INPUT TOGETHER (KEY FIX) */}
       <div
         ref={chatContainerRef}
         className="flex-1 overflow-y-auto space-y-6 pr-2 pt-2"
       >
+        {/* CHAT MESSAGES */}
         {chat.map((c, i) => (
           <div
             key={i}
@@ -174,7 +176,7 @@ export default function ChatPanel({
             <div
               className={`max-w-[75%] p-5 rounded-2xl shadow-sm border ${
                 c.role === "tutor"
-                  ? "bg-amber-50 border-amber-200" // ✅ FIXED (SOFT COLOR)
+                  ? "bg-amber-50 border-amber-200"
                   : "bg-white border-slate-200"
               }`}
             >
@@ -198,50 +200,51 @@ export default function ChatPanel({
             Client is thinking…
           </div>
         )}
-      </div>
 
-      {/* INPUT AREA */}
-      <div className="pt-4 border-t border-slate-200">
-        <textarea
-          rows={3}
-          value={msg}
-          disabled={!isActive}
-          onChange={e => setMsg(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="w-full rounded-2xl border border-slate-300 p-4 text-sm"
-          placeholder="Give an appropriate diagnostic response based on the client’s presentation..."
-        />
-
-        <div className="flex justify-between mt-4">
-          <button
-            onClick={onEndSession}
+        {/* ✅ INPUT NOW PART OF FLOW (IMPORTANT FIX) */}
+        <div className="pt-4 border-t border-slate-200 mt-6">
+          <textarea
+            rows={3}
+            value={msg}
             disabled={!isActive}
-            className="bg-slate-700 text-white px-4 py-2 rounded-xl text-sm"
-          >
-            TUTOR MODE
-          </button>
+            onChange={e => setMsg(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="w-full rounded-2xl border border-slate-300 p-4 text-sm"
+            placeholder="Give an appropriate diagnostic response based on the client’s presentation..."
+          />
 
-          <div className="flex gap-3 items-center">
+          <div className="flex justify-between mt-4">
             <button
-              onClick={startListening}
-              className="bg-slate-500 text-white px-4 py-2 rounded-xl text-sm"
-            >
-              🎤 Speak
-            </button>
-
-            {listening && (
-              <span className="text-xs text-red-500">Listening...</span>
-            )}
-
-            <button
-              onClick={send}
+              onClick={onEndSession}
               disabled={!isActive}
-              className="bg-brand-600 text-white px-6 py-2 rounded-xl text-sm"
+              className="bg-slate-700 text-white px-4 py-2 rounded-xl text-sm"
             >
-              Respond
+              TUTOR MODE
             </button>
+
+            <div className="flex gap-3 items-center">
+              <button
+                onClick={startListening}
+                className="bg-slate-500 text-white px-4 py-2 rounded-xl text-sm"
+              >
+                🎤 Speak
+              </button>
+
+              {listening && (
+                <span className="text-xs text-red-500">Listening...</span>
+              )}
+
+              <button
+                onClick={send}
+                disabled={!isActive}
+                className="bg-brand-600 text-white px-6 py-2 rounded-xl text-sm"
+              >
+                Respond
+              </button>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );
