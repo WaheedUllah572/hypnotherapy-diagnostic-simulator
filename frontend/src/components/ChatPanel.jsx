@@ -22,7 +22,6 @@ export default function ChatPanel({
   useEffect(() => {
     setChatHistory(chat);
 
-    // ✅ smooth scroll
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
@@ -68,97 +67,96 @@ export default function ChatPanel({
   };
 
   const send = async () => {
-  if (!msg.trim() || !isActive) return;
+    if (!msg.trim() || !isActive) return;
 
-  const userMessage = msg;
-  const updatedChat = [...chat, { role: "therapist", text: userMessage }];
-  setChat(updatedChat);
-  setMsg("");
-  setTyping(true);
+    const userMessage = msg;
+    const updatedChat = [...chat, { role: "therapist", text: userMessage }];
+    setChat(updatedChat);
+    setMsg("");
+    setTyping(true);
 
-  // ✅ HARD FAILSAFE TIMER (VERY IMPORTANT)
-  const failSafe = setTimeout(() => {
-    setChat(c => [
-      ...c,
-      {
-        role: "client",
-        text: "The client pauses… you may need to rephrase your question."
-      }
-    ]);
-    setTyping(false);
-  }, 12000); // 12 sec max
-
-  try {
-    const res = await axios.post(
-      "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
-      {
-        text: userMessage,
-        clientType: clientType,
-        history: updatedChat
-      }
-    );
-
-    clearTimeout(failSafe); // ✅ STOP TIMER
-
-    const lower = userMessage.toLowerCase();
-
-    const hasEmpathy =
-      lower.includes("understand") ||
-      lower.includes("that sounds") ||
-      lower.includes("i hear");
-
-    const askedQuestion = userMessage.includes("?");
-
-    const hasEngagement =
-      askedQuestion ||
-      lower.includes("tell me") ||
-      lower.includes("can you") ||
-      lower.includes("what") ||
-      lower.includes("how");
-
-    const isGreeting =
-      lower.includes("hello") ||
-      lower.includes("hi");
-
-    const inappropriate =
-      lower.includes("just relax") ||
-      lower.includes("don't worry") ||
-      lower.includes("you should");
-
-    const bad =
-      (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
-
-    if (bad) {
-      setTimeout(() => {
-        setChat(c => [
-          ...c,
-          {
-            role: "tutor",
-            text:
-              "Consider briefly acknowledging the client’s experience and using an open-ended question."
-          }
-        ]);
-      }, 400);
-    }
-
-    setTimeout(() => {
-      setChat(c => [...c, { role: "client", text: res.data.reply }]);
+    const failSafe = setTimeout(() => {
+      setChat(c => [
+        ...c,
+        {
+          role: "client",
+          text: "The client pauses… you may need to rephrase your question."
+        }
+      ]);
       setTyping(false);
-    }, 1200);
+    }, 12000);
 
-  } catch (err) {
-    clearTimeout(failSafe);
+    try {
+      const res = await axios.post(
+        "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
+        {
+          text: userMessage,
+          clientType: clientType,
+          history: updatedChat
+        }
+      );
 
-    setChat(c => [
-      ...c,
-      {
-        role: "client",
-        text: "The client seems unsure how to respond… try asking differently."
+      clearTimeout(failSafe);
+
+      const lower = userMessage.toLowerCase();
+
+      const hasEmpathy =
+        lower.includes("understand") ||
+        lower.includes("that sounds") ||
+        lower.includes("i hear");
+
+      const askedQuestion = userMessage.includes("?");
+
+      const hasEngagement =
+        askedQuestion ||
+        lower.includes("tell me") ||
+        lower.includes("can you") ||
+        lower.includes("what") ||
+        lower.includes("how");
+
+      const isGreeting =
+        lower.includes("hello") ||
+        lower.includes("hi");
+
+      const inappropriate =
+        lower.includes("just relax") ||
+        lower.includes("don't worry") ||
+        lower.includes("you should");
+
+      const bad =
+        (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
+
+      if (bad) {
+        setTimeout(() => {
+          setChat(c => [
+            ...c,
+            {
+              role: "tutor",
+              text:
+                "Consider briefly acknowledging the client’s experience and using an open-ended question."
+            }
+          ]);
+        }, 400);
       }
-    ]);
-    setTyping(false);
-  }
-};
+
+      setTimeout(() => {
+        setChat(c => [...c, { role: "client", text: res.data.reply }]);
+        setTyping(false);
+      }, 1200);
+
+    } catch (err) {
+      clearTimeout(failSafe);
+
+      setChat(c => [
+        ...c,
+        {
+          role: "client",
+          text: "The client seems unsure how to respond… try asking differently."
+        }
+      ]);
+      setTyping(false);
+    }
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -168,13 +166,9 @@ export default function ChatPanel({
   };
 
   return (
-  <div className="h-full flex flex-col">
+    <div className="h-full overflow-y-auto px-2 pt-2" ref={chatContainerRef}>
 
-    {/* ✅ SCROLLABLE CHAT AREA */}
-    <div
-      ref={chatContainerRef}
-      className="flex-1 overflow-y-auto px-2 pt-2 pb-32"
-    >
+      {/* CHAT MESSAGES */}
       {chat.map((c, i) => (
         <div
           key={i}
@@ -205,56 +199,55 @@ export default function ChatPanel({
       ))}
 
       {typing && (
-        <div className="text-xs text-slate-400 italic animate-pulse">
+        <div className="text-xs text-slate-400 italic animate-pulse mb-4">
           Client is typing…
         </div>
       )}
-    </div>
 
-    {/* ✅ FIXED INPUT BAR (LIKE CHATGPT) */}
-    <div className="border-t border-slate-200 bg-white px-4 py-4">
-      <textarea
-        rows={3}
-        value={msg}
-        disabled={!isActive}
-        onChange={e => setMsg(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="w-full rounded-2xl border border-slate-300 p-4 text-sm"
-        placeholder="Give an appropriate diagnostic response based on the client’s presentation..."
-      />
-
-      <div className="flex justify-between mt-4">
-        <button
-          onClick={onEndSession}
+      {/* ✅ INPUT NOW DIRECTLY UNDER LAST MESSAGE */}
+      <div className="pt-4 border-t border-slate-200 mt-6">
+        <textarea
+          rows={3}
+          value={msg}
           disabled={!isActive}
-          className="bg-slate-700 text-white px-4 py-2 rounded-xl text-sm"
-        >
-          TUTOR MODE
-        </button>
+          onChange={e => setMsg(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-full rounded-2xl border border-slate-300 p-4 text-sm"
+          placeholder="Give an appropriate diagnostic response based on the client’s presentation..."
+        />
 
-        <div className="flex gap-3 items-center">
+        <div className="flex justify-between mt-4">
           <button
-            onClick={startListening}
-            className="bg-slate-500 text-white px-4 py-2 rounded-xl text-sm"
-          >
-            🎤 Speak
-          </button>
-
-          {listening && (
-            <span className="text-xs text-red-500">Listening...</span>
-          )}
-
-          <button
-            onClick={send}
+            onClick={onEndSession}
             disabled={!isActive}
-            className="bg-brand-600 text-white px-6 py-2 rounded-xl text-sm"
+            className="bg-slate-700 text-white px-4 py-2 rounded-xl text-sm"
           >
-            Respond
+            TUTOR MODE
           </button>
+
+          <div className="flex gap-3 items-center">
+            <button
+              onClick={startListening}
+              className="bg-slate-500 text-white px-4 py-2 rounded-xl text-sm"
+            >
+              🎤 Speak
+            </button>
+
+            {listening && (
+              <span className="text-xs text-red-500">Listening...</span>
+            )}
+
+            <button
+              onClick={send}
+              disabled={!isActive}
+              className="bg-brand-600 text-white px-6 py-2 rounded-xl text-sm"
+            >
+              Respond
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-  </div>
-);
+    </div>
+  );
 }
