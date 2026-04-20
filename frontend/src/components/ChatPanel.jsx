@@ -68,93 +68,97 @@ export default function ChatPanel({
   };
 
   const send = async () => {
-    if (!msg.trim() || !isActive) return;
+  if (!msg.trim() || !isActive) return;
 
-    const userMessage = msg;
-    const updatedChat = [...chat, { role: "therapist", text: userMessage }];
-    setChat(updatedChat);
-    setMsg("");
-    setTyping(true);
+  const userMessage = msg;
+  const updatedChat = [...chat, { role: "therapist", text: userMessage }];
+  setChat(updatedChat);
+  setMsg("");
+  setTyping(true);
 
-    try {
-      const res = await axios.post(
-        "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
-        {
-          text: userMessage,
-          clientType: clientType,
-          history: updatedChat
-        }
-      );
-
-      const lower = userMessage.toLowerCase();
-
-      const hasEmpathy =
-        lower.includes("understand") ||
-        lower.includes("that sounds") ||
-        lower.includes("i hear");
-
-      const askedQuestion = userMessage.includes("?");
-
-      const hasEngagement =
-        askedQuestion ||
-        lower.includes("tell me") ||
-        lower.includes("can you") ||
-        lower.includes("what") ||
-        lower.includes("how");
-
-      const isGreeting =
-        lower.includes("hello") ||
-        lower.includes("hi");
-
-      const inappropriate =
-        lower.includes("just relax") ||
-        lower.includes("don't worry") ||
-        lower.includes("you should");
-
-      const bad =
-        (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
-
-      if (bad) {
-        setTimeout(() => {
-          setChat(c => [
-            ...c,
-            {
-              role: "tutor",
-              text:
-                "Consider briefly acknowledging the client’s experience and using an open-ended question to guide the conversation."
-            }
-          ]);
-        }, 400);
+  // ✅ HARD FAILSAFE TIMER (VERY IMPORTANT)
+  const failSafe = setTimeout(() => {
+    setChat(c => [
+      ...c,
+      {
+        role: "client",
+        text: "The client pauses… you may need to rephrase your question."
       }
+    ]);
+    setTyping(false);
+  }, 12000); // 12 sec max
 
-      if (res.data.safety_flag) {
-        setTimeout(() => {
-          setChat(c => [
-            ...c,
-            {
-              role: "tutor",
-              text:
-                "⚠️ A potential risk indicator has been detected. Continue carefully."
-            }
-          ]);
-          setTyping(false);
-        }, 400);
-      } else {
-        setTimeout(() => {
-          setChat(c => [...c, { role: "client", text: res.data.reply }]);
-          setTyping(false);
-        }, 1200);
+  try {
+    const res = await axios.post(
+      "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
+      {
+        text: userMessage,
+        clientType: clientType,
+        history: updatedChat
       }
-    } catch {
+    );
+
+    clearTimeout(failSafe); // ✅ STOP TIMER
+
+    const lower = userMessage.toLowerCase();
+
+    const hasEmpathy =
+      lower.includes("understand") ||
+      lower.includes("that sounds") ||
+      lower.includes("i hear");
+
+    const askedQuestion = userMessage.includes("?");
+
+    const hasEngagement =
+      askedQuestion ||
+      lower.includes("tell me") ||
+      lower.includes("can you") ||
+      lower.includes("what") ||
+      lower.includes("how");
+
+    const isGreeting =
+      lower.includes("hello") ||
+      lower.includes("hi");
+
+    const inappropriate =
+      lower.includes("just relax") ||
+      lower.includes("don't worry") ||
+      lower.includes("you should");
+
+    const bad =
+      (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
+
+    if (bad) {
       setTimeout(() => {
         setChat(c => [
           ...c,
-          { role: "client", text: "Client pauses and seems unsure…" }
+          {
+            role: "tutor",
+            text:
+              "Consider briefly acknowledging the client’s experience and using an open-ended question."
+          }
         ]);
-        setTyping(false);
-      }, 1200);
+      }, 400);
     }
-  };
+
+    setTimeout(() => {
+      setChat(c => [...c, { role: "client", text: res.data.reply }]);
+      setTyping(false);
+    }, 1200);
+
+  } catch (err) {
+    clearTimeout(failSafe);
+
+    setChat(c => [
+      ...c,
+      {
+        role: "client",
+        text: "The client seems unsure how to respond… try asking differently."
+      }
+    ]);
+    setTyping(false);
+  }
+};
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
