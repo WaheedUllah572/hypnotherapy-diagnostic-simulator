@@ -166,46 +166,51 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="h-full overflow-y-auto px-2 pt-2" ref={chatContainerRef}>
+    <div className="h-full flex flex-col">
 
-      {/* CHAT MESSAGES */}
-      {chat.map((c, i) => (
-        <div
-          key={i}
-          className={`flex mb-6 ${
-            c.role === "therapist" ? "justify-end" : "justify-start"
-          }`}
-        >
+      {/* ✅ SCROLLABLE CHAT */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto px-2 pt-2 pb-40"
+      >
+        {chat.map((c, i) => (
           <div
-            className={`max-w-[75%] p-5 rounded-2xl shadow-sm border ${
-              c.role === "tutor"
-                ? "bg-amber-50 border-amber-200"
-                : "bg-white border-slate-200"
+            key={i}
+            className={`flex mb-6 ${
+              c.role === "therapist" ? "justify-end" : "justify-start"
             }`}
           >
-            <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
-              {c.role === "therapist"
-                ? "Your Response (Student)"
-                : c.role === "tutor"
-                ? "Tutor"
-                : "Client"}
-            </p>
+            <div
+              className={`max-w-[75%] p-5 rounded-2xl shadow-sm border ${
+                c.role === "tutor"
+                  ? "bg-amber-50 border-amber-200"
+                  : "bg-white border-slate-200"
+              }`}
+            >
+              <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
+                {c.role === "therapist"
+                  ? "Your Response (Student)"
+                  : c.role === "tutor"
+                  ? "Tutor"
+                  : "Client"}
+              </p>
 
-            <p className="text-sm text-slate-800 whitespace-pre-line">
-              {c.text}
-            </p>
+              <p className="text-sm text-slate-800 whitespace-pre-line">
+                {c.text}
+              </p>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {typing && (
-        <div className="text-xs text-slate-400 italic animate-pulse mb-4">
-          Client is typing…
-        </div>
-      )}
+        {typing && (
+          <div className="text-xs text-slate-400 italic animate-pulse mb-4">
+            Client is typing…
+          </div>
+        )}
+      </div>
 
-      {/* ✅ INPUT NOW DIRECTLY UNDER LAST MESSAGE */}
-      <div className="pt-4 border-t border-slate-200 mt-6">
+      {/* ✅ FIXED INPUT (CHATGPT STYLE) */}
+      <div className="border-t border-slate-200 bg-white px-4 py-4 sticky bottom-0">
         <textarea
           rows={3}
           value={msg}
