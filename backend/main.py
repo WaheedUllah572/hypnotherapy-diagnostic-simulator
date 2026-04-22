@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 import random
-import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -50,7 +49,9 @@ async def chat(msg: Message):
         risk_sessions[session_id] = (random.randint(1, 15) == 3)
 
     stage = detect_stage_from_question(msg.text) or get_stage(session_id)
-    persona_reply = get_persona_response(msg.clientType, stage, risk_sessions[session_id])
+    persona_reply = get_persona_response(
+        msg.clientType, stage, risk_sessions[session_id]
+    )
 
     messages = [{"role": "system", "content": f"Stage: {stage}\n{persona_reply}"}]
 
@@ -90,29 +91,34 @@ async def tutor_review(req: TutorRequest):
 
     s = req.submission
 
-    q1 = "cbt" in s.get("chosenApproach", "").lower()
-    q2 = any(x in s.get("clientModality", "").lower() for x in ["visual", "auditory", "kinaesthetic"])
-    q3 = "goal" in s.get("clientObjective", "").lower()
+    q1_text = s.get("chosenApproach", "").lower()
+    q2_text = s.get("clientModality", "").lower()
+    q3_text = s.get("clientObjective", "").lower()
+
+    q1 = "cbt" in q1_text or "cognitive" in q1_text
+    q2 = any(x in q2_text for x in ["visual", "auditory", "kinaesthetic"])
+    q3 = any(x in q3_text for x in ["goal", "reduce", "manage", "control"])
 
     q4_data = evaluate_q4(s.get("clientReassurance", ""))
     q4 = all(q4_data.values())
 
-    # ✅ FINAL STRUCTURED FEEDBACK
+    # ✅ FIXED FEEDBACK (CLIENT REQUIREMENT MET)
     feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ Appropriate model selected." if q1 else "✘ The correct approach would be a Cognitive Behavioural approach based on the client’s thought patterns."}
+{"✔ Appropriate model selected. Cognitive Behavioural Therapy (CBT) is suitable based on the client’s presentation of anxiety and thought patterns." if q1 else "✘ The selected approach is unclear. A Cognitive Behavioural Therapy (CBT) approach would be more appropriate based on the client’s anxiety presentation and thinking patterns."}
 
 QUESTION 2 — Client Modality
-{"✔ Modality correctly identified." if q2 else "✘ The client’s language suggests a kinaesthetic modality (focus on feelings and body sensations)."}
+{"✔ Modality correctly identified." if q2 else "✘ The client’s language suggests a kinaesthetic modality (focus on feelings, tension, and bodily sensations)."}
 
 QUESTION 3 — Client Objective
-{"✔ Objective clearly defined." if q3 else "✘ The objective should clearly state what the client wants to change or achieve."}
+{"✔ Objective clearly defined and relevant." if q3 else "✘ The objective should clearly state what the client wants to change or achieve (e.g., reducing anxiety or improving coping)."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ All components addressed." if q4 else f"""
-• Safety: {"✔" if q4_data["safety"] else "✘"}
-• Reassurance: {"✔" if q4_data["reassurance"] else "✘"}
-• Readiness: {"✔" if q4_data["readiness"] else "✘"}
+{"✔ You addressed safety, reassurance, and readiness appropriately." if q4 else f"""✘ Safety & reassurance could be strengthened:
+
+• Safety screening: {"✔ addressed" if q4_data["safety"] else "✘ not clearly addressed"}
+• Reassurance: {"✔ provided" if q4_data["reassurance"] else "✘ could be clearer"}
+• Readiness to proceed: {"✔ confirmed" if q4_data["readiness"] else "✘ not explicitly confirmed"}
 """}
 """
 
