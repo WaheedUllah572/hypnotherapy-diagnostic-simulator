@@ -98,34 +98,6 @@ export default function ChatPanel({
 
       clearTimeout(failSafe);
 
-      const lower = userMessage.toLowerCase();
-
-      const hasEmpathy =
-        lower.includes("understand") ||
-        lower.includes("that sounds") ||
-        lower.includes("i hear");
-
-      const askedQuestion = userMessage.includes("?");
-
-      const hasEngagement =
-        askedQuestion ||
-        lower.includes("tell me") ||
-        lower.includes("can you") ||
-        lower.includes("what") ||
-        lower.includes("how");
-
-      const isGreeting =
-        lower.includes("hello") ||
-        lower.includes("hi");
-
-      const inappropriate =
-        lower.includes("just relax") ||
-        lower.includes("don't worry") ||
-        lower.includes("you should");
-
-      const bad =
-        (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
-
       setTimeout(() => {
         setChat(c => [...c, { role: "client", text: res.data.reply }]);
         setTyping(false);
@@ -194,19 +166,21 @@ export default function ChatPanel({
         </div>
       )}
 
-      {/* ✅ INPUT DIRECTLY UNDER LAST MESSAGE */}
-      <div className="pt-4 border-t border-slate-200 mt-6">
+      {/* ✅ COMPACT INPUT BLOCK (FIXED UX) */}
+      <div className="border-t border-slate-200 mt-3 pt-3">
+
         <textarea
           rows={3}
           value={msg}
           disabled={!isActive}
           onChange={e => setMsg(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-full rounded-2xl border border-slate-300 p-4 text-sm"
-          placeholder="Give an appropriate diagnostic response based on the client’s presentation..."
+          className="w-full rounded-xl border border-slate-300 p-3 text-sm"
+          placeholder="Type your response..."
         />
 
-        <div className="flex justify-between mt-4">
+        <div className="flex justify-between items-center mt-2">
+
           <button
             onClick={onEndSession}
             disabled={!isActive}
@@ -215,10 +189,10 @@ export default function ChatPanel({
             TUTOR MODE
           </button>
 
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-2 items-center">
             <button
               onClick={startListening}
-              className="bg-slate-500 text-white px-4 py-2 rounded-xl text-sm"
+              className="bg-slate-500 text-white px-3 py-2 rounded-xl text-sm"
             >
               🎤 Speak
             </button>
@@ -230,11 +204,12 @@ export default function ChatPanel({
             <button
               onClick={send}
               disabled={!isActive}
-              className="bg-brand-600 text-white px-6 py-2 rounded-xl text-sm"
+              className="bg-brand-600 text-white px-5 py-2 rounded-xl text-sm"
             >
               Respond
             </button>
           </div>
+
         </div>
       </div>
 
