@@ -126,19 +126,6 @@ export default function ChatPanel({
       const bad =
         (!hasEmpathy && !hasEngagement && !isGreeting) || inappropriate;
 
-      if (bad) {
-        setTimeout(() => {
-          setChat(c => [
-            ...c,
-            {
-              role: "tutor",
-              text:
-                "Consider briefly acknowledging the client’s experience and using an open-ended question."
-            }
-          ]);
-        }, 400);
-      }
-
       setTimeout(() => {
         setChat(c => [...c, { role: "client", text: res.data.reply }]);
         setTyping(false);

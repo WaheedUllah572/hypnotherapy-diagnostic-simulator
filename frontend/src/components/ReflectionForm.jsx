@@ -2,13 +2,11 @@ import { useEffect, useState } from "react";
 
 export default function ReflectionForm({ submission, setSubmission, onSubmit }) {
   const [local, setLocal] = useState({
-    chosenApproach: "",
-    clientModality: "",
-    clientObjective: "",
-    clientReassurance: "",
-    ...submission
-  });
-
+  chosenApproach: submission.chosenApproach || "",
+  clientModality: submission.clientModality || "",
+  clientObjective: submission.clientObjective || "",
+  clientReassurance: submission.clientReassurance || ""
+});
   useEffect(() => {
     setLocal(prev => ({
       ...prev,
