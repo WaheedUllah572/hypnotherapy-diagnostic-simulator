@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
 
 export default function ReflectionForm({ submission, setSubmission, onSubmit }) {
+
+  // ✅ FIX: SAFE INITIALIZATION (NO RENDER BUG)
   const [local, setLocal] = useState({
-  chosenApproach: submission.chosenApproach || "",
-  clientModality: submission.clientModality || "",
-  clientObjective: submission.clientObjective || "",
-  clientReassurance: submission.clientReassurance || ""
-});
+    chosenApproach: "",
+    clientModality: "",
+    clientObjective: "",
+    clientReassurance: ""
+  });
+
+  // ✅ FIX: CONTROLLED SYNC (NO OVERRIDE BUG)
   useEffect(() => {
-    setLocal(prev => ({
-      ...prev,
-      ...submission
-    }));
+    if (submission) {
+      setLocal({
+        chosenApproach: submission.chosenApproach || "",
+        clientModality: submission.clientModality || "",
+        clientObjective: submission.clientObjective || "",
+        clientReassurance: submission.clientReassurance || ""
+      });
+    }
   }, [submission]);
 
   const update = (field, value) => {
@@ -29,7 +37,6 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         End-of-Session Clinical Reflection
       </h3>
 
-      {/* QUESTION 1 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 1 — Identify the most appropriate treatment approach and describe what informed this.
@@ -42,7 +49,6 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         />
       </div>
 
-      {/* QUESTION 2 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 2 — Describe the client relaxation modality and how you identified it.
@@ -55,7 +61,6 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         />
       </div>
 
-      {/* QUESTION 3 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 3 — State the client’s core objective.
@@ -68,7 +73,6 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         />
       </div>
 
-      {/* QUESTION 4 */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 4 — Demonstrate how you:
@@ -80,15 +84,14 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
           <li>Provided reassurance and confirmed readiness</li>
         </ul>
 
-      
-
-<textarea
-  className="w-full p-3 border rounded-xl"
-  rows={5}
-  value={local.clientReassurance}
-  onChange={e => update("clientReassurance", e.target.value)}
-  placeholder="Explain how you assessed safety (risk, medical history), addressed any client concerns, reassured them, and confirmed they were ready to proceed..."
-/>      </div>
+        <textarea
+          className="w-full p-3 border rounded-xl"
+          rows={5}
+          value={local.clientReassurance}
+          onChange={e => update("clientReassurance", e.target.value)}
+          placeholder="Explain how you assessed safety (risk, medical history), reassured the client, and confirmed readiness to proceed..."
+        />
+      </div>
 
       <button
         onClick={handleSubmit}

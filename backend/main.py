@@ -76,15 +76,29 @@ async def chat(msg: Message):
     return {"reply": reply, "safety_flag": False, "stage": stage}
 
 
-# ✅ Q4 STRUCTURED CHECK
+# ✅ Q4 STRUCTURED CHECK (FIXED - STRONGER READINESS)
 def evaluate_q4(text):
     t = text.lower()
-    return {
-        "safety": any(x in t for x in ["risk", "medical", "history", "screen"]),
-        "reassurance": any(x in t for x in ["reassure", "safe", "comfortable"]),
-        "readiness": any(x in t for x in ["ready", "proceed", "continue"])
-    }
 
+    safety = any(x in t for x in [
+        "risk", "medical", "history", "screen", "contraindication"
+    ])
+
+    reassurance = any(x in t for x in [
+        "reassure", "safe", "comfortable", "support", "ease"
+    ])
+
+    readiness = any(x in t for x in [
+        "ready", "proceed", "continue",
+        "happy to proceed", "okay to continue",
+        "we can begin", "before we begin"
+    ])
+
+    return {
+        "safety": safety,
+        "reassurance": reassurance,
+        "readiness": readiness
+    }
 
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):

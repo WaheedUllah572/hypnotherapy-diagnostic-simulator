@@ -58,7 +58,7 @@ Link present problems to past experiences.
         style = "Speak naturally."
         dominant_modality = "Kinaesthetic"
 
-    # 🔴 IMPORTANT: Risk behaviour instruction (STRONGER)
+    # 🔴 IMPORTANT: Risk behaviour instruction (UNCHANGED)
     risk_instruction = ""
     if risk_mode:
         risk_instruction = """
@@ -87,15 +87,15 @@ Keep it natural and realistic, not dramatic.
 Use 1–2 sentences only.
 """
 
-    # Modality instruction
-    if random.random() < 0.8:
+    # ✅ FIXED MODALITY LOGIC (CLIENT REQUIREMENT)
+    if random.randint(1, 15) == 1:
         modality_instruction = f"""
-Use CLEAR {dominant_modality} sensory language.
-Do NOT mix modalities.
+Use MOSTLY {dominant_modality} language but include ONE other sensory hint.
 """
     else:
         modality_instruction = f"""
-Use MOSTLY {dominant_modality} language but include ONE other sensory hint.
+Use CLEAR {dominant_modality} sensory language.
+Do NOT mix modalities.
 """
 
     return f"""
