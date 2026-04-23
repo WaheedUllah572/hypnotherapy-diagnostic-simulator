@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 export default function ReflectionForm({ submission, setSubmission, onSubmit }) {
 
-  // ✅ FIX: SAFE INITIALIZATION (NO RENDER BUG)
   const [local, setLocal] = useState({
     chosenApproach: "",
     clientModality: "",
@@ -10,7 +9,6 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
     clientReassurance: ""
   });
 
-  // ✅ FIX: CONTROLLED SYNC (NO OVERRIDE BUG)
   useEffect(() => {
     if (submission) {
       setLocal({
@@ -44,7 +42,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <textarea
           className="w-full p-3 border rounded-xl"
           rows={4}
-          value={local.chosenApproach}
+          value={local.chosenApproach || ""}
           onChange={e => update("chosenApproach", e.target.value)}
         />
       </div>
@@ -56,7 +54,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <textarea
           className="w-full p-3 border rounded-xl"
           rows={4}
-          value={local.clientModality}
+          value={local.clientModality || ""}
           onChange={e => update("clientModality", e.target.value)}
         />
       </div>
@@ -68,7 +66,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <textarea
           className="w-full p-3 border rounded-xl"
           rows={3}
-          value={local.clientObjective}
+          value={local.clientObjective || ""}
           onChange={e => update("clientObjective", e.target.value)}
         />
       </div>
@@ -87,7 +85,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <textarea
           className="w-full p-3 border rounded-xl"
           rows={5}
-          value={local.clientReassurance}
+          value={local.clientReassurance || ""}
           onChange={e => update("clientReassurance", e.target.value)}
           placeholder="Explain how you assessed safety (risk, medical history), reassured the client, and confirmed readiness to proceed..."
         />

@@ -76,7 +76,7 @@ async def chat(msg: Message):
     return {"reply": reply, "safety_flag": False, "stage": stage}
 
 
-# ✅ Q4 STRUCTURED CHECK (FIXED - STRONGER READINESS)
+# ✅ STRONGER Q4 DETECTION (FINAL)
 def evaluate_q4(text):
     t = text.lower()
 
@@ -89,9 +89,20 @@ def evaluate_q4(text):
     ])
 
     readiness = any(x in t for x in [
-        "ready", "proceed", "continue",
-        "happy to proceed", "okay to continue",
-        "we can begin", "before we begin"
+        "ready",
+        "ready to proceed",
+        "confirmed ready",
+        "confirmed readiness",
+        "they are ready",
+        "they were ready",
+        "we agreed to proceed",
+        "happy to proceed",
+        "okay to continue",
+        "we can begin",
+        "before we begin",
+        "proceed",
+        "continue",
+        "move forward"
     ])
 
     return {
@@ -99,6 +110,7 @@ def evaluate_q4(text):
         "reassurance": reassurance,
         "readiness": readiness
     }
+
 
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
@@ -116,7 +128,18 @@ async def tutor_review(req: TutorRequest):
     q4_data = evaluate_q4(s.get("clientReassurance", ""))
     q4 = all(q4_data.values())
 
-    # ✅ FIXED FEEDBACK (CLIENT REQUIREMENT MET)
+    # ✅ FIXED Q4 FEEDBACK BLOCK (STABLE)
+    if q4:
+        q4_feedback = "✔ You addressed safety, reassurance, and readiness appropriately."
+    else:
+        q4_feedback = f"""✘ Safety & reassurance could be strengthened:
+
+• Safety screening: {"✔ addressed" if q4_data["safety"] else "✘ not clearly addressed"}
+• Reassurance: {"✔ provided" if q4_data["reassurance"] else "✘ could be clearer"}
+• Readiness to proceed: {"✔ confirmed" if q4_data["readiness"] else "✘ not explicitly confirmed"}
+"""
+
+    # ✅ FINAL STRUCTURED FEEDBACK
     feedback = f"""
 QUESTION 1 — Treatment Approach
 {"✔ Appropriate model selected. Cognitive Behavioural Therapy (CBT) is suitable based on the client’s presentation of anxiety and thought patterns." if q1 else "✘ The selected approach is unclear. A Cognitive Behavioural Therapy (CBT) approach would be more appropriate based on the client’s anxiety presentation and thinking patterns."}
@@ -128,12 +151,7 @@ QUESTION 3 — Client Objective
 {"✔ Objective clearly defined and relevant." if q3 else "✘ The objective should clearly state what the client wants to change or achieve (e.g., reducing anxiety or improving coping)."}
 
 QUESTION 4 — Safety & Reassurance
-{"✔ You addressed safety, reassurance, and readiness appropriately." if q4 else f"""✘ Safety & reassurance could be strengthened:
-
-• Safety screening: {"✔ addressed" if q4_data["safety"] else "✘ not clearly addressed"}
-• Reassurance: {"✔ provided" if q4_data["reassurance"] else "✘ could be clearer"}
-• Readiness to proceed: {"✔ confirmed" if q4_data["readiness"] else "✘ not explicitly confirmed"}
-"""}
+{q4_feedback}
 """
 
     total = sum([q1, q2, q3, q4])
