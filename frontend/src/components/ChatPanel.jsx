@@ -67,23 +67,31 @@ export default function ChatPanel({
   };
 
   const send = async () => {
-    if (!msg.trim() || !isActive) return;
+    const cleanMsg = msg.trim();
 
-    const userMessage = msg;
+    // ✅ BLOCK WEAK INPUTS (CRITICAL FIX)
+    if (cleanMsg.length < 5 || !isActive) return;
+
+    const userMessage = cleanMsg;
     const updatedChat = [...chat, { role: "therapist", text: userMessage }];
     setChat(updatedChat);
     setMsg("");
     setTyping(true);
 
+    let responded = false;
+
+    // ✅ SAFE FAILSAFE (NO DOUBLE RESPONSE)
     const failSafe = setTimeout(() => {
-      setChat(c => [
-        ...c,
-        {
-          role: "client",
-          text: "The client pauses… you may need to rephrase your question."
-        }
-      ]);
-      setTyping(false);
+      if (!responded) {
+        setChat(c => [
+          ...c,
+          {
+            role: "client",
+            text: "The client pauses… you may need to rephrase your question."
+          }
+        ]);
+        setTyping(false);
+      }
     }, 12000);
 
     try {
@@ -96,14 +104,16 @@ export default function ChatPanel({
         }
       );
 
+      responded = true;
       clearTimeout(failSafe);
 
       setTimeout(() => {
         setChat(c => [...c, { role: "client", text: res.data.reply }]);
         setTyping(false);
-      }, 1200);
+      }, 800);
 
     } catch (err) {
+      responded = true;
       clearTimeout(failSafe);
 
       setChat(c => [
@@ -130,7 +140,6 @@ export default function ChatPanel({
       ref={chatContainerRef}
     >
 
-      {/* CHAT */}
       {chat.map((c, i) => (
         <div
           key={i}
@@ -166,7 +175,7 @@ export default function ChatPanel({
         </div>
       )}
 
-      {/* ✅ COMPACT INPUT BLOCK (FIXED UX) */}
+      {/* INPUT */}
       <div className="border-t border-slate-200 mt-3 pt-3">
 
         <textarea
