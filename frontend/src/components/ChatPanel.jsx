@@ -16,8 +16,12 @@ export default function ChatPanel({
   ]);
   const [typing, setTyping] = useState(false);
   const [listening, setListening] = useState(false);
+
   const chatContainerRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  // ✅ CRITICAL FIX: persistent response control
+  const respondedRef = useRef(false);
 
   useEffect(() => {
     setChatHistory(chat);
@@ -66,21 +70,41 @@ export default function ChatPanel({
     }, 6000);
   };
 
+  // ✅ SAFE API CALL WITH RETRY
+  const callAPI = async (payload, retry = 0) => {
+    try {
+      return await axios.post(
+        "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
+        payload,
+        { timeout: 10000 } // ✅ frontend timeout
+      );
+    } catch (err) {
+      if (retry < 1) {
+        return callAPI(payload, retry + 1); // ✅ retry once only
+      }
+      throw err;
+    }
+  };
+
   const send = async () => {
     const cleanMsg = msg.trim();
 
     if (cleanMsg.length < 5 || !isActive) return;
 
     const userMessage = cleanMsg;
+
     const updatedChat = [...chat, { role: "therapist", text: userMessage }];
     setChat(updatedChat);
     setMsg("");
     setTyping(true);
 
-    let responded = false;
+    // ✅ RESET CONTROL FLAG
+    respondedRef.current = false;
 
     const failSafe = setTimeout(() => {
-      if (!responded) {
+      if (!respondedRef.current) {
+        respondedRef.current = true;
+
         setChat(c => [
           ...c,
           {
@@ -88,40 +112,44 @@ export default function ChatPanel({
             text: "The client pauses… you may need to rephrase your question."
           }
         ]);
+
         setTyping(false);
       }
     }, 12000);
 
     try {
-      const res = await axios.post(
-        "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
-        {
-          text: userMessage,
-          clientType: clientType,
-          history: updatedChat
-        }
-      );
+      const res = await callAPI({
+        text: userMessage,
+        clientType: clientType,
+        history: updatedChat
+      });
 
-      responded = true;
-      clearTimeout(failSafe);
+      // ✅ BLOCK DUPLICATES
+      if (!respondedRef.current) {
+        respondedRef.current = true;
+        clearTimeout(failSafe);
 
-      setTimeout(() => {
-        setChat(c => [...c, { role: "client", text: res.data.reply }]);
-        setTyping(false);
-      }, 800);
+        setTimeout(() => {
+          setChat(c => [...c, { role: "client", text: res.data.reply }]);
+          setTyping(false);
+        }, 600);
+      }
 
     } catch (err) {
-      responded = true;
-      clearTimeout(failSafe);
+      if (!respondedRef.current) {
+        respondedRef.current = true;
+        clearTimeout(failSafe);
 
-      setChat(c => [
-        ...c,
-        {
-          role: "client",
-          text: "The client seems unsure how to respond… try asking differently."
-        }
-      ]);
-      setTyping(false);
+        setChat(c => [
+          ...c,
+          {
+            role: "client",
+            text: "The client seems unsure how to respond… try asking differently."
+          }
+        ]);
+
+        setTyping(false);
+      }
     }
   };
 
@@ -135,7 +163,7 @@ export default function ChatPanel({
   return (
     <div className="h-full flex flex-col">
 
-      {/* ✅ CHAT (NO FORCED HEIGHT) */}
+      {/* CHAT */}
       <div
         ref={chatContainerRef}
         className="overflow-y-auto px-2 pt-2 pb-4"
