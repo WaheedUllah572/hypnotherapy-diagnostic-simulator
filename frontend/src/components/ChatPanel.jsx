@@ -69,7 +69,6 @@ export default function ChatPanel({
   const send = async () => {
     const cleanMsg = msg.trim();
 
-    // ✅ BLOCK WEAK INPUTS (CRITICAL FIX)
     if (cleanMsg.length < 5 || !isActive) return;
 
     const userMessage = cleanMsg;
@@ -80,7 +79,6 @@ export default function ChatPanel({
 
     let responded = false;
 
-    // ✅ SAFE FAILSAFE (NO DOUBLE RESPONSE)
     const failSafe = setTimeout(() => {
       if (!responded) {
         setChat(c => [
@@ -135,51 +133,54 @@ export default function ChatPanel({
   };
 
   return (
-    <div
-      className="h-full overflow-y-auto px-2 pt-2"
-      ref={chatContainerRef}
-    >
+    <div className="h-full flex flex-col">
 
-      {chat.map((c, i) => (
-        <div
-          key={i}
-          className={`flex mb-6 ${
-            c.role === "therapist" ? "justify-end" : "justify-start"
-          }`}
-        >
+      {/* ✅ SCROLLABLE CHAT AREA */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto px-2 pt-2 pb-4"
+      >
+        {chat.map((c, i) => (
           <div
-            className={`max-w-[75%] p-5 rounded-2xl shadow-sm border ${
-              c.role === "tutor"
-                ? "bg-amber-50 border-amber-200"
-                : "bg-white border-slate-200"
+            key={i}
+            className={`flex mb-6 ${
+              c.role === "therapist" ? "justify-end" : "justify-start"
             }`}
           >
-            <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
-              {c.role === "therapist"
-                ? "Your Response (Student)"
-                : c.role === "tutor"
-                ? "Tutor"
-                : "Client"}
-            </p>
+            <div
+              className={`max-w-[75%] p-5 rounded-2xl shadow-sm border ${
+                c.role === "tutor"
+                  ? "bg-amber-50 border-amber-200"
+                  : "bg-white border-slate-200"
+              }`}
+            >
+              <p className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">
+                {c.role === "therapist"
+                  ? "Your Response (Student)"
+                  : c.role === "tutor"
+                  ? "Tutor"
+                  : "Client"}
+              </p>
 
-            <p className="text-sm text-slate-800 whitespace-pre-line">
-              {c.text}
-            </p>
+              <p className="text-sm text-slate-800 whitespace-pre-line">
+                {c.text}
+              </p>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {typing && (
-        <div className="text-xs text-slate-400 italic animate-pulse mb-4">
-          Client is typing…
-        </div>
-      )}
+        {typing && (
+          <div className="text-xs text-slate-400 italic animate-pulse mb-4">
+            Client is typing…
+          </div>
+        )}
+      </div>
 
-      {/* INPUT */}
-      <div className="border-t border-slate-200 mt-3 pt-3">
+      {/* ✅ FIXED INPUT BAR (CHATGPT STYLE) */}
+      <div className="border-t border-slate-200 bg-white p-3 sticky bottom-0">
 
         <textarea
-          rows={3}
+          rows={2}
           value={msg}
           disabled={!isActive}
           onChange={e => setMsg(e.target.value)}
