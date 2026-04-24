@@ -135,10 +135,10 @@ export default function ChatPanel({
   return (
     <div className="h-full flex flex-col">
 
-      {/* ✅ SCROLLABLE CHAT AREA */}
+      {/* ✅ CHAT (NO FORCED HEIGHT) */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto px-2 pt-2 pb-4"
+        className="overflow-y-auto px-2 pt-2 pb-4"
       >
         {chat.map((c, i) => (
           <div
@@ -176,7 +176,7 @@ export default function ChatPanel({
         )}
       </div>
 
-      {/* ✅ FIXED INPUT BAR (CHATGPT STYLE) */}
+      {/* INPUT */}
       <div className="border-t border-slate-200 bg-white p-3 sticky bottom-0">
 
         <textarea
