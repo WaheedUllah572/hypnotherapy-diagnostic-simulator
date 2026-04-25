@@ -71,26 +71,25 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-semibold text-slate-800 mb-2">
-          QUESTION 4 — Demonstrate how you:
-        </label>
+      <div className="p-4 border rounded-xl">
+  <label className="block text-sm font-semibold text-slate-800 mb-2">
+    QUESTION 4 — Demonstrate how you:
+  </label>
 
-        <ul className="text-xs text-slate-600 mb-2 list-disc ml-5 space-y-1">
-          <li>Clarified suitability and screened for safety concerns</li>
-          <li>Responded to client questions</li>
-          <li>Provided reassurance and confirmed readiness</li>
-        </ul>
+  <ul className="text-xs text-slate-600 mb-2 list-disc ml-5 space-y-1">
+    <li>Clarified suitability and screened for safety concerns</li>
+    <li>Responded to client questions</li>
+    <li>Provided reassurance and confirmed readiness</li>
+  </ul>
 
-        <textarea
-          className="w-full p-3 border rounded-xl"
-          rows={5}
-          value={local.clientReassurance || ""}
-          onChange={e => update("clientReassurance", e.target.value)}
-          placeholder="Explain how you assessed safety (risk, medical history), reassured the client, and confirmed readiness to proceed..."
-        />
-      </div>
-
+  <textarea
+    className="w-full p-3 border rounded-xl"
+    rows={5}
+    value={local.clientReassurance || ""}
+    onChange={e => update("clientReassurance", e.target.value)}
+    placeholder="Explain how you assessed safety..."
+  />
+</div>
       <button
         onClick={handleSubmit}
         className="bg-brand-600 text-white px-6 py-2 rounded-xl"
