@@ -28,7 +28,6 @@ export default function SessionSimulator() {
     randomiseClient();
   }, []);
 
-  // Never repeat same client twice
   const randomiseClient = () => {
     let newClient;
     do {
@@ -53,7 +52,6 @@ export default function SessionSimulator() {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-slate-100 to-teal-100">
-      {/* HEADER */}
       <div className="header-bar text-white px-8 py-5 sticky top-0 z-50">
         <div className="max-w-[1500px] mx-auto flex justify-between">
           <h1 className="text-lg tracking-wider font-medium">
@@ -78,9 +76,9 @@ export default function SessionSimulator() {
             </div>
           </aside>
 
-          {/* CENTER */}
+          {/* CENTER (✅ FIXED HERE) */}
           <main className="col-span-6">
-            <div className="glass p-6 lift h-[650px]">
+            <div className="glass p-6 lift">
               {stage === "session" && (
                 <ChatPanel
                   isActive={true}
