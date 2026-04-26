@@ -30,7 +30,8 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
   };
 
   return (
-    <div className="space-y-8">
+    <div className="bg-white p-6 rounded-xl space-y-8"> {/* ✅ CRITICAL FIX */}
+
       <h3 className="text-lg font-semibold text-slate-900">
         End-of-Session Clinical Reflection
       </h3>
@@ -74,13 +75,12 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         />
       </div>
 
-      {/* ✅ Q4 — MATCHED STRUCTURE */}
+      {/* ✅ Q4 — NOW INSIDE SAME CONTAINER */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 4 — Demonstrate how you:
         </label>
 
-        {/* Keep guidance but NOT styled differently */}
         <p className="text-xs text-slate-600 mb-2">
           Clarified suitability and screened for safety concerns, responded to client questions,
           and provided reassurance while confirming readiness.
@@ -101,6 +101,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
       >
         Submit for Tutor Review
       </button>
+
     </div>
   );
 }
