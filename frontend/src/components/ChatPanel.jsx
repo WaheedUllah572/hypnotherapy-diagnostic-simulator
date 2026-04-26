@@ -8,9 +8,7 @@ export default function ChatPanel({
   clientType
 }) {
   const [msg, setMsg] = useState("");
-  const [chat, setChat] = useState([
-    { role: "client", text: "Hello" }
-  ]);
+  const [chat, setChat] = useState([{ role: "client", text: "Hello" }]);
   const [typing, setTyping] = useState(false);
   const [listening, setListening] = useState(false);
 
@@ -18,6 +16,9 @@ export default function ChatPanel({
   const recognitionRef = useRef(null);
   const respondedRef = useRef(false);
   const failSafeRef = useRef(null);
+
+  // ✅ CRITICAL FIX — unique session per chat
+  const sessionIdRef = useRef(Date.now().toString());
 
   useEffect(() => {
     setChatHistory(chat);
@@ -69,7 +70,7 @@ export default function ChatPanel({
       return await axios.post(
         "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
         payload,
-        { timeout: 15000 } // ✅ increased timeout
+        { timeout: 15000 }
       );
     } catch (err) {
       if (retry < 1) return callAPI(payload, retry + 1);
@@ -90,7 +91,6 @@ export default function ChatPanel({
 
     if (failSafeRef.current) clearTimeout(failSafeRef.current);
 
-    // ✅ FIX: increased buffer (critical)
     failSafeRef.current = setTimeout(() => {
       if (!respondedRef.current) {
         respondedRef.current = true;
@@ -103,13 +103,14 @@ export default function ChatPanel({
         ]);
         setTyping(false);
       }
-    }, 18000); // ✅ was 12000
+    }, 18000);
 
     try {
       const res = await callAPI({
         text: cleanMsg,
         clientType,
-        history: updatedChat
+        history: updatedChat,
+        sessionId: sessionIdRef.current // ✅ FIX
       });
 
       if (!respondedRef.current) {
@@ -146,7 +147,6 @@ export default function ChatPanel({
 
   return (
     <div className="h-full flex flex-col">
-
       <div ref={chatContainerRef} className="overflow-y-auto px-2 pt-2 pb-2">
         {chat.map((c, i) => (
           <div key={i} className={`flex mb-4 ${c.role === "therapist" ? "justify-end" : "justify-start"}`}>

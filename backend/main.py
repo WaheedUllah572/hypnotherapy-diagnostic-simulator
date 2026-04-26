@@ -32,7 +32,7 @@ class Message(BaseModel):
     text: str
     clientType: str
     history: list = []
-
+    sessionId: str | None = None  # ✅ FIX
 
 class TutorRequest(BaseModel):
     submission: dict
@@ -43,7 +43,7 @@ class TutorRequest(BaseModel):
 @app.post("/chat")
 async def chat(msg: Message):
 
-    session_id = msg.clientType + "_session"
+    session_id = msg.sessionId or (msg.clientType + "_session")  # ✅ FIX
 
     if session_id not in risk_sessions:
         risk_sessions[session_id] = (random.randint(1, 15) == 3)
