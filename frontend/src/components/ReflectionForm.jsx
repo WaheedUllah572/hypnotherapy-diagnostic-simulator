@@ -40,7 +40,9 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 1 — Identify the most appropriate treatment approach and describe what informed this.
         </label>
-        <textarea className="w-full p-3 border rounded-xl" rows={4}
+        <textarea
+          className="w-full p-3 border rounded-xl"
+          rows={4}
           value={local.chosenApproach || ""}
           onChange={e => update("chosenApproach", e.target.value)}
         />
@@ -51,7 +53,9 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 2 — Describe the client relaxation modality and how you identified it.
         </label>
-        <textarea className="w-full p-3 border rounded-xl" rows={4}
+        <textarea
+          className="w-full p-3 border rounded-xl"
+          rows={4}
           value={local.clientModality || ""}
           onChange={e => update("clientModality", e.target.value)}
         />
@@ -62,30 +66,32 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 3 — State the client’s core objective.
         </label>
-        <textarea className="w-full p-3 border rounded-xl" rows={3}
+        <textarea
+          className="w-full p-3 border rounded-xl"
+          rows={3}
           value={local.clientObjective || ""}
           onChange={e => update("clientObjective", e.target.value)}
         />
       </div>
 
-      {/* Q4 FIXED */}
+      {/* ✅ Q4 — MATCHED STRUCTURE */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 4 — Demonstrate how you:
         </label>
 
-        <ul className="text-xs text-slate-600 mb-2 space-y-1 pl-3">
-          <li>Clarified suitability and screened for safety concerns</li>
-          <li>Responded to client questions</li>
-          <li>Provided reassurance and confirmed readiness</li>
-        </ul>
+        {/* Keep guidance but NOT styled differently */}
+        <p className="text-xs text-slate-600 mb-2">
+          Clarified suitability and screened for safety concerns, responded to client questions,
+          and provided reassurance while confirming readiness.
+        </p>
 
         <textarea
           className="w-full p-3 border rounded-xl"
           rows={5}
           value={local.clientReassurance || ""}
           onChange={e => update("clientReassurance", e.target.value)}
-          placeholder="Explain how you assessed safety..."
+          placeholder="Explain how you assessed safety, reassured the client, and confirmed readiness..."
         />
       </div>
 
