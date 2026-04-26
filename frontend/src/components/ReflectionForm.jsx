@@ -30,7 +30,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl space-y-8"> {/* ✅ CRITICAL FIX */}
+    <div className="bg-white p-6 rounded-xl space-y-8">
 
       <h3 className="text-lg font-semibold text-slate-900">
         End-of-Session Clinical Reflection
@@ -41,9 +41,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 1 — Identify the most appropriate treatment approach and describe what informed this.
         </label>
-        <textarea
-          className="w-full p-3 border rounded-xl"
-          rows={4}
+        <textarea className="w-full p-3 border rounded-xl" rows={4}
           value={local.chosenApproach || ""}
           onChange={e => update("chosenApproach", e.target.value)}
         />
@@ -54,9 +52,7 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 2 — Describe the client relaxation modality and how you identified it.
         </label>
-        <textarea
-          className="w-full p-3 border rounded-xl"
-          rows={4}
+        <textarea className="w-full p-3 border rounded-xl" rows={4}
           value={local.clientModality || ""}
           onChange={e => update("clientModality", e.target.value)}
         />
@@ -67,24 +63,17 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
         <label className="block text-sm font-semibold text-slate-800 mb-2">
           QUESTION 3 — State the client’s core objective.
         </label>
-        <textarea
-          className="w-full p-3 border rounded-xl"
-          rows={3}
+        <textarea className="w-full p-3 border rounded-xl" rows={3}
           value={local.clientObjective || ""}
           onChange={e => update("clientObjective", e.target.value)}
         />
       </div>
 
-      {/* ✅ Q4 — NOW INSIDE SAME CONTAINER */}
+      {/* ✅ Q4 — EXACT SAME STRUCTURE */}
       <div>
         <label className="block text-sm font-semibold text-slate-800 mb-2">
-          QUESTION 4 — Demonstrate how you:
+          QUESTION 4 — Demonstrate how you clarified suitability, responded to the client, and confirmed readiness.
         </label>
-
-        <p className="text-xs text-slate-600 mb-2">
-          Clarified suitability and screened for safety concerns, responded to client questions,
-          and provided reassurance while confirming readiness.
-        </p>
 
         <textarea
           className="w-full p-3 border rounded-xl"
