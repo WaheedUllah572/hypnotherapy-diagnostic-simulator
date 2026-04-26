@@ -69,7 +69,7 @@ export default function ChatPanel({
       return await axios.post(
         "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
         payload,
-        { timeout: 10000 }
+        { timeout: 15000 } // ✅ increased timeout
       );
     } catch (err) {
       if (retry < 1) return callAPI(payload, retry + 1);
@@ -88,19 +88,22 @@ export default function ChatPanel({
 
     respondedRef.current = false;
 
-    // CLEAR any previous timer
     if (failSafeRef.current) clearTimeout(failSafeRef.current);
 
+    // ✅ FIX: increased buffer (critical)
     failSafeRef.current = setTimeout(() => {
       if (!respondedRef.current) {
         respondedRef.current = true;
         setChat(c => [
           ...c,
-          { role: "client", text: "The client pauses… you may need to rephrase your question." }
+          {
+            role: "client",
+            text: "The client pauses… you may need to rephrase your question."
+          }
         ]);
         setTyping(false);
       }
-    }, 12000);
+    }, 18000); // ✅ was 12000
 
     try {
       const res = await callAPI({
@@ -124,7 +127,10 @@ export default function ChatPanel({
 
         setChat(c => [
           ...c,
-          { role: "client", text: "The client seems unsure how to respond… try asking differently." }
+          {
+            role: "client",
+            text: "The client seems unsure how to respond… try asking differently."
+          }
         ]);
         setTyping(false);
       }
@@ -141,17 +147,9 @@ export default function ChatPanel({
   return (
     <div className="h-full flex flex-col">
 
-      <div
-        ref={chatContainerRef}
-        className="overflow-y-auto px-2 pt-2 pb-2"
-      >
+      <div ref={chatContainerRef} className="overflow-y-auto px-2 pt-2 pb-2">
         {chat.map((c, i) => (
-          <div
-            key={i}
-            className={`flex mb-4 ${
-              c.role === "therapist" ? "justify-end" : "justify-start"
-            }`}
-          >
+          <div key={i} className={`flex mb-4 ${c.role === "therapist" ? "justify-end" : "justify-start"}`}>
             <div className="max-w-[75%] p-4 rounded-2xl shadow-sm border bg-white border-slate-200">
               <p className="text-[11px] text-slate-400 mb-1">
                 {c.role === "therapist" ? "Your Response (Student)" : "Client"}

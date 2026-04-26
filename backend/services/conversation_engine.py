@@ -1,5 +1,3 @@
-# backend/services/conversation_engine.py
-
 session_stages = {}
 
 stages_order = [
@@ -29,7 +27,17 @@ def advance_stage(session_id):
 def detect_stage_from_question(text):
     text = text.lower()
 
-    if "what brings" in text or "hello" in text:
+    # ✅ CRITICAL FIX (client issue)
+    if any(x in text for x in [
+        "hello",
+        "hi",
+        "how can i help",
+        "what would you like to talk",
+        "what do you want to work on"
+    ]):
+        return "presenting_problem"
+
+    elif "what brings" in text:
         return "presenting_problem"
     elif "when did" in text or "how long" in text:
         return "timeline"
@@ -45,22 +53,18 @@ def detect_stage_from_question(text):
         return "goal"
     elif "hypnotherapy" in text:
         return "hypnosis_question"
-    else:
-        return None
+
+    return None
 
 
-# ✅ NEW: CLINICAL RESPONSE CHECK (THIS IS THE KEY FEATURE)
 def detect_bad_response(student_text: str):
     text = student_text.lower()
 
-    # ❌ No empathy
     empathy_keywords = ["understand", "that sounds", "i hear", "that must"]
     has_empathy = any(k in text for k in empathy_keywords)
 
-    # ❌ No question / engagement
     asking_question = "?" in text
 
-    # ❌ Inappropriate suggestion (too early)
     bad_suggestions = ["just relax", "you should", "don't worry"]
     inappropriate = any(k in text for k in bad_suggestions)
 
