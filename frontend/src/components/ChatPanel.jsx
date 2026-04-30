@@ -68,7 +68,8 @@ export default function ChatPanel({
   const callAPI = async (payload, retry = 0) => {
     try {
       return await axios.post(
-        "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
+        // ✅ FIXED: NEW BACKEND URL
+        "https://ai-tax-agent-backend-1.onrender.com/chat",
         payload,
         { timeout: 15000 }
       );
@@ -110,7 +111,7 @@ export default function ChatPanel({
         text: cleanMsg,
         clientType,
         history: updatedChat,
-        sessionId: sessionIdRef.current // ✅ FIX
+        sessionId: sessionIdRef.current
       });
 
       if (!respondedRef.current) {
@@ -119,6 +120,9 @@ export default function ChatPanel({
 
         setChat(c => [...c, { role: "client", text: res.data.reply }]);
         setTyping(false);
+
+        // ✅ OPTIONAL DEBUG (SAFE)
+        console.log("STATE:", res.data.state);
       }
 
     } catch (err) {
