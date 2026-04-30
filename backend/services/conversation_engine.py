@@ -30,22 +30,49 @@ def update_state(session_id, student_text):
 
     state = session_state[session_id]
 
-    # empathy improves trust
-    if any(x in text for x in ["understand", "that sounds", "i hear"]):
-        state["trust"] += 5
+    # ✅ STRONGER EMPATHY DETECTION (FIX)
+    if any(x in text for x in [
+        "i understand",
+        "that sounds",
+        "i hear you",
+        "you’re safe",
+        "i'm here",
+        "i am here",
+        "we can work through this",
+        "it's okay"
+    ]):
+        state["trust"] += 10
         state["engagement"] += 5
+        state["distress"] -= 5
 
-    # poor responses increase resistance
-    if "just relax" in text or "don't worry" in text:
-        state["resistance"] += 10
-        state["trust"] -= 5
+    # ✅ BAD / DISMISSIVE RESPONSES (FIX)
+    if any(x in text for x in [
+        "just relax",
+        "don't worry",
+        "calm down",
+        "it's nothing",
+        "you'll be fine"
+    ]):
+        state["resistance"] += 15
+        state["trust"] -= 10
 
-    # risk detection (basic)
+    # ✅ QUESTION QUALITY (NEW MINIMAL FIX)
+    if any(x in text for x in [
+        "how do you feel",
+        "can you tell me more",
+        "what does that feel like",
+        "can you describe"
+    ]):
+        state["engagement"] += 5
+        state["trust"] += 5
+
+    # ✅ RISK DETECTION (UNCHANGED BUT SLIGHTLY STRONGER)
     if any(x in text for x in ["suicide", "can't go on", "give up"]):
         state["risk_flag"] = "moderate"
         state["distress"] += 20
+        state["trust"] -= 10
 
-    # clamp values
+    # ✅ CLAMP VALUES (UNCHANGED)
     for k in ["trust", "distress", "engagement", "resistance"]:
         state[k] = max(0, min(100, state[k]))
 
