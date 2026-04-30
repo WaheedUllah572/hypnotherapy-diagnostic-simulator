@@ -110,7 +110,7 @@ export default function ChatPanel({
         text: cleanMsg,
         clientType,
         history: updatedChat,
-        sessionId: sessionIdRef.current // ✅ FIX
+        sessionId: sessionIdRef.current
       });
 
       if (!respondedRef.current) {
@@ -119,6 +119,10 @@ export default function ChatPanel({
 
         setChat(c => [...c, { role: "client", text: res.data.reply }]);
         setTyping(false);
+
+        // ✅ ONLY REQUIRED ADDITION
+        console.log("STATE:", res.data.state);
+        console.log("FULL RESPONSE:", res.data);
       }
 
     } catch (err) {
