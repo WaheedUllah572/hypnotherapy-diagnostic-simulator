@@ -8,109 +8,37 @@ with open(DATA_PATH, "r") as f:
     case_histories = json.load(f)
 
 
-def get_persona_response(client_name, stage, risk_mode=False):
+def get_persona_response(client_name, stage, state):
 
-    case = case_histories.get(client_name)
+    trust = state["trust"]
+    distress = state["distress"]
+    resistance = state["resistance"]
+    risk = state["risk_flag"]
 
-    if not case:
-        return "The client seems unsure and is trying to explain their problem."
+    tone = "neutral"
 
-    info = case.get(stage, "")
-    persona_type = case.get("type", "")
+    if trust > 70:
+        tone = "open"
+    elif resistance > 60:
+        tone = "resistant"
+    elif distress > 60:
+        tone = "distressed"
 
-    # Communication style per persona
-    if persona_type == "CBH":
-        style = """
-You are a Cognitive Behavioural client.
-Speak using thought-based language like:
-"I keep thinking..."
-"I worry that..."
-"I keep imagining..."
-"""
-        dominant_modality = "Visual"
+    response_style = f"""
+Client emotional state:
+- Trust: {trust}
+- Distress: {distress}
+- Resistance: {resistance}
 
-    elif persona_type == "SH":
-        style = """
-You are an emotional / solution-focused client.
-Speak using feeling and emotional language like:
-"I feel overwhelmed..."
-"I feel under pressure..."
-"""
-        dominant_modality = "Auditory"
-
-    elif persona_type == "Ericksonian":
-        style = """
-You are an Ericksonian-style client.
-Speak using metaphor and imagery like:
-"It's like..."
-"I feel like I'm..."
-"""
-        dominant_modality = "Kinaesthetic"
-
-    elif persona_type == "Regression":
-        style = """
-You are a regression-style client.
-Link present problems to past experiences.
-"""
-        dominant_modality = "Kinaesthetic"
-
-    else:
-        style = "Speak naturally."
-        dominant_modality = "Kinaesthetic"
-
-    # 🔴 IMPORTANT: Risk behaviour instruction (UNCHANGED)
-    risk_instruction = ""
-    if risk_mode:
-        risk_instruction = """
-IMPORTANT SAFETY BEHAVIOUR:
-You are an emotionally vulnerable client.
-
-When the therapist asks about:
-- feelings
-- stress
-- coping
-- sleep
-- feeling overwhelmed
-- wanting to escape
-- feeling trapped
-- giving up
-
-You MUST include at least one of the following ideas in your response:
-- feeling trapped
-- wanting to escape
-- wanting everything to stop
-- feeling like giving up
-- feeling like you can't go on
-- wishing you could disappear
-
-Keep it natural and realistic, not dramatic.
-Use 1–2 sentences only.
+Behaviour rules:
+- If trust is high → open up more
+- If resistance is high → give short hesitant replies
+- If distress is high → show emotional difficulty
 """
 
-    # ✅ FIXED MODALITY LOGIC (CLIENT REQUIREMENT)
-    if random.randint(1, 15) == 1:
-        modality_instruction = f"""
-Use MOSTLY {dominant_modality} language but include ONE other sensory hint.
-"""
-    else:
-        modality_instruction = f"""
-Use CLEAR {dominant_modality} sensory language.
-Do NOT mix modalities.
+    if risk != "none":
+        response_style += """
+Include subtle expressions of overwhelm or wanting to escape.
 """
 
-    return f"""
-Client background information:
-{info}
-
-Communication style:
-{style}
-
-{risk_instruction}
-
-Modality instruction:
-{modality_instruction}
-
-Respond naturally to the therapist.
-Keep responses to 1–3 sentences.
-Do not explain everything at once.
-"""
+    return response_style

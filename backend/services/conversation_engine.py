@@ -1,4 +1,5 @@
 session_stages = {}
+session_state = {}
 
 stages_order = [
     "presenting_problem",
@@ -10,6 +11,50 @@ stages_order = [
     "goal",
     "hypnosis_question"
 ]
+
+
+def init_session_state(session_id):
+    if session_id not in session_state:
+        session_state[session_id] = {
+            "trust": 50,
+            "distress": 30,
+            "engagement": 50,
+            "resistance": 20,
+            "risk_flag": "none"
+        }
+
+
+def update_state(session_id, student_text):
+    init_session_state(session_id)
+    text = student_text.lower()
+
+    state = session_state[session_id]
+
+    # empathy improves trust
+    if any(x in text for x in ["understand", "that sounds", "i hear"]):
+        state["trust"] += 5
+        state["engagement"] += 5
+
+    # poor responses increase resistance
+    if "just relax" in text or "don't worry" in text:
+        state["resistance"] += 10
+        state["trust"] -= 5
+
+    # risk detection (basic)
+    if any(x in text for x in ["suicide", "can't go on", "give up"]):
+        state["risk_flag"] = "moderate"
+        state["distress"] += 20
+
+    # clamp values
+    for k in ["trust", "distress", "engagement", "resistance"]:
+        state[k] = max(0, min(100, state[k]))
+
+    return state
+
+
+def get_state(session_id):
+    init_session_state(session_id)
+    return session_state[session_id]
 
 
 def get_stage(session_id):
@@ -27,48 +72,23 @@ def advance_stage(session_id):
 def detect_stage_from_question(text):
     text = text.lower()
 
-    # ✅ CRITICAL FIX (client issue)
-    if any(x in text for x in [
-        "hello",
-        "hi",
-        "how can i help",
-        "what would you like to talk",
-        "what do you want to work on"
-    ]):
+    if any(x in text for x in ["hello", "hi", "how can i help"]):
         return "presenting_problem"
-
     elif "what brings" in text:
         return "presenting_problem"
-    elif "when did" in text or "how long" in text:
+    elif "when did" in text:
         return "timeline"
-    elif "what goes through" in text or "what do you think" in text:
+    elif "what do you think" in text:
         return "thoughts"
     elif "how do you feel" in text:
         return "feelings"
     elif "body" in text:
         return "body"
-    elif "before" in text or "childhood" in text or "past" in text:
+    elif "past" in text:
         return "past"
-    elif "what would you like" in text or "goal" in text:
+    elif "goal" in text:
         return "goal"
     elif "hypnotherapy" in text:
         return "hypnosis_question"
 
     return None
-
-
-def detect_bad_response(student_text: str):
-    text = student_text.lower()
-
-    empathy_keywords = ["understand", "that sounds", "i hear", "that must"]
-    has_empathy = any(k in text for k in empathy_keywords)
-
-    asking_question = "?" in text
-
-    bad_suggestions = ["just relax", "you should", "don't worry"]
-    inappropriate = any(k in text for k in bad_suggestions)
-
-    if not has_empathy or not asking_question or inappropriate:
-        return True
-
-    return False

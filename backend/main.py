@@ -3,15 +3,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 import os
-import random
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from services.session_tracker import save_session, get_sessions
 from services.progress_engine import calculate_progress
+
+# ✅ UPDATED IMPORTS (Phase 2A)
+from services.conversation_engine import (
+    get_stage,
+    detect_stage_from_question,
+    update_state,
+    get_state
+)
 from services.persona_engine import get_persona_response
-from services.conversation_engine import get_stage, detect_stage_from_question
+from services.prompt_builder import build_prompt
 
 app = FastAPI()
 
@@ -25,14 +32,13 @@ app.add_middleware(
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-risk_sessions = {}
-
 
 class Message(BaseModel):
     text: str
     clientType: str
     history: list = []
-    sessionId: str | None = None  # ✅ FIX
+    sessionId: str | None = None
+
 
 class TutorRequest(BaseModel):
     submission: dict
@@ -40,21 +46,29 @@ class TutorRequest(BaseModel):
     clientName: str
 
 
+# ============================
+# ✅ UPDATED CHAT ENDPOINT
+# ============================
 @app.post("/chat")
 async def chat(msg: Message):
 
-    session_id = msg.sessionId or (msg.clientType + "_session")  # ✅ FIX
+    session_id = msg.sessionId or (msg.clientType + "_session")
 
-    if session_id not in risk_sessions:
-        risk_sessions[session_id] = (random.randint(1, 15) == 3)
-
+    # Detect stage
     stage = detect_stage_from_question(msg.text) or get_stage(session_id)
-    persona_reply = get_persona_response(
-        msg.clientType, stage, risk_sessions[session_id]
-    )
 
-    messages = [{"role": "system", "content": f"Stage: {stage}\n{persona_reply}"}]
+    # ✅ NEW: Update state
+    state = update_state(session_id, msg.text)
 
+    # Generate persona behavior based on state
+    persona = get_persona_response(msg.clientType, stage, state)
+
+    # Build improved prompt
+    system_prompt = build_prompt(stage, persona)
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # History handling (unchanged logic, just cleaner)
     for m in msg.history:
         if m["role"] == "therapist":
             messages.append({"role": "user", "content": m["text"]})
@@ -73,10 +87,16 @@ async def chat(msg: Message):
     except Exception:
         reply = "I'm not sure how to explain that… could you ask me in a different way?"
 
-    return {"reply": reply, "safety_flag": False, "stage": stage}
+    return {
+        "reply": reply,
+        "stage": stage,
+        "state": state  # ✅ NEW: return state for debugging/testing
+    }
 
 
-# ✅ STRONGER Q4 DETECTION (FINAL)
+# ============================
+# ✅ TUTOR EVALUATION (UNCHANGED — already good)
+# ============================
 def evaluate_q4(text):
     t = text.lower()
 
@@ -128,7 +148,6 @@ async def tutor_review(req: TutorRequest):
     q4_data = evaluate_q4(s.get("clientReassurance", ""))
     q4 = all(q4_data.values())
 
-    # ✅ FIXED Q4 FEEDBACK BLOCK (STABLE)
     if q4:
         q4_feedback = "✔ You addressed safety, reassurance, and readiness appropriately."
     else:
@@ -139,7 +158,6 @@ async def tutor_review(req: TutorRequest):
 • Readiness to proceed: {"✔ confirmed" if q4_data["readiness"] else "✘ not explicitly confirmed"}
 """
 
-    # ✅ FINAL STRUCTURED FEEDBACK
     feedback = f"""
 QUESTION 1 — Treatment Approach
 {"✔ Appropriate model selected. Cognitive Behavioural Therapy (CBT) is suitable based on the client’s presentation of anxiety and thought patterns." if q1 else "✘ The selected approach is unclear. A Cognitive Behavioural Therapy (CBT) approach would be more appropriate based on the client’s anxiety presentation and thinking patterns."}
