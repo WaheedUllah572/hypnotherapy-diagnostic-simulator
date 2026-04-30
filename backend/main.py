@@ -57,8 +57,11 @@ async def chat(msg: Message):
     # Detect stage
     stage = detect_stage_from_question(msg.text) or get_stage(session_id)
 
-    # ✅ NEW: Update state
-    state = update_state(session_id, msg.text)
+    # ✅ SAFE STATE HANDLING (REQUIRED FIX)
+    try:
+        state = update_state(session_id, msg.text)
+    except Exception:
+        state = get_state(session_id)
 
     # Generate persona behavior based on state
     persona = get_persona_response(msg.clientType, stage, state)
@@ -68,7 +71,7 @@ async def chat(msg: Message):
 
     messages = [{"role": "system", "content": system_prompt}]
 
-    # History handling (unchanged logic, just cleaner)
+    # History handling (UNCHANGED)
     for m in msg.history:
         if m["role"] == "therapist":
             messages.append({"role": "user", "content": m["text"]})
@@ -90,12 +93,12 @@ async def chat(msg: Message):
     return {
         "reply": reply,
         "stage": stage,
-        "state": state  # ✅ NEW: return state for debugging/testing
+        "state": state  # ✅ REQUIRED FOR PHASE 2A
     }
 
 
 # ============================
-# ✅ TUTOR EVALUATION (UNCHANGED — already good)
+# ✅ TUTOR EVALUATION (UNCHANGED)
 # ============================
 def evaluate_q4(text):
     t = text.lower()
