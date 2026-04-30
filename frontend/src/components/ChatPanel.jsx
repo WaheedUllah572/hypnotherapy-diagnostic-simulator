@@ -17,7 +17,6 @@ export default function ChatPanel({
   const respondedRef = useRef(false);
   const failSafeRef = useRef(null);
 
-  // ✅ CRITICAL FIX — unique session per chat
   const sessionIdRef = useRef(Date.now().toString());
 
   useEffect(() => {
@@ -68,7 +67,6 @@ export default function ChatPanel({
   const callAPI = async (payload, retry = 0) => {
     try {
       return await axios.post(
-        // ✅ FIXED: NEW BACKEND URL
         "https://ai-tax-agent-backend-1.onrender.com/chat",
         payload,
         { timeout: 15000 }
@@ -109,7 +107,7 @@ export default function ChatPanel({
     try {
       const res = await callAPI({
         text: cleanMsg,
-        clientType,
+        clientType: clientType || "Daniel", // ✅ FIX
         history: updatedChat,
         sessionId: sessionIdRef.current
       });
@@ -121,7 +119,6 @@ export default function ChatPanel({
         setChat(c => [...c, { role: "client", text: res.data.reply }]);
         setTyping(false);
 
-        // ✅ OPTIONAL DEBUG (SAFE)
         console.log("STATE:", res.data.state);
       }
 

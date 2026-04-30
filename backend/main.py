@@ -52,26 +52,24 @@ class TutorRequest(BaseModel):
 @app.post("/chat")
 async def chat(msg: Message):
 
-    session_id = msg.sessionId or (msg.clientType + "_session")
+    # ✅ FIX: safe clientType fallback
+    client_type = msg.clientType or "Daniel"
+    session_id = msg.sessionId or (client_type + "_session")
 
-    # Detect stage
     stage = detect_stage_from_question(msg.text) or get_stage(session_id)
 
-    # ✅ SAFE STATE HANDLING (REQUIRED FIX)
     try:
         state = update_state(session_id, msg.text)
     except Exception:
         state = get_state(session_id)
 
-    # Generate persona behavior based on state
-    persona = get_persona_response(msg.clientType, stage, state)
+    # ✅ FIX APPLIED HERE
+    persona = get_persona_response(client_type, stage, state)
 
-    # Build improved prompt
     system_prompt = build_prompt(stage, persona)
 
     messages = [{"role": "system", "content": system_prompt}]
 
-    # History handling (UNCHANGED)
     for m in msg.history:
         if m["role"] == "therapist":
             messages.append({"role": "user", "content": m["text"]})
@@ -93,10 +91,8 @@ async def chat(msg: Message):
     return {
         "reply": reply,
         "stage": stage,
-        "state": state  # ✅ REQUIRED FOR PHASE 2A
+        "state": state
     }
-
-
 # ============================
 # ✅ TUTOR EVALUATION (UNCHANGED)
 # ============================
