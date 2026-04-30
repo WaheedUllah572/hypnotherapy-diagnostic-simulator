@@ -17,6 +17,8 @@ export default function SessionSimulator() {
   const [client, setClient] = useState(clientProfiles[0]);
   const [chatHistory, setChatHistory] = useState([]);
 
+  const [stateData, setStateData] = useState(null); // ✅ NEW
+
   const [submission, setSubmission] = useState({
     chosenApproach: "",
     clientModality: "",
@@ -48,6 +50,7 @@ export default function SessionSimulator() {
       clientReassurance: ""
     });
     setStage("session");
+    setStateData(null); // ✅ reset
   };
 
   return (
@@ -76,7 +79,7 @@ export default function SessionSimulator() {
             </div>
           </aside>
 
-          {/* CENTER (✅ FIXED HERE) */}
+          {/* CENTER */}
           <main className="col-span-6">
             <div className="glass p-6 lift">
               {stage === "session" && (
@@ -85,6 +88,7 @@ export default function SessionSimulator() {
                   onEndSession={() => setStage("reflection")}
                   setChatHistory={setChatHistory}
                   clientType={client.type}
+                  setStateData={setStateData} // ✅ PASS STATE
                 />
               )}
 
@@ -108,8 +112,19 @@ export default function SessionSimulator() {
           </main>
 
           {/* RIGHT */}
-          <aside className="col-span-2">
+          <aside className="col-span-2 space-y-4">
             <ProgressDashboard />
+
+            {/* ✅ SIMPLE STATE DISPLAY (MINIMAL UI — SAFE CHANGE) */}
+            {stateData && (
+              <div className="bg-white p-4 rounded-xl shadow border text-xs">
+                <h3 className="font-semibold mb-2">Client State</h3>
+                <p>Trust: {stateData.trust}</p>
+                <p>Distress: {stateData.distress}</p>
+                <p>Engagement: {stateData.engagement}</p>
+                <p>Resistance: {stateData.resistance}</p>
+              </div>
+            )}
           </aside>
         </div>
       </div>

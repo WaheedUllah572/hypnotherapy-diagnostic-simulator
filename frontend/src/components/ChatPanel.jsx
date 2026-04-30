@@ -5,7 +5,8 @@ export default function ChatPanel({
   onEndSession,
   isActive,
   setChatHistory,
-  clientType
+  clientType,
+  setStateData // ✅ NEW PROP
 }) {
   const [msg, setMsg] = useState("");
   const [chat, setChat] = useState([{ role: "client", text: "Hello" }]);
@@ -17,7 +18,6 @@ export default function ChatPanel({
   const respondedRef = useRef(false);
   const failSafeRef = useRef(null);
 
-  // ✅ CRITICAL FIX — unique session per chat
   const sessionIdRef = useRef(Date.now().toString());
 
   useEffect(() => {
@@ -120,7 +120,12 @@ export default function ChatPanel({
         setChat(c => [...c, { role: "client", text: res.data.reply }]);
         setTyping(false);
 
-        // ✅ ONLY REQUIRED ADDITION
+        // ✅ SEND STATE TO PARENT (MAIN FIX)
+        if (setStateData) {
+          setStateData(res.data.state);
+        }
+
+        // debug (keep)
         console.log("STATE:", res.data.state);
         console.log("FULL RESPONSE:", res.data);
       }
