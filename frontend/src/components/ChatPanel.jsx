@@ -17,6 +17,7 @@ export default function ChatPanel({
   const respondedRef = useRef(false);
   const failSafeRef = useRef(null);
 
+  // ✅ CRITICAL FIX — unique session per chat
   const sessionIdRef = useRef(Date.now().toString());
 
   useEffect(() => {
@@ -67,7 +68,7 @@ export default function ChatPanel({
   const callAPI = async (payload, retry = 0) => {
     try {
       return await axios.post(
-        "https://ai-tax-agent-backend-1.onrender.com/chat",
+        "https://hypnotherapy-diagnostic-simulator.onrender.com/chat",
         payload,
         { timeout: 15000 }
       );
@@ -107,9 +108,9 @@ export default function ChatPanel({
     try {
       const res = await callAPI({
         text: cleanMsg,
-        clientType: clientType || "Daniel", // ✅ FIX
+        clientType,
         history: updatedChat,
-        sessionId: sessionIdRef.current
+        sessionId: sessionIdRef.current // ✅ FIX
       });
 
       if (!respondedRef.current) {
@@ -118,8 +119,6 @@ export default function ChatPanel({
 
         setChat(c => [...c, { role: "client", text: res.data.reply }]);
         setTyping(false);
-
-        console.log("STATE:", res.data.state);
       }
 
     } catch (err) {
