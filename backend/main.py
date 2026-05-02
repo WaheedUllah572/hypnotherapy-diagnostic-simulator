@@ -135,40 +135,74 @@ def evaluate_q4(text):
 async def tutor_review(req: TutorRequest):
 
     s = req.submission
+    chat = req.chatHistory
 
     q1_text = s.get("chosenApproach", "").lower()
     q2_text = s.get("clientModality", "").lower()
     q3_text = s.get("clientObjective", "").lower()
+    q4_text = s.get("clientReassurance", "").lower()
 
+    # ✅ Q1
     q1 = "cbt" in q1_text or "cognitive" in q1_text
-    q2 = any(x in q2_text for x in ["visual", "auditory", "kinaesthetic"])
+
+    # ✅ NEW: CHECK BEHAVIOURAL QUESTION IN CHAT
+    asked_behaviour = any(
+        any(x in m["text"].lower() for x in [
+            "relax", "hobbies", "fun", "downtime"
+        ])
+        for m in chat if m["role"] == "therapist"
+    )
+
+    # ✅ MODALITY VALID ONLY IF BEHAVIOUR ASKED
+    q2 = asked_behaviour and any(x in q2_text for x in [
+        "visual", "auditory", "kinaesthetic"
+    ])
+
+    # ✅ Q3
     q3 = any(x in q3_text for x in ["goal", "reduce", "manage", "control"])
 
-    q4_data = evaluate_q4(s.get("clientReassurance", ""))
-    q4 = all(q4_data.values())
+    # ✅ NEW: STRESS INDICATOR DETECTION IN CHAT
+    stress_present = any(
+        any(x in m["text"].lower() for x in [
+            "i used to", "i don't anymore", "haven't done"
+        ])
+        for m in chat if m["role"] == "client"
+    )
 
-    if q4:
-        q4_feedback = "✔ You addressed safety, reassurance, and readiness appropriately."
-    else:
-        q4_feedback = f"""✘ Safety & reassurance could be strengthened:
+    # ✅ STUDENT RESPONSE CHECK
+    handled_stress = all(x in q4_text for x in [
+        "stress", "used to", "will", "again"
+    ])
 
-• Safety screening: {"✔ addressed" if q4_data["safety"] else "✘ not clearly addressed"}
-• Reassurance: {"✔ provided" if q4_data["reassurance"] else "✘ could be clearer"}
-• Readiness to proceed: {"✔ confirmed" if q4_data["readiness"] else "✘ not explicitly confirmed"}
-"""
+    stress_score = True if (not stress_present or handled_stress) else False
+
+    # ✅ Q4
+    q4_data = evaluate_q4(q4_text)
+    q4 = all(q4_data.values()) and stress_score
+
+    # ✅ FEEDBACK
+    stress_feedback = ""
+    if stress_present:
+        if handled_stress:
+            stress_feedback = "✔ You recognised the reduction in enjoyable activity as a stress indicator."
+        else:
+            stress_feedback = "✘ You missed the client's ‘I used to…’ stress indicator."
 
     feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ Appropriate model selected. Cognitive Behavioural Therapy (CBT) is suitable based on the client’s presentation of anxiety and thought patterns." if q1 else "✘ The selected approach is unclear. A Cognitive Behavioural Therapy (CBT) approach would be more appropriate based on the client’s anxiety presentation and thinking patterns."}
+{"✔ Appropriate model selected." if q1 else "✘ Approach unclear."}
 
 QUESTION 2 — Client Modality
-{"✔ Modality correctly identified." if q2 else "✘ The client’s language suggests a kinaesthetic modality (focus on feelings, tension, and bodily sensations)."}
+{"✔ Correct (behaviour explored)." if q2 else "✘ Modality must be based on behavioural questioning."}
 
 QUESTION 3 — Client Objective
-{"✔ Objective clearly defined and relevant." if q3 else "✘ The objective should clearly state what the client wants to change or achieve (e.g., reducing anxiety or improving coping)."}
+{"✔ Objective clear." if q3 else "✘ Objective unclear."}
 
 QUESTION 4 — Safety & Reassurance
-{q4_feedback}
+{"✔ Appropriate." if q4 else "✘ Needs improvement."}
+
+STRESS INDICATOR
+{stress_feedback}
 """
 
     total = sum([q1, q2, q3, q4])

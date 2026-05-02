@@ -15,6 +15,8 @@ def get_persona_response(client_name, stage, state):
     resistance = state["resistance"]
     risk = state["risk_flag"]
 
+    behaviour_explored = state.get("behaviour_explored", False)
+
     tone = "neutral"
 
     if trust > 70:
@@ -34,6 +36,26 @@ Behaviour rules:
 - If trust is high → open up more
 - If resistance is high → give short hesitant replies
 - If distress is high → show emotional difficulty
+"""
+
+    # ✅ MODALITY RULE ENFORCEMENT
+    if not behaviour_explored:
+        response_style += """
+IMPORTANT:
+Do NOT reveal how you relax or hobbies unless specifically asked.
+Do NOT provide behaviour-based answers yet.
+"""
+    else:
+        response_style += """
+Now you may describe what you do to relax or hobbies naturally.
+Use this to reveal modality through behaviour.
+"""
+
+    # ✅ "I USED TO" STRESS INDICATOR (NEW)
+    if random.randint(1, 4) == 1:
+        response_style += """
+Include a natural sentence like:
+"I used to enjoy something, but I don’t really do that anymore."
 """
 
     if risk != "none":
