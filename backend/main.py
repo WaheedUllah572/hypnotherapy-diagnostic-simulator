@@ -131,6 +131,8 @@ def evaluate_q4(text):
     }
 
 
+# (ONLY showing modified part — everything else unchanged)
+
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
 
@@ -145,7 +147,7 @@ async def tutor_review(req: TutorRequest):
     # ✅ Q1
     q1 = "cbt" in q1_text or "cognitive" in q1_text
 
-    # ✅ NEW: CHECK BEHAVIOURAL QUESTION IN CHAT
+    # ✅ CHECK BEHAVIOURAL QUESTION
     asked_behaviour = any(
         any(x in m["text"].lower() for x in [
             "relax", "hobbies", "fun", "downtime"
@@ -153,7 +155,6 @@ async def tutor_review(req: TutorRequest):
         for m in chat if m["role"] == "therapist"
     )
 
-    # ✅ MODALITY VALID ONLY IF BEHAVIOUR ASKED
     q2 = asked_behaviour and any(x in q2_text for x in [
         "visual", "auditory", "kinaesthetic"
     ])
@@ -161,18 +162,23 @@ async def tutor_review(req: TutorRequest):
     # ✅ Q3
     q3 = any(x in q3_text for x in ["goal", "reduce", "manage", "control"])
 
-    # ✅ NEW: STRESS INDICATOR DETECTION IN CHAT
+    # ✅ FIXED: STRONGER STRESS DETECTION
     stress_present = any(
         any(x in m["text"].lower() for x in [
-            "i used to", "i don't anymore", "haven't done"
+            "i used to",
+            "used to enjoy",
+            "don't do that anymore",
+            "haven't done that in a long time"
         ])
         for m in chat if m["role"] == "client"
     )
 
-    # ✅ STUDENT RESPONSE CHECK
-    handled_stress = all(x in q4_text for x in [
-        "stress", "used to", "will", "again"
-    ])
+    # ✅ FIXED: BETTER STUDENT RESPONSE CHECK
+    handled_stress = (
+        ("stress" in q4_text or "overwhelm" in q4_text) and
+        ("used to" in q4_text or "not doing" in q4_text) and
+        ("will" in q4_text or "again" in q4_text)
+    )
 
     stress_score = True if (not stress_present or handled_stress) else False
 
@@ -184,7 +190,7 @@ async def tutor_review(req: TutorRequest):
     stress_feedback = ""
     if stress_present:
         if handled_stress:
-            stress_feedback = "✔ You recognised the reduction in enjoyable activity as a stress indicator."
+            stress_feedback = "✔ You correctly identified the reduction in pleasurable activity as a stress indicator."
         else:
             stress_feedback = "✘ You missed the client's ‘I used to…’ stress indicator."
 

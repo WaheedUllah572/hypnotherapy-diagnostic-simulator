@@ -51,11 +51,11 @@ Now you may describe what you do to relax or hobbies naturally.
 Use this to reveal modality through behaviour.
 """
 
-    # ✅ "I USED TO" STRESS INDICATOR (NEW)
-    if random.randint(1, 4) == 1:
+    # ✅ FIXED: "I USED TO" (NOT RANDOM — TRIGGERED CONDITION)
+    if distress > 35 and stage in ["timeline", "feelings", "body"]:
         response_style += """
 Include a natural sentence like:
-"I used to enjoy something, but I don’t really do that anymore."
+"I used to enjoy doing things like that, but I don't seem to anymore."
 """
 
     if risk != "none":
