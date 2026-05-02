@@ -168,11 +168,16 @@ async def tutor_review(req: TutorRequest):
     )
 
     handled_stress = (
-        ("stress" in q4_text or "overwhelm" in q4_text) and
-        ("used to" in q4_text or "not doing" in q4_text) and
-        ("will" in q4_text or "again" in q4_text)
+    ("stress" in q4_text or "overwhelm" in q4_text) and
+    ("used to" in q4_text or "not doing" in q4_text) and
+    (
+        "will" in q4_text or
+        "again" in q4_text or
+        "you'll" in q4_text or
+        "you will" in q4_text or
+        "begin to" in q4_text
     )
-
+)
     stress_score = True if (not stress_present or handled_stress) else False
 
     q4_data = evaluate_q4(q4_text)
