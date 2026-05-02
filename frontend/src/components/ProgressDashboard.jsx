@@ -13,7 +13,7 @@ export default function ProgressDashboard() {
       const res = await axios.get("https://hypnotherapy-diagnostic-simulator.onrender.com/progress");
       setProgress(res.data);
     } catch {
-      // keep default values so box still shows
+      // keep default values
     }
   };
 
@@ -26,8 +26,12 @@ export default function ProgressDashboard() {
 
     window.addEventListener("progressUpdated", handleUpdate);
 
+    // ✅ FIX: auto refresh every 3 seconds (ensures update works)
+    const interval = setInterval(fetchProgress, 3000);
+
     return () => {
       window.removeEventListener("progressUpdated", handleUpdate);
+      clearInterval(interval);
     };
   }, []);
 

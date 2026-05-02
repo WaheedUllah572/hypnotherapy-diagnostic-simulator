@@ -52,7 +52,6 @@ class TutorRequest(BaseModel):
 @app.post("/chat")
 async def chat(msg: Message):
 
-    # ✅ FIX: safe clientType fallback
     client_type = msg.clientType or "Daniel"
     session_id = msg.sessionId or (client_type + "_session")
 
@@ -63,7 +62,6 @@ async def chat(msg: Message):
     except Exception:
         state = get_state(session_id)
 
-    # ✅ FIX APPLIED HERE
     persona = get_persona_response(client_type, stage, state)
 
     system_prompt = build_prompt(stage, persona)
@@ -93,6 +91,8 @@ async def chat(msg: Message):
         "stage": stage,
         "state": state
     }
+
+
 # ============================
 # ✅ TUTOR EVALUATION (UNCHANGED)
 # ============================
@@ -131,8 +131,6 @@ def evaluate_q4(text):
     }
 
 
-# (ONLY showing modified part — everything else unchanged)
-
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
 
@@ -144,10 +142,8 @@ async def tutor_review(req: TutorRequest):
     q3_text = s.get("clientObjective", "").lower()
     q4_text = s.get("clientReassurance", "").lower()
 
-    # ✅ Q1
     q1 = "cbt" in q1_text or "cognitive" in q1_text
 
-    # ✅ CHECK BEHAVIOURAL QUESTION
     asked_behaviour = any(
         any(x in m["text"].lower() for x in [
             "relax", "hobbies", "fun", "downtime"
@@ -159,10 +155,8 @@ async def tutor_review(req: TutorRequest):
         "visual", "auditory", "kinaesthetic"
     ])
 
-    # ✅ Q3
     q3 = any(x in q3_text for x in ["goal", "reduce", "manage", "control"])
 
-    # ✅ FIXED: STRONGER STRESS DETECTION
     stress_present = any(
         any(x in m["text"].lower() for x in [
             "i used to",
@@ -173,7 +167,6 @@ async def tutor_review(req: TutorRequest):
         for m in chat if m["role"] == "client"
     )
 
-    # ✅ FIXED: BETTER STUDENT RESPONSE CHECK
     handled_stress = (
         ("stress" in q4_text or "overwhelm" in q4_text) and
         ("used to" in q4_text or "not doing" in q4_text) and
@@ -182,11 +175,9 @@ async def tutor_review(req: TutorRequest):
 
     stress_score = True if (not stress_present or handled_stress) else False
 
-    # ✅ Q4
     q4_data = evaluate_q4(q4_text)
     q4 = all(q4_data.values()) and stress_score
 
-    # ✅ FEEDBACK
     stress_feedback = ""
     if stress_present:
         if handled_stress:
@@ -218,4 +209,30 @@ STRESS INDICATOR
         "feedback": feedback.strip(),
         "score": {"total": total},
         "detected_modality": "Kinaesthetic"
+    }
+
+
+# ============================
+# ✅ REQUIRED FIX — PROGRESS ENDPOINT
+# ============================
+@app.get("/progress")
+def progress():
+
+    sessions = get_sessions()
+
+    if not sessions:
+        return {
+            "sessionsCompleted": 0,
+            "averageScore": 0,
+            "personasCompleted": []
+        }
+
+    total_sessions = len(sessions)
+    avg_score = sum(s["score"] for s in sessions) / total_sessions
+    personas = list(set(s["client"] for s in sessions))
+
+    return {
+        "sessionsCompleted": total_sessions,
+        "averageScore": round(avg_score, 2),
+        "personasCompleted": personas
     }

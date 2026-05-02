@@ -1,7 +1,6 @@
 sessions_db = []
 
 def save_session(client, score):
-
     sessions_db.append({
         "client": client,
         "score": score,
