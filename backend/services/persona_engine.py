@@ -38,7 +38,7 @@ Behaviour rules:
 - If distress is high → show emotional difficulty
 """
 
-    # ✅ MODALITY RULE ENFORCEMENT
+    # ✅ MODALITY RULE ENFORCEMENT (UNCHANGED)
     if not behaviour_explored:
         response_style += """
 IMPORTANT:
@@ -51,13 +51,14 @@ Now you may describe what you do to relax or hobbies naturally.
 Use this to reveal modality through behaviour.
 """
 
-    # ✅ FIXED: "I USED TO" (NOT RANDOM — TRIGGERED CONDITION)
-    if distress > 35 and stage in ["timeline", "feelings", "body"]:
+        # ✅ FIXED: FORCE "I USED TO" WHEN BEHAVIOUR IS REVEALED
         response_style += """
-Include a natural sentence like:
-"I used to enjoy doing things like that, but I don't seem to anymore."
+IMPORTANT:
+When describing your activities, include a clear statement like:
+"I used to enjoy doing this, but I don't really do it anymore."
 """
 
+    # ✅ RISK (UNCHANGED)
     if risk != "none":
         response_style += """
 Include subtle expressions of overwhelm or wanting to escape.
