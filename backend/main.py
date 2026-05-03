@@ -47,7 +47,7 @@ class TutorRequest(BaseModel):
 
 
 # ============================
-# ✅ CHAT ENDPOINT
+# ✅ CHAT ENDPOINT (UNCHANGED)
 # ============================
 @app.post("/chat")
 async def chat(msg: Message):
@@ -93,21 +93,22 @@ async def chat(msg: Message):
 
 
 # ============================
-# ✅ TUTOR EVALUATION
+# ✅ TUTOR EVALUATION (FIXED ONLY WHERE NEEDED)
 # ============================
 def evaluate_q4(text):
     t = text.lower()
 
+    # ✅ FIX: slightly expanded keywords (minimal but necessary)
     safety = any(x in t for x in [
         "risk", "medical", "history", "screen", "contraindication"
     ])
 
     reassurance = any(x in t for x in [
-        "reassure", "safe", "comfortable", "support", "ease"
+        "reassure", "safe", "comfortable", "support", "ease", "okay", "you're safe"
     ])
 
     readiness = any(x in t for x in [
-        "ready", "proceed", "continue", "begin", "move forward"
+        "ready", "proceed", "continue", "begin", "move forward", "we can start"
     ])
 
     return {
@@ -130,6 +131,7 @@ async def tutor_review(req: TutorRequest):
 
     q1 = "cbt" in q1_text or "cognitive" in q1_text
 
+    # ✅ behavioural detection (UNCHANGED)
     asked_behaviour = any(
         any(x in m["text"].lower() for x in [
             "relax",
@@ -150,6 +152,7 @@ async def tutor_review(req: TutorRequest):
 
     q3 = any(x in q3_text for x in ["goal", "reduce", "manage", "control"])
 
+    # ✅ stress detection (UNCHANGED)
     stress_present = any(
         any(x in m["text"].lower() for x in [
             "i used to",
@@ -160,7 +163,7 @@ async def tutor_review(req: TutorRequest):
         for m in chat if m["role"] == "client"
     )
 
-    # ✅ FINAL FIX (flexible detection)
+    # ✅ FIX: more flexible + realistic clinical phrasing detection
     handled_stress = (
         any(x in q4_text for x in [
             "used to",
@@ -172,17 +175,19 @@ async def tutor_review(req: TutorRequest):
             "stress",
             "overwhelm",
             "sign",
-            "affecting",
-            "impact"
+            "affect",
+            "impact",
+            "difficult"
         ]) and
         any(x in q4_text for x in [
             "will",
             "again",
             "you'll",
             "you will",
-            "begin to",
+            "begin",
             "return",
-            "able to"
+            "able",
+            "start"
         ])
     )
 
@@ -226,7 +231,7 @@ STRESS INDICATOR
 
 
 # ============================
-# ✅ PROGRESS
+# ✅ PROGRESS (UNCHANGED)
 # ============================
 @app.get("/progress")
 def progress():
