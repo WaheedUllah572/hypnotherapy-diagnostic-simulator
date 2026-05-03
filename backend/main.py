@@ -98,17 +98,32 @@ async def chat(msg: Message):
 def evaluate_q4(text):
     t = text.lower()
 
-    # ✅ FIX: slightly expanded keywords (minimal but necessary)
     safety = any(x in t for x in [
         "risk", "medical", "history", "screen", "contraindication"
     ])
 
+    # ✅ FIX: added "supported"
     reassurance = any(x in t for x in [
-        "reassure", "safe", "comfortable", "support", "ease", "okay", "you're safe"
+        "reassure",
+        "safe",
+        "comfortable",
+        "support",
+        "supported",
+        "ease",
+        "okay",
+        "you're safe"
     ])
 
+    # ✅ FIX: expanded readiness detection
     readiness = any(x in t for x in [
-        "ready", "proceed", "continue", "begin", "move forward", "we can start"
+        "ready",
+        "ready to proceed",
+        "comfortable to proceed",
+        "proceed",
+        "continue",
+        "begin",
+        "move forward",
+        "we can start"
     ])
 
     return {
@@ -116,7 +131,6 @@ def evaluate_q4(text):
         "reassurance": reassurance,
         "readiness": readiness
     }
-
 
 @app.post("/tutor-review")
 async def tutor_review(req: TutorRequest):
