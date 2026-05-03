@@ -99,9 +99,16 @@ def evaluate_q4(text):
     t = text.lower()
 
     safety = any(x in t for x in [
-        "risk", "medical", "history", "screen", "contraindication"
-    ])
-
+    "risk",
+    "medical",
+    "history",
+    "screen",
+    "contraindication",
+    "safe",
+    "safety",
+    "no risk",
+    "not at risk"
+])
     # ✅ FIX: added "supported"
     reassurance = any(x in t for x in [
         "reassure",
