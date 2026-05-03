@@ -94,7 +94,7 @@ async def chat(msg: Message):
 
 
 # ============================
-# ✅ TUTOR EVALUATION (UNCHANGED)
+# ✅ TUTOR EVALUATION (UNCHANGED CORE — ONLY FIXED LOGIC)
 # ============================
 def evaluate_q4(text):
     t = text.lower()
@@ -144,9 +144,17 @@ async def tutor_review(req: TutorRequest):
 
     q1 = "cbt" in q1_text or "cognitive" in q1_text
 
+    # ✅ FIX 1: Expanded behavioural detection
     asked_behaviour = any(
         any(x in m["text"].lower() for x in [
-            "relax", "hobbies", "fun", "downtime"
+            "relax",
+            "hobbies",
+            "fun",
+            "downtime",
+            "what do you enjoy",
+            "what do you like to do",
+            "how do you switch off",
+            "what helps you relax"
         ])
         for m in chat if m["role"] == "therapist"
     )
@@ -167,17 +175,25 @@ async def tutor_review(req: TutorRequest):
         for m in chat if m["role"] == "client"
     )
 
+    # ✅ FIX 2: Flexible stress handling detection
     handled_stress = (
-    ("stress" in q4_text or "overwhelm" in q4_text) and
-    ("used to" in q4_text or "not doing" in q4_text) and
-    (
-        "will" in q4_text or
-        "again" in q4_text or
-        "you'll" in q4_text or
-        "you will" in q4_text or
-        "begin to" in q4_text
+        ("stress" in q4_text or "overwhelm" in q4_text) and
+        any(x in q4_text for x in [
+            "used to",
+            "not doing",
+            "stopped",
+            "no longer"
+        ]) and
+        any(x in q4_text for x in [
+            "will",
+            "again",
+            "you'll",
+            "you will",
+            "begin to",
+            "return"
+        ])
     )
-)
+
     stress_score = True if (not stress_present or handled_stress) else False
 
     q4_data = evaluate_q4(q4_text)
@@ -218,7 +234,7 @@ STRESS INDICATOR
 
 
 # ============================
-# ✅ REQUIRED FIX — PROGRESS ENDPOINT
+# ✅ PROGRESS ENDPOINT (UNCHANGED)
 # ============================
 @app.get("/progress")
 def progress():
