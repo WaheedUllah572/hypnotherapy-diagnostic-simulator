@@ -173,7 +173,7 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="h-[650px] flex flex-col">
+  <div className="h-full flex flex-col">
 
       <div
         ref={chatContainerRef}
