@@ -173,12 +173,12 @@ export default function ChatPanel({
   };
 
   return (
-  <div className="h-full flex flex-col">
+  <div className="flex flex-col">
 
       <div
-        ref={chatContainerRef}
-        className="flex-1 overflow-y-auto px-2 pt-2 pb-2"
-      >
+  ref={chatContainerRef}
+  className="overflow-y-auto px-2 pt-2 pb-2 max-h-[350px]"
+>
 
         {chat.map((c, i) => (
           <div
