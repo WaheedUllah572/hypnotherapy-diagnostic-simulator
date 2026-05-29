@@ -6,7 +6,7 @@ export default function ChatPanel({
   isActive,
   setChatHistory,
   clientType,
-  setStateData // ✅ NEW PROP
+  setStateData
 }) {
   const [msg, setMsg] = useState("");
   const [chat, setChat] = useState([{ role: "client", text: "Hello" }]);
@@ -80,20 +80,28 @@ export default function ChatPanel({
 
   const send = async () => {
     const cleanMsg = msg.trim();
+
     if (cleanMsg.length < 5 || !isActive) return;
 
-    const updatedChat = [...chat, { role: "therapist", text: cleanMsg }];
+    const updatedChat = [...chat, {
+      role: "therapist",
+      text: cleanMsg
+    }];
+
     setChat(updatedChat);
     setMsg("");
     setTyping(true);
 
     respondedRef.current = false;
 
-    if (failSafeRef.current) clearTimeout(failSafeRef.current);
+    if (failSafeRef.current) {
+      clearTimeout(failSafeRef.current);
+    }
 
     failSafeRef.current = setTimeout(() => {
       if (!respondedRef.current) {
         respondedRef.current = true;
+
         setChat(c => [
           ...c,
           {
@@ -101,6 +109,7 @@ export default function ChatPanel({
             text: "The client pauses… you may need to rephrase your question."
           }
         ]);
+
         setTyping(false);
       }
     }, 18000);
@@ -115,24 +124,32 @@ export default function ChatPanel({
 
       if (!respondedRef.current) {
         respondedRef.current = true;
+
         clearTimeout(failSafeRef.current);
 
-        setChat(c => [...c, { role: "client", text: res.data.reply }]);
+        setChat(c => [
+          ...c,
+          {
+            role: "client",
+            text: res.data.reply
+          }
+        ]);
+
         setTyping(false);
 
-        // ✅ SEND STATE TO PARENT (MAIN FIX)
         if (setStateData) {
           setStateData(res.data.state);
         }
 
-        // debug (keep)
         console.log("STATE:", res.data.state);
         console.log("FULL RESPONSE:", res.data);
       }
 
     } catch (err) {
+
       if (!respondedRef.current) {
         respondedRef.current = true;
+
         clearTimeout(failSafeRef.current);
 
         setChat(c => [
@@ -142,6 +159,7 @@ export default function ChatPanel({
             text: "The client seems unsure how to respond… try asking differently."
           }
         ]);
+
         setTyping(false);
       }
     }
@@ -155,17 +173,34 @@ export default function ChatPanel({
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div ref={chatContainerRef} className="overflow-y-auto px-2 pt-2 pb-2">
+    <div className="h-[650px] flex flex-col">
+
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto px-2 pt-2 pb-2"
+      >
+
         {chat.map((c, i) => (
-          <div key={i} className={`flex mb-4 ${c.role === "therapist" ? "justify-end" : "justify-start"}`}>
+          <div
+            key={i}
+            className={`flex mb-4 ${
+              c.role === "therapist"
+                ? "justify-end"
+                : "justify-start"
+            }`}
+          >
             <div className="max-w-[75%] p-4 rounded-2xl shadow-sm border bg-white border-slate-200">
+
               <p className="text-[11px] text-slate-400 mb-1">
-                {c.role === "therapist" ? "Your Response (Student)" : "Client"}
+                {c.role === "therapist"
+                  ? "Your Response (Student)"
+                  : "Client"}
               </p>
+
               <p className="text-sm text-slate-800 whitespace-pre-line">
                 {c.text}
               </p>
+
             </div>
           </div>
         ))}
@@ -175,35 +210,52 @@ export default function ChatPanel({
             Client is typing…
           </div>
         )}
+
       </div>
 
       <div className="border-t bg-white p-3">
+
         <textarea
           rows={2}
           value={msg}
           disabled={!isActive}
-          onChange={e => setMsg(e.target.value)}
+          onChange={(e) => setMsg(e.target.value)}
           onKeyDown={handleKeyDown}
           className="w-full rounded-xl border p-3 text-sm"
           placeholder="Type your response..."
         />
 
         <div className="flex justify-between mt-2">
-          <button onClick={onEndSession} className="bg-slate-700 text-white px-4 py-2 rounded-xl text-sm">
+
+          <button
+            onClick={onEndSession}
+            className="bg-slate-700 text-white px-4 py-2 rounded-xl text-sm"
+          >
             TUTOR MODE
           </button>
 
           <div className="flex gap-2">
-            <button onClick={startListening} className="bg-slate-500 text-white px-3 py-2 rounded-xl text-sm">
+
+            <button
+              onClick={startListening}
+              className="bg-slate-500 text-white px-3 py-2 rounded-xl text-sm"
+            >
               🎤 Speak
             </button>
 
-            <button onClick={send} className="bg-brand-600 text-white px-5 py-2 rounded-xl text-sm">
+            <button
+              onClick={send}
+              className="bg-brand-600 text-white px-5 py-2 rounded-xl text-sm"
+            >
               Respond
             </button>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 }
