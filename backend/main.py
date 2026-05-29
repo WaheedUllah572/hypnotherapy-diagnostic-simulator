@@ -150,7 +150,18 @@ async def tutor_review(req: TutorRequest):
     q3_text = s.get("clientObjective", "").lower()
     q4_text = s.get("clientReassurance", "").lower()
 
-    q1 = "cbt" in q1_text or "cognitive" in q1_text
+    q1 = any(x in q1_text for x in [
+    "cbh",
+    "cognitive",
+    "cognitive behavioural",
+    "cognitive behavioral",
+    "solution",
+    "solution-focused",
+    "solution focused",
+    "ericksonian",
+    "indirect",
+    "regression"
+])
 
     # ✅ behavioural detection (UNCHANGED)
     asked_behaviour = any(
@@ -175,14 +186,18 @@ async def tutor_review(req: TutorRequest):
 
     # ✅ stress detection (UNCHANGED)
     stress_present = any(
-        any(x in m["text"].lower() for x in [
-            "i used to",
-            "used to enjoy",
-            "don't do that anymore",
-            "haven't done that in a long time"
-        ])
-        for m in chat if m["role"] == "client"
-    )
+    any(x in m["text"].lower() for x in [
+        "i used to",
+        "used to enjoy",
+        "don't do that anymore",
+        "haven't done that in a long time",
+        "don't really make time",
+        "don't make time anymore",
+        "not doing it anymore",
+        "used to but"
+    ])
+    for m in chat if m["role"] == "client"
+)
 
     # ✅ FIX: more flexible + realistic clinical phrasing detection
     handled_stress = (
@@ -215,7 +230,7 @@ async def tutor_review(req: TutorRequest):
     stress_score = True if (not stress_present or handled_stress) else False
 
     q4_data = evaluate_q4(q4_text)
-    q4 = all(q4_data.values()) and stress_score
+    q4 = all(q4_data.values())
 
     stress_feedback = ""
     if stress_present:
