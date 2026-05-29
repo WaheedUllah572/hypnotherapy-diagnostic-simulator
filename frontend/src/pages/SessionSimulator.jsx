@@ -6,12 +6,58 @@ import TutorMode from "../components/TutorMode";
 import ProgressDashboard from "../components/ProgressDashboard";
 
 const clientProfiles = [
-  { name: "Claire", problem: "Fear of driving on motorways", type: "CBH" },
-  { name: "Daniel", problem: "Work performance anxiety", type: "SH" },
-  { name: "Sophie", problem: "Panic in crowded spaces", type: "Ericksonian" },
-  { name: "Mark", problem: "Sleep anxiety and racing thoughts", type: "Regression" }
-];
+  {
+    name: "Claire",
+    condition: "Motorway Driving Anxiety",
+    problem: "Fear of driving on motorways",
+    goal: "Feel calm and confident when driving again",
+    symptoms: [
+      "motorway panic",
+      "fear of losing control",
+      "avoidance driving"
+    ],
+    type: "CBH"
+  },
 
+  {
+    name: "Daniel",
+    condition: "Work Performance Anxiety",
+    problem: "Anxiety around work performance",
+    goal: "Feel calmer and more confident at work",
+    symptoms: [
+      "performance anxiety",
+      "fear of failure",
+      "work stress"
+    ],
+    type: "SH"
+  },
+
+  {
+    name: "Sophie",
+    condition: "Crowd / Environmental Anxiety",
+    problem: "Overwhelm in crowded places",
+    goal: "Feel calmer in busy environments",
+    symptoms: [
+      "crowd anxiety",
+      "sensory overwhelm",
+      "escape response"
+    ],
+    type: "Ericksonian"
+  },
+
+  {
+    name: "Mark",
+    condition: "Sleep Anxiety / Night-Time Overthinking",
+    problem: "Sleep anxiety and racing thoughts",
+    goal: "Sleep peacefully again",
+    symptoms: [
+      "night-time overthinking",
+      "difficulty switching off",
+      "fatigue"
+    ],
+    type: "Regression"
+  }
+];
 export default function SessionSimulator() {
   const [stage, setStage] = useState("session");
   const [client, setClient] = useState(clientProfiles[0]);

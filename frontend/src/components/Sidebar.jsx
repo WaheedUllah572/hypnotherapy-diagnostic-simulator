@@ -7,13 +7,44 @@ export default function Sidebar({ client }) {
         <h3 className="text-sm font-semibold text-slate-900 mb-2">
           Client Profile
         </h3>
+
         <div className="p-4 bg-slate-100 rounded-xl border">
+
           <p className="font-medium text-slate-800">
             {client.name}
           </p>
+
           <p className="text-slate-600 text-xs mt-1">
-            “{client.problem}”
+            {client.condition || client.problem}
           </p>
+
+          {client.goal && (
+            <div className="mt-3">
+              <p className="text-xs font-semibold text-slate-700">
+                Objective
+              </p>
+              <p className="text-xs text-slate-600">
+                {client.goal}
+              </p>
+            </div>
+          )}
+
+          {client.symptoms?.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-semibold text-slate-700">
+                Symptoms
+              </p>
+
+              <ul className="list-disc ml-4 text-xs text-slate-600 mt-1">
+                {client.symptoms.map((symptom) => (
+                  <li key={symptom}>
+                    {symptom}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -22,6 +53,7 @@ export default function Sidebar({ client }) {
         <h4 className="text-sm font-semibold text-slate-900 mb-2">
           Training Guidance
         </h4>
+
         <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
 
           <p>
@@ -45,14 +77,19 @@ export default function Sidebar({ client }) {
             <li>
               The most appropriate treatment approach:
               <br />
-              Cognitive Behavioural Hypnotherapy (CBH)<br/>
-              Solution-Focused Hypnotherapy<br/>
-              Ericksonian / Indirect Hypnotherapy<br/>
+              Cognitive Behavioural Hypnotherapy (CBH)
+              <br />
+              Solution-Focused Hypnotherapy
+              <br />
+              Ericksonian / Indirect Hypnotherapy
+              <br />
               Regression (Level 2 only)
             </li>
+
             <li>
               The client relaxation modality: Visual / Auditory / Kinaesthetic
             </li>
+
             <li>
               The client’s core objective
             </li>

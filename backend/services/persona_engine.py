@@ -23,6 +23,15 @@ def get_persona_response(client_name, stage, state):
         False
     )
 
+    # ============================
+    # NEW: SCENARIO DATA
+    # ============================
+    persona = case_histories.get(client_name, {})
+
+    condition = persona.get("condition", "")
+    goal = persona.get("goal", "")
+    symptoms = persona.get("symptoms", [])
+
     tone = "neutral"
 
     # ============================
@@ -122,6 +131,35 @@ Where appropriate, show:
 - emotional fatigue
 - difficulty switching off
 - tension about responsibilities
+"""
+
+    # ============================
+    # NEW: SCENARIO CONSISTENCY
+    # ============================
+    response_style += f"""
+
+SCENARIO CONSISTENCY RULES
+
+Current condition:
+{condition}
+
+Core objective:
+{goal}
+
+Core symptoms:
+{", ".join(symptoms)}
+
+IMPORTANT:
+Remain fully consistent with this specific scenario.
+
+Keep responses aligned with:
+- the presenting problem
+- the symptom pattern
+- the emotional presentation
+- the client objective
+
+Do NOT drift into symptoms, fears, goals,
+or experiences that belong to other client scenarios.
 """
 
     return response_style

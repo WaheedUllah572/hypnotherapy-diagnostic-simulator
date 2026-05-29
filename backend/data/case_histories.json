@@ -1,49 +1,117 @@
 {
   "Claire": {
+    "condition": "Motorway Driving Anxiety",
     "type": "CBH",
+
     "presenting_problem": "I’ve developed a fear of driving on motorways after having a panic attack while driving last year.",
+
     "timeline": "It started about 8 months ago after a very stressful period at work.",
-    "thoughts": "I keep worrying that I might lose control of the car or cause an accident.",
-    "feelings": "I feel anxious and trapped even thinking about driving on motorways.",
-    "body": "My chest feels tight, my hands sweat, and my heart starts racing.",
+
+    "thoughts": "I keep worrying that I might lose control of the car or cause an accident while driving.",
+
+    "feelings": "I feel anxious, trapped, and panicked even thinking about driving on motorways.",
+
+    "body": "My chest feels tight, my hands sweat, and my heart starts racing when I approach motorways.",
+
     "past": "I had a panic attack in a supermarket a few years ago during another stressful period.",
-    "goal": "I want to feel calm and confident when driving again.",
+
+    "goal": "I want to feel calm, safe, and confident when driving again.",
+
+    "symptoms": [
+      "motorway panic",
+      "fear of losing control",
+      "avoidance driving",
+      "panic symptoms while driving",
+      "anticipatory anxiety"
+    ],
+
     "hypnosis_question": "Will I still be in control during hypnosis?"
   },
 
   "Daniel": {
+    "condition": "Work Performance Anxiety",
     "type": "SH",
+
     "presenting_problem": "I’ve been struggling with anxiety around my performance at work.",
+
     "timeline": "It really started after I was promoted last year and given more responsibility.",
-    "thoughts": "I keep thinking I’m going to fail or disappoint people somehow.",
-    "feelings": "I feel overwhelmed and constantly under pressure.",
-    "body": "I get a heavy feeling in my chest and a lot of tension in my shoulders.",
+
+    "thoughts": "I keep thinking I’m going to fail, make mistakes, or disappoint people.",
+
+    "feelings": "I feel overwhelmed, pressured, and mentally exhausted most of the time.",
+
+    "body": "I get a heavy feeling in my chest and a lot of tension in my shoulders during work.",
+
     "past": "I’ve always put a lot of pressure on myself to succeed, even when I was younger.",
-    "goal": "I want to feel calmer and more confident in my role.",
+
+    "goal": "I want to feel calmer, more capable, and more confident in my role.",
+
+    "symptoms": [
+      "performance anxiety",
+      "fear of failure",
+      "overthinking",
+      "work stress",
+      "mental exhaustion"
+    ],
+
     "hypnosis_question": "How can hypnotherapy help with confidence?"
   },
 
   "Sophie": {
+    "condition": "Crowd / Environmental Anxiety",
     "type": "Ericksonian",
+
     "presenting_problem": "It feels like everything becomes too loud and overwhelming when I’m in crowded places.",
+
     "timeline": "It’s been gradually building over the past couple of years.",
-    "thoughts": "My mind starts spiralling when there’s too much activity around me.",
-    "feelings": "I feel overwhelmed and like I need to escape.",
-    "body": "It feels like a wave rising in my chest and everything becomes too much.",
+
+    "thoughts": "My mind starts spiralling when there’s too much activity or noise around me.",
+
+    "feelings": "I feel overwhelmed, trapped, and like I need to escape busy environments.",
+
+    "body": "It feels like a wave rising in my chest and everything becomes too much physically and emotionally.",
+
     "past": "I remember feeling something similar at school when I felt judged or under pressure.",
+
     "goal": "I want to feel calmer and more in control in busy environments.",
+
+    "symptoms": [
+      "crowd anxiety",
+      "sensory overwhelm",
+      "escape response",
+      "panic in busy places",
+      "environmental stress"
+    ],
+
     "hypnosis_question": "What does hypnosis actually feel like?"
   },
 
   "Mark": {
+    "condition": "Sleep Anxiety / Night-Time Overthinking",
     "type": "Regression",
+
     "presenting_problem": "I’ve been struggling with sleep and feeling anxious most nights.",
+
     "timeline": "It started during a stressful period at work about a year ago.",
-    "thoughts": "At night my mind keeps going over everything that could go wrong.",
-    "feelings": "I feel uneasy and constantly on edge.",
-    "body": "My stomach feels tight and I find it hard to relax properly.",
+
+    "thoughts": "At night my mind keeps going over everything that could go wrong and I can’t switch off.",
+
+    "feelings": "I feel uneasy, mentally exhausted, and constantly on edge at night.",
+
+    "body": "My stomach feels tight, my body feels restless, and I find it hard to relax properly before sleep.",
+
     "past": "It reminds me of when I was younger and used to worry a lot about school and expectations.",
-    "goal": "I want to be able to switch off and sleep peacefully again.",
+
+    "goal": "I want to be able to relax properly, switch off mentally, and sleep peacefully again.",
+
+    "symptoms": [
+      "night-time overthinking",
+      "difficulty switching off",
+      "sleep anxiety",
+      "mental restlessness",
+      "fatigue"
+    ],
+
     "hypnosis_question": "Can hypnosis help me quiet my mind at night?"
   }
 }
