@@ -150,20 +150,41 @@ async def tutor_review(req: TutorRequest):
     q3_text = s.get("clientObjective", "").lower()
     q4_text = s.get("clientReassurance", "").lower()
 
-    q1 = any(x in q1_text for x in [
-    "cbh",
-    "cognitive",
-    "cognitive behavioural",
-    "cognitive behavioral",
-    "solution",
-    "solution-focused",
-    "solution focused",
-    "ericksonian",
-    "indirect",
-    "regression"
-])
+    # ============================
+    # TREATMENT APPROACH SCORING
+    # ============================
 
-    # ✅ behavioural detection (UNCHANGED)
+    if req.clientName == "Claire":
+        q1 = any(x in q1_text for x in [
+            "cbh",
+            "cognitive",
+            "cognitive behavioural",
+            "cognitive behavioral"
+        ])
+
+    elif req.clientName == "Daniel":
+        q1 = any(x in q1_text for x in [
+            "solution",
+            "solution-focused",
+            "solution focused"
+        ])
+
+    elif req.clientName == "Sophie":
+        q1 = any(x in q1_text for x in [
+            "ericksonian",
+            "indirect"
+        ])
+
+    elif req.clientName == "Mark":
+        q1 = "regression" in q1_text
+
+    else:
+        q1 = False
+
+    # ============================
+    # MODALITY SCORING
+    # ============================
+
     asked_behaviour = any(
         any(x in m["text"].lower() for x in [
             "relax",
@@ -175,38 +196,64 @@ async def tutor_review(req: TutorRequest):
             "how do you switch off",
             "what helps you relax"
         ])
-        for m in chat if m["role"] == "therapist"
+        for m in chat
+        if m["role"] == "therapist"
     )
 
-    q2 = asked_behaviour and any(x in q2_text for x in [
-        "visual", "auditory", "kinaesthetic"
-    ])
+    q2 = asked_behaviour and any(
+        x in q2_text
+        for x in ["visual", "auditory", "kinaesthetic"]
+    )
 
-    q3 = any(x in q3_text for x in ["goal", "reduce", "manage", "control"])
+    # ============================
+    # OBJECTIVE SCORING
+    # ============================
 
-    # ✅ stress detection (UNCHANGED)
+    q3 = any(
+        x in q3_text
+        for x in [
+            "goal",
+            "reduce",
+            "manage",
+            "control",
+            "confidence",
+            "calm",
+            "sleep",
+            "relax"
+        ]
+    )
+
+    # ============================
+    # STRESS DETECTION
+    # ============================
+
     stress_present = any(
-    any(x in m["text"].lower() for x in [
-        "i used to",
-        "used to enjoy",
-        "don't do that anymore",
-        "haven't done that in a long time",
-        "don't really make time",
-        "don't make time anymore",
-        "not doing it anymore",
-        "used to but"
-    ])
-    for m in chat if m["role"] == "client"
-)
+        any(x in m["text"].lower() for x in [
+            "i used to",
+            "used to enjoy",
+            "don't do that anymore",
+            "haven't done that in a long time",
+            "don't really make time",
+            "don't make time anymore",
+            "not doing it anymore",
+            "used to but"
+        ])
+        for m in chat
+        if m["role"] == "client"
+    )
 
-    # ✅ FIX: more flexible + realistic clinical phrasing detection
     handled_stress = (
         any(x in q4_text for x in [
             "used to",
             "not doing",
             "stopped",
-            "no longer"
-        ]) and
+            "no longer",
+            "activities",
+            "hobbies",
+            "pleasurable",
+            "enjoyable"
+        ])
+        and
         any(x in q4_text for x in [
             "stress",
             "overwhelm",
@@ -214,7 +261,8 @@ async def tutor_review(req: TutorRequest):
             "affect",
             "impact",
             "difficult"
-        ]) and
+        ])
+        and
         any(x in q4_text for x in [
             "will",
             "again",
@@ -227,17 +275,36 @@ async def tutor_review(req: TutorRequest):
         ])
     )
 
-    stress_score = True if (not stress_present or handled_stress) else False
+    stress_score = True if (
+        not stress_present or handled_stress
+    ) else False
+
+    # ============================
+    # SAFETY / REASSURANCE
+    # ============================
 
     q4_data = evaluate_q4(q4_text)
-    q4 = all(q4_data.values())
+
+    q4 = (
+        all(q4_data.values())
+        and stress_score
+    )
+
+    # ============================
+    # FEEDBACK
+    # ============================
 
     stress_feedback = ""
+
     if stress_present:
         if handled_stress:
-            stress_feedback = "✔ You correctly identified the reduction in pleasurable activity as a stress indicator."
+            stress_feedback = (
+                "✔ You correctly identified the reduction in pleasurable activity as a stress indicator."
+            )
         else:
-            stress_feedback = "✘ You missed the client's ‘I used to…’ stress indicator."
+            stress_feedback = (
+                "✘ You missed the client's ‘I used to…’ stress indicator."
+            )
 
     feedback = f"""
 QUESTION 1 — Treatment Approach
@@ -257,11 +324,17 @@ STRESS INDICATOR
 """
 
     total = sum([q1, q2, q3, q4])
-    save_session(req.clientName, total)
+
+    save_session(
+        req.clientName,
+        total
+    )
 
     return {
         "feedback": feedback.strip(),
-        "score": {"total": total},
+        "score": {
+            "total": total
+        },
         "detected_modality": "Kinaesthetic"
     }
 
