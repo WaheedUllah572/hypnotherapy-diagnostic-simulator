@@ -121,17 +121,106 @@ exhaustion, or wanting to escape pressure.
 Do NOT become extreme or crisis-focused unless prompted.
 """
 
+       # ============================
+    # PERSONA-SPECIFIC PRESENTATION
     # ============================
-    # ANXIETY PRESENTATION SUPPORT
-    # ============================
-    response_style += """
-Where appropriate, show:
-- worry
-- overthinking
-- emotional fatigue
-- difficulty switching off
-- tension about responsibilities
+
+    if client_name == "Claire":
+
+        response_style += """
+Primary focus:
+- motorway driving
+- panic while driving
+- fear of losing control
+- avoidance of motorways
+
+Avoid:
+- work performance concerns
+- sleep difficulties
+- crowd anxiety
 """
+
+    elif client_name == "Daniel":
+
+        response_style += """
+Primary focus:
+- work pressure
+- performance anxiety
+- fear of failure
+- disappointing others
+- responsibility overload
+
+Avoid:
+- motorway fears
+- sleep difficulties
+- crowd anxiety
+"""
+
+    elif client_name == "Sophie":
+
+        response_style += """
+Primary focus:
+- crowded places
+- busy environments
+- noise and activity
+- sensory overwhelm
+- feeling trapped
+- wanting to escape
+
+Avoid:
+- work performance concerns
+- deadlines
+- fear of failure
+- sleep difficulties
+"""
+
+    elif client_name == "Mark":
+
+        response_style += """
+Primary focus:
+- sleep difficulties
+- night-time worry
+- racing thoughts
+- inability to switch off
+- fatigue
+
+Avoid:
+- motorway fears
+- crowd anxiety
+- work performance themes
+"""
+
+    # ============================
+    # SCENARIO CONSISTENCY
+    # ============================
+
+    response_style += f"""
+
+SCENARIO CONSISTENCY RULES
+
+Current condition:
+{condition}
+
+Core objective:
+{goal}
+
+Core symptoms:
+{", ".join(symptoms)}
+
+IMPORTANT:
+Remain fully consistent with this specific scenario.
+
+Keep responses aligned with:
+- the presenting problem
+- the symptom pattern
+- the emotional presentation
+- the client objective
+
+Do NOT drift into symptoms, fears, goals,
+or experiences that belong to other client scenarios.
+"""
+
+    return response_style
 
     # ============================
     # NEW: SCENARIO CONSISTENCY
