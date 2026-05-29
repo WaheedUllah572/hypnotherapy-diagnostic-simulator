@@ -127,7 +127,7 @@ export default function SessionSimulator() {
 
           {/* CENTER */}
           <main className="col-span-6">
-            <div className="glass p-6 lift h-[650px]">
+            <div className="glass p-6 lift">
               {stage === "session" && (
                 <ChatPanel
                   isActive={true}
