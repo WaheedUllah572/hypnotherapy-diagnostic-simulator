@@ -76,8 +76,8 @@ export default function ReflectionForm({ submission, setSubmission, onSubmit }) 
       </div>
 
       {/* Q4 */}
-      <div className="mb-6">
-        <label className="block text-sm font-semibold text-slate-800 mb-2">
+      <div className="mb-6 mt-2">
+        <label className="block text-sm font-semibold text-slate-800 mb-3 leading-relaxed">
           QUESTION 4 — Demonstrate how you clarified suitability, responded to the client, and confirmed readiness.
         </label>
 
