@@ -133,7 +133,7 @@ export default function SessionSimulator() {
                   isActive={true}
                   onEndSession={() => setStage("reflection")}
                   setChatHistory={setChatHistory}
-                  clientType={client.type}
+                  clientType={client.name}
                   setStateData={setStateData} // ✅ PASS STATE
                 />
               )}
