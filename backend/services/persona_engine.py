@@ -29,16 +29,25 @@ def get_persona_response(client_name, stage, state):
     # AUTHORITATIVE CASE DATA
     # ============================
 
-    condition = persona.get("condition")
-    presenting_problem = persona.get("presenting_problem")
-    timeline = persona.get("timeline")
-    thoughts = persona.get("thoughts")
-    feelings = persona.get("feelings")
-    body = persona.get("body")
-    past = persona.get("past")
-    goal = persona.get("goal")
-    symptoms = persona.get("symptoms", [])
-    hypnosis_question = persona.get("hypnosis_question")
+    # Phase 2B nested case structure
+    identity = persona.get("identity", {})
+    presentation = persona.get("presentation", {})
+    clinical_features = persona.get("clinical_features", {})
+    simulation = persona.get("simulation", {})
+
+    condition = identity.get("condition")
+
+    presenting_problem = presentation.get("presenting_problem")
+    timeline = presentation.get("timeline")
+    thoughts = presentation.get("thoughts")
+    feelings = presentation.get("feelings")
+    body = presentation.get("physical")
+    past = presentation.get("past")
+    goal = presentation.get("goal")
+
+    symptoms = clinical_features.get("symptoms", [])
+
+    hypnosis_question = simulation.get("hypnosis_question")
 
     tone = "neutral"
 
