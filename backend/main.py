@@ -87,6 +87,11 @@ async def chat(msg: Message):
 
     persona = get_persona_response(client_type, stage, state)
     system_prompt = build_prompt(stage, persona)
+    print("\n========== PHASE 2B PROMPT DEBUG ==========")
+    print(f"Client: {client_type}")
+    print(f"Stage: {stage}")
+    print(system_prompt)
+    print("===========================================\n")
 
     messages = [{"role": "system", "content": system_prompt}]
 
