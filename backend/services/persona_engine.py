@@ -1,13 +1,13 @@
 import json
 import os
-import random
+
 
 DATA_PATH = os.path.join(
     os.path.dirname(__file__),
     "../data/case_histories.json"
 )
 
-with open(DATA_PATH, "r") as f:
+with open(DATA_PATH, "r", encoding="utf-8") as f:
     case_histories = json.load(f)
 
 
@@ -23,20 +23,25 @@ def get_persona_response(client_name, stage, state):
         False
     )
 
-    # ============================
-    # NEW: SCENARIO DATA
-    # ============================
     persona = case_histories.get(client_name, {})
 
-    condition = persona.get("condition", "")
-    goal = persona.get("goal", "")
+    # ============================
+    # AUTHORITATIVE CASE DATA
+    # ============================
+
+    condition = persona.get("condition")
+    presenting_problem = persona.get("presenting_problem")
+    timeline = persona.get("timeline")
+    thoughts = persona.get("thoughts")
+    feelings = persona.get("feelings")
+    body = persona.get("body")
+    past = persona.get("past")
+    goal = persona.get("goal")
     symptoms = persona.get("symptoms", [])
+    hypnosis_question = persona.get("hypnosis_question")
 
     tone = "neutral"
 
-    # ============================
-    # CLIENT STATE LOGIC
-    # ============================
     if trust > 70:
         tone = "open"
 
@@ -46,209 +51,152 @@ def get_persona_response(client_name, stage, state):
     elif distress > 60:
         tone = "distressed"
 
-    # ============================
-    # BASE RESPONSE STYLE
-    # ============================
     response_style = f"""
-Client emotional state:
-- Trust: {trust}
-- Distress: {distress}
-- Resistance: {resistance}
+CLIENT STATE
 
-Current tone:
-- {tone}
+Trust: {trust}
+Distress: {distress}
+Resistance: {resistance}
+Tone: {tone}
 
-Behaviour rules:
-- If trust is high → open up more naturally
-- If resistance is high → give shorter hesitant replies
-- If distress is high → show emotional difficulty and overwhelm
-- Remain realistic and conversational
+AUTHORITATIVE CLIENT CASE
+
+Client:
+{client_name}
+
+Condition:
+{condition}
+
+Presenting problem:
+{presenting_problem}
+
+Timeline:
+{timeline}
+
+Thoughts:
+{thoughts}
+
+Feelings:
+{feelings}
+
+Physical/body experience:
+{body}
+
+Relevant past:
+{past}
+
+Goal:
+{goal}
+
+Symptoms:
+{", ".join(symptoms)}
+
+Hypnosis question/concern:
+{hypnosis_question}
+
+CASE GROUNDING RULES
+
+The information above is the authoritative case record.
+
+You may express these facts naturally and conversationally,
+but you must preserve their meaning.
+
+Do NOT contradict the case record.
+
+Do NOT invent new:
+- diagnoses
+- medication
+- medical history
+- psychological treatment
+- psychiatric treatment
+- healthcare professionals
+- previous hypnosis experience
+- traumatic events
+- safeguarding history
+- risk history
+- referrals
+- treatment history
+
+If the student asks about clinical information that is not
+established in the case record, do not create a definite fact.
+
+Respond naturally with uncertainty or limited knowledge where
+appropriate rather than inventing clinical history.
+
+Do not replace an established timeline, symptom, thought,
+feeling, past experience or goal with a different one.
 """
 
     # ============================
-    # MODALITY RULE ENFORCEMENT
+    # EMOTIONAL BEHAVIOUR
     # ============================
+
+    response_style += """
+CLIENT BEHAVIOUR
+
+- Remain realistic and conversational.
+- If trust is high, open up somewhat more naturally.
+- If resistance is high, responses may become shorter or hesitant.
+- If distress is high, emotional difficulty may become more apparent.
+- Do not exaggerate the emotional state.
+"""
+
+    # ============================
+    # MODALITY / BEHAVIOUR
+    # ============================
+
     if not behaviour_explored:
 
         response_style += """
-IMPORTANT:
-Do NOT reveal hobbies, relaxation methods,
-or behavioural coping strategies unless
-specifically asked.
+MODALITY DISCLOSURE
 
-You may describe emotions and stress,
-but NOT modality-revealing behaviour yet.
+Do not volunteer hobbies, relaxation methods, downtime
+activities or behavioural coping strategies before the
+student meaningfully explores them.
+
+Do not reveal modality merely by deliberately inserting
+visual, auditory or kinaesthetic vocabulary.
 """
 
     else:
 
         response_style += """
-Now you may naturally describe:
-- hobbies
-- relaxation behaviour
-- downtime activities
-- coping habits
+MODALITY DISCLOSURE
 
-Use real-world behaviour to reveal modality.
+The student has begun exploring behaviour.
+
+You may discuss hobbies, relaxation behaviour, downtime
+activities or coping habits when relevant.
+
+Any modality evidence should emerge naturally through
+behaviour rather than being explicitly labelled.
 """
 
-        # ============================
-        # STRESS INDICATOR RULE
-        # ============================
         response_style += """
-IMPORTANT:
-If discussing previous enjoyable activities,
-naturally include a stress-related reduction
-in engagement such as:
+STRESS INDICATOR
 
-- "I used to enjoy..."
-- "I don't really do that anymore"
-- "I haven't done that in a while"
+Where genuinely relevant to discussion of enjoyable or
+restorative activities, the client may describe reduced
+engagement in something previously enjoyed.
 
-This should feel natural and emotionally realistic,
-not forced into every response.
+Do not force this into unrelated responses.
 """
 
     # ============================
-    # RISK / OVERWHELM LOGIC
+    # RISK STATE
     # ============================
+
     if risk != "none":
 
         response_style += """
-Include subtle signs of emotional overwhelm,
-exhaustion, or wanting to escape pressure.
+CURRENT STATE NOTE
 
-Do NOT become extreme or crisis-focused unless prompted.
-"""
+The session state contains a risk/overwhelm indicator.
+Respond consistently with the established conversation.
 
-       # ============================
-    # PERSONA-SPECIFIC PRESENTATION
-    # ============================
-
-    if client_name == "Claire":
-
-        response_style += """
-Primary focus:
-- motorway driving
-- panic while driving
-- fear of losing control
-- avoidance of motorways
-
-Avoid:
-- work performance concerns
-- sleep difficulties
-- crowd anxiety
-"""
-
-    elif client_name == "Daniel":
-
-        response_style += """
-Primary focus:
-- work pressure
-- performance anxiety
-- fear of failure
-- disappointing others
-- responsibility overload
-
-Avoid:
-- motorway fears
-- sleep difficulties
-- crowd anxiety
-"""
-
-    elif client_name == "Sophie":
-
-        response_style += """
-Primary focus:
-- crowded places
-- busy environments
-- noise and activity
-- sensory overwhelm
-- feeling trapped
-- wanting to escape
-
-Avoid:
-- work performance concerns
-- deadlines
-- fear of failure
-- sleep difficulties
-"""
-
-    elif client_name == "Mark":
-
-        response_style += """
-Primary focus:
-- sleep difficulties
-- night-time worry
-- racing thoughts
-- inability to switch off
-- fatigue
-
-Avoid:
-- motorway fears
-- crowd anxiety
-- work performance themes
-"""
-
-    # ============================
-    # SCENARIO CONSISTENCY
-    # ============================
-
-    response_style += f"""
-
-SCENARIO CONSISTENCY RULES
-
-Current condition:
-{condition}
-
-Core objective:
-{goal}
-
-Core symptoms:
-{", ".join(symptoms)}
-
-IMPORTANT:
-Remain fully consistent with this specific scenario.
-
-Keep responses aligned with:
-- the presenting problem
-- the symptom pattern
-- the emotional presentation
-- the client objective
-
-Do NOT drift into symptoms, fears, goals,
-or experiences that belong to other client scenarios.
-"""
-
-    return response_style
-
-    # ============================
-    # NEW: SCENARIO CONSISTENCY
-    # ============================
-    response_style += f"""
-
-SCENARIO CONSISTENCY RULES
-
-Current condition:
-{condition}
-
-Core objective:
-{goal}
-
-Core symptoms:
-{", ".join(symptoms)}
-
-IMPORTANT:
-Remain fully consistent with this specific scenario.
-
-Keep responses aligned with:
-- the presenting problem
-- the symptom pattern
-- the emotional presentation
-- the client objective
-
-Do NOT drift into symptoms, fears, goals,
-or experiences that belong to other client scenarios.
+Do not invent suicidal intent, self-harm, diagnosis or other
+serious risk information that has not actually been
+established.
 """
 
     return response_style
