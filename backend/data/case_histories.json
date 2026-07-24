@@ -1,117 +1,510 @@
 {
   "Claire": {
-    "condition": "Motorway Driving Anxiety",
-    "type": "CBH",
+    "identity": {
+      "condition": "Motorway Driving Anxiety",
+      "therapeutic_profile": "CBH"
+    },
 
-    "presenting_problem": "I’ve developed a fear of driving on motorways after having a panic attack while driving last year.",
+    "presentation": {
+      "presenting_problem": "I’ve developed a fear of driving on motorways after having a panic attack while driving last year.",
+      "timeline": "It started about 8 months ago after a very stressful period at work.",
+      "thoughts": "I keep worrying that I might lose control of the car or cause an accident while driving.",
+      "feelings": "I feel anxious, trapped, and panicked even thinking about driving on motorways.",
+      "physical": "My chest feels tight, my hands sweat, and my heart starts racing when I approach motorways.",
+      "past": "I had a panic attack in a supermarket a few years ago during another stressful period.",
+      "goal": "I want to feel calm, safe, and confident when driving again."
+    },
 
-    "timeline": "It started about 8 months ago after a very stressful period at work.",
+    "clinical_features": {
+      "symptoms": [
+        "motorway panic",
+        "fear of losing control",
+        "avoidance driving",
+        "panic symptoms while driving",
+        "anticipatory anxiety"
+      ],
+      "triggers": [
+        "approaching motorways",
+        "driving on motorways",
+        "thinking about motorway driving"
+      ],
+      "maintaining_factors": [
+        "anticipatory anxiety",
+        "avoidance",
+        "catastrophic fear of losing control"
+      ],
+      "coping_strategies": [],
+      "functional_impact": [
+        "avoidance of motorway driving"
+      ]
+    },
 
-    "thoughts": "I keep worrying that I might lose control of the car or cause an accident while driving.",
+    "persona": {
+      "personality_traits": [],
+      "communication_style": null,
+      "emotional_presentation": "Anxious when discussing motorway driving and loss of control.",
+      "behavioural_tendencies": [
+        "avoidance of anxiety-provoking driving situations"
+      ],
+      "disclosure_style": null,
+      "modality": null
+    },
 
-    "feelings": "I feel anxious, trapped, and panicked even thinking about driving on motorways.",
+    "hypnosis_history": {
+      "previous_experience": null,
+      "experience_type": null,
+      "experience_details": null,
+      "beliefs": null,
+      "expectations": null,
+      "concerns": [
+        "Will I still be in control during hypnosis?"
+      ]
+    },
 
-    "body": "My chest feels tight, my hands sweat, and my heart starts racing when I approach motorways.",
+    "healthcare": {
+      "medical_history": null,
+      "psychological_care": null,
+      "psychiatric_care": null,
+      "medication": {
+        "current": null,
+        "name": null,
+        "reason": null,
+        "adherence": null,
+        "recent_changes": null,
+        "benefits": null,
+        "side_effects": null
+      },
+      "professionals_involved": [],
+      "referral_or_permission_required": null
+    },
 
-    "past": "I had a panic attack in a supermarket a few years ago during another stressful period.",
+    "motivation": {
+      "why_now": null,
+      "readiness": null,
+      "expectations": [],
+      "goals": [
+        "feel calm when driving",
+        "feel safe when driving",
+        "regain confidence on motorways"
+      ]
+    },
 
-    "goal": "I want to feel calm, safe, and confident when driving again.",
+    "safety": {
+      "risk_factors": [],
+      "contraindications": [],
+      "safeguarding_concerns": [],
+      "professional_boundary_considerations": []
+    },
 
-    "symptoms": [
-      "motorway panic",
-      "fear of losing control",
-      "avoidance driving",
-      "panic symptoms while driving",
-      "anticipatory anxiety"
-    ],
+    "treatment_reasoning": {
+      "candidate_approaches": [
+        "CBH"
+      ],
+      "preferred_approach": "CBH",
+      "supporting_evidence": [
+        "identifiable anxiety trigger",
+        "catastrophic thinking about losing control",
+        "avoidance behaviour",
+        "panic-related physiological symptoms"
+      ],
+      "contra_evidence": []
+    },
 
-    "hypnosis_question": "Will I still be in control during hypnosis?"
+    "simulation": {
+      "hidden_information": [],
+      "disclosure_rules": [],
+      "training_challenges": [
+        "explore the panic cycle",
+        "explore avoidance",
+        "explore fear of losing control",
+        "establish relevant safety and healthcare history"
+      ],
+      "hypnosis_question": "Will I still be in control during hypnosis?"
+    }
   },
 
   "Daniel": {
-    "condition": "Work Performance Anxiety",
-    "type": "SH",
+    "identity": {
+      "condition": "Work Performance Anxiety",
+      "therapeutic_profile": "SH"
+    },
 
-    "presenting_problem": "I’ve been struggling with anxiety around my performance at work.",
+    "presentation": {
+      "presenting_problem": "I’ve been struggling with anxiety around my performance at work.",
+      "timeline": "It really started after I was promoted last year and given more responsibility.",
+      "thoughts": "I keep thinking I’m going to fail, make mistakes, or disappoint people.",
+      "feelings": "I feel overwhelmed, pressured, and mentally exhausted most of the time.",
+      "physical": "I get a heavy feeling in my chest and a lot of tension in my shoulders during work.",
+      "past": "I’ve always put a lot of pressure on myself to succeed, even when I was younger.",
+      "goal": "I want to feel calmer, more capable, and more confident in my role."
+    },
 
-    "timeline": "It really started after I was promoted last year and given more responsibility.",
+    "clinical_features": {
+      "symptoms": [
+        "performance anxiety",
+        "fear of failure",
+        "overthinking",
+        "work stress",
+        "mental exhaustion"
+      ],
+      "triggers": [
+        "work performance",
+        "increased responsibility",
+        "possibility of making mistakes",
+        "fear of disappointing others"
+      ],
+      "maintaining_factors": [
+        "fear of failure",
+        "self-imposed pressure",
+        "overthinking"
+      ],
+      "coping_strategies": [],
+      "functional_impact": [
+        "mental exhaustion",
+        "persistent work-related pressure"
+      ]
+    },
 
-    "thoughts": "I keep thinking I’m going to fail, make mistakes, or disappoint people.",
+    "persona": {
+      "personality_traits": [
+        "achievement-focused"
+      ],
+      "communication_style": null,
+      "emotional_presentation": "Pressured, overwhelmed and mentally exhausted around work performance.",
+      "behavioural_tendencies": [
+        "places substantial pressure on himself to succeed"
+      ],
+      "disclosure_style": null,
+      "modality": null
+    },
 
-    "feelings": "I feel overwhelmed, pressured, and mentally exhausted most of the time.",
+    "hypnosis_history": {
+      "previous_experience": null,
+      "experience_type": null,
+      "experience_details": null,
+      "beliefs": null,
+      "expectations": null,
+      "concerns": [
+        "How can hypnotherapy help with confidence?"
+      ]
+    },
 
-    "body": "I get a heavy feeling in my chest and a lot of tension in my shoulders during work.",
+    "healthcare": {
+      "medical_history": null,
+      "psychological_care": null,
+      "psychiatric_care": null,
+      "medication": {
+        "current": null,
+        "name": null,
+        "reason": null,
+        "adherence": null,
+        "recent_changes": null,
+        "benefits": null,
+        "side_effects": null
+      },
+      "professionals_involved": [],
+      "referral_or_permission_required": null
+    },
 
-    "past": "I’ve always put a lot of pressure on myself to succeed, even when I was younger.",
+    "motivation": {
+      "why_now": "Anxiety became significant after promotion and increased responsibility at work.",
+      "readiness": null,
+      "expectations": [],
+      "goals": [
+        "feel calmer at work",
+        "feel more capable",
+        "develop confidence in his role"
+      ]
+    },
 
-    "goal": "I want to feel calmer, more capable, and more confident in my role.",
+    "safety": {
+      "risk_factors": [],
+      "contraindications": [],
+      "safeguarding_concerns": [],
+      "professional_boundary_considerations": []
+    },
 
-    "symptoms": [
-      "performance anxiety",
-      "fear of failure",
-      "overthinking",
-      "work stress",
-      "mental exhaustion"
-    ],
+    "treatment_reasoning": {
+      "candidate_approaches": [
+        "Solution-Focused Hypnotherapy",
+        "CBH",
+        "Ericksonian Hypnotherapy"
+      ],
+      "preferred_approach": null,
+      "supporting_evidence": [
+        "work-related anxiety",
+        "fear of failure",
+        "overthinking",
+        "confidence-related goal"
+      ],
+      "contra_evidence": []
+    },
 
-    "hypnosis_question": "How can hypnotherapy help with confidence?"
+    "simulation": {
+      "hidden_information": [],
+      "disclosure_rules": [],
+      "training_challenges": [
+        "identify the maintaining mechanisms behind performance anxiety",
+        "explore the impact of increased responsibility",
+        "explore confidence and expectations",
+        "establish relevant safety and healthcare history"
+      ],
+      "hypnosis_question": "How can hypnotherapy help with confidence?"
+    }
   },
 
   "Sophie": {
-    "condition": "Crowd / Environmental Anxiety",
-    "type": "Ericksonian",
+    "identity": {
+      "condition": "Crowd / Environmental Anxiety",
+      "therapeutic_profile": "Ericksonian"
+    },
 
-    "presenting_problem": "It feels like everything becomes too loud and overwhelming when I’m in crowded places.",
+    "presentation": {
+      "presenting_problem": "It feels like everything becomes too loud and overwhelming when I’m in crowded places.",
+      "timeline": "It’s been gradually building over the past couple of years.",
+      "thoughts": "My mind starts spiralling when there’s too much activity or noise around me.",
+      "feelings": "I feel overwhelmed, trapped, and like I need to escape busy environments.",
+      "physical": "It feels like a wave rising in my chest and everything becomes too much physically and emotionally.",
+      "past": "I remember feeling something similar at school when I felt judged or under pressure.",
+      "goal": "I want to feel calmer and more in control in busy environments."
+    },
 
-    "timeline": "It’s been gradually building over the past couple of years.",
+    "clinical_features": {
+      "symptoms": [
+        "crowd anxiety",
+        "sensory overwhelm",
+        "escape response",
+        "panic in busy places",
+        "environmental stress"
+      ],
+      "triggers": [
+        "crowded places",
+        "busy environments",
+        "high levels of activity",
+        "noise"
+      ],
+      "maintaining_factors": [
+        "escape response",
+        "feeling trapped",
+        "spiralling thoughts in overstimulating environments"
+      ],
+      "coping_strategies": [],
+      "functional_impact": [
+        "difficulty tolerating busy environments"
+      ]
+    },
 
-    "thoughts": "My mind starts spiralling when there’s too much activity or noise around me.",
+    "persona": {
+      "personality_traits": [],
+      "communication_style": null,
+      "emotional_presentation": "Overwhelmed and trapped when exposed to busy or highly stimulating environments.",
+      "behavioural_tendencies": [
+        "urge to escape overwhelming environments"
+      ],
+      "disclosure_style": null,
+      "modality": null
+    },
 
-    "feelings": "I feel overwhelmed, trapped, and like I need to escape busy environments.",
+    "hypnosis_history": {
+      "previous_experience": null,
+      "experience_type": null,
+      "experience_details": null,
+      "beliefs": null,
+      "expectations": null,
+      "concerns": [
+        "What does hypnosis actually feel like?"
+      ]
+    },
 
-    "body": "It feels like a wave rising in my chest and everything becomes too much physically and emotionally.",
+    "healthcare": {
+      "medical_history": null,
+      "psychological_care": null,
+      "psychiatric_care": null,
+      "medication": {
+        "current": null,
+        "name": null,
+        "reason": null,
+        "adherence": null,
+        "recent_changes": null,
+        "benefits": null,
+        "side_effects": null
+      },
+      "professionals_involved": [],
+      "referral_or_permission_required": null
+    },
 
-    "past": "I remember feeling something similar at school when I felt judged or under pressure.",
+    "motivation": {
+      "why_now": null,
+      "readiness": null,
+      "expectations": [],
+      "goals": [
+        "feel calmer in busy environments",
+        "feel more in control",
+        "reduce the need to escape"
+      ]
+    },
 
-    "goal": "I want to feel calmer and more in control in busy environments.",
+    "safety": {
+      "risk_factors": [],
+      "contraindications": [],
+      "safeguarding_concerns": [],
+      "professional_boundary_considerations": []
+    },
 
-    "symptoms": [
-      "crowd anxiety",
-      "sensory overwhelm",
-      "escape response",
-      "panic in busy places",
-      "environmental stress"
-    ],
+    "treatment_reasoning": {
+      "candidate_approaches": [
+        "Ericksonian Hypnotherapy",
+        "CBH"
+      ],
+      "preferred_approach": "Ericksonian Hypnotherapy",
+      "supporting_evidence": [
+        "strong sensory experience",
+        "environmental overwhelm",
+        "escape response",
+        "physical and emotional experience of anxiety"
+      ],
+      "contra_evidence": []
+    },
 
-    "hypnosis_question": "What does hypnosis actually feel like?"
+    "simulation": {
+      "hidden_information": [],
+      "disclosure_rules": [],
+      "training_challenges": [
+        "explore the sensory and emotional experience",
+        "clarify triggers and escape behaviour",
+        "explore earlier experiences without assuming causation",
+        "establish relevant safety and healthcare history"
+      ],
+      "hypnosis_question": "What does hypnosis actually feel like?"
+    }
   },
 
   "Mark": {
-    "condition": "Sleep Anxiety / Night-Time Overthinking",
-    "type": "Regression",
+    "identity": {
+      "condition": "Sleep Anxiety / Night-Time Overthinking",
+      "therapeutic_profile": "Regression"
+    },
 
-    "presenting_problem": "I’ve been struggling with sleep and feeling anxious most nights.",
+    "presentation": {
+      "presenting_problem": "I’ve been struggling with sleep and feeling anxious most nights.",
+      "timeline": "It started during a stressful period at work about a year ago.",
+      "thoughts": "At night my mind keeps going over everything that could go wrong and I can’t switch off.",
+      "feelings": "I feel uneasy, mentally exhausted, and constantly on edge at night.",
+      "physical": "My stomach feels tight, my body feels restless, and I find it hard to relax properly before sleep.",
+      "past": "It reminds me of when I was younger and used to worry a lot about school and expectations.",
+      "goal": "I want to be able to relax properly, switch off mentally, and sleep peacefully again."
+    },
 
-    "timeline": "It started during a stressful period at work about a year ago.",
+    "clinical_features": {
+      "symptoms": [
+        "night-time overthinking",
+        "difficulty switching off",
+        "sleep anxiety",
+        "mental restlessness",
+        "fatigue"
+      ],
+      "triggers": [
+        "night-time",
+        "attempting to sleep",
+        "work-related stress",
+        "anticipating what could go wrong"
+      ],
+      "maintaining_factors": [
+        "repetitive worry",
+        "anticipatory thinking",
+        "difficulty disengaging from thoughts",
+        "physical restlessness"
+      ],
+      "coping_strategies": [],
+      "functional_impact": [
+        "difficulty sleeping",
+        "fatigue",
+        "mental exhaustion"
+      ]
+    },
 
-    "thoughts": "At night my mind keeps going over everything that could go wrong and I can’t switch off.",
+    "persona": {
+      "personality_traits": [],
+      "communication_style": null,
+      "emotional_presentation": "Mentally exhausted, uneasy and on edge when discussing sleep and night-time worry.",
+      "behavioural_tendencies": [
+        "repetitive night-time thinking"
+      ],
+      "disclosure_style": null,
+      "modality": null
+    },
 
-    "feelings": "I feel uneasy, mentally exhausted, and constantly on edge at night.",
+    "hypnosis_history": {
+      "previous_experience": null,
+      "experience_type": null,
+      "experience_details": null,
+      "beliefs": null,
+      "expectations": null,
+      "concerns": [
+        "Can hypnosis help me quiet my mind at night?"
+      ]
+    },
 
-    "body": "My stomach feels tight, my body feels restless, and I find it hard to relax properly before sleep.",
+    "healthcare": {
+      "medical_history": null,
+      "psychological_care": null,
+      "psychiatric_care": null,
+      "medication": {
+        "current": null,
+        "name": null,
+        "reason": null,
+        "adherence": null,
+        "recent_changes": null,
+        "benefits": null,
+        "side_effects": null
+      },
+      "professionals_involved": [],
+      "referral_or_permission_required": null
+    },
 
-    "past": "It reminds me of when I was younger and used to worry a lot about school and expectations.",
+    "motivation": {
+      "why_now": null,
+      "readiness": null,
+      "expectations": [],
+      "goals": [
+        "relax before sleep",
+        "switch off mentally",
+        "sleep peacefully"
+      ]
+    },
 
-    "goal": "I want to be able to relax properly, switch off mentally, and sleep peacefully again.",
+    "safety": {
+      "risk_factors": [],
+      "contraindications": [],
+      "safeguarding_concerns": [],
+      "professional_boundary_considerations": []
+    },
 
-    "symptoms": [
-      "night-time overthinking",
-      "difficulty switching off",
-      "sleep anxiety",
-      "mental restlessness",
-      "fatigue"
-    ],
+    "treatment_reasoning": {
+      "candidate_approaches": [],
+      "preferred_approach": null,
+      "supporting_evidence": [
+        "night-time repetitive thinking",
+        "work-related stress",
+        "sleep disturbance",
+        "physical restlessness",
+        "earlier history of worry"
+      ],
+      "contra_evidence": [
+        "Regression should not be automatically selected solely because an earlier experience is mentioned."
+      ]
+    },
 
-    "hypnosis_question": "Can hypnosis help me quiet my mind at night?"
+    "simulation": {
+      "hidden_information": [],
+      "disclosure_rules": [],
+      "training_challenges": [
+        "explore the current maintaining mechanisms",
+        "assess sleep-related and healthcare factors",
+        "avoid assuming that an earlier memory establishes causation",
+        "justify treatment selection from evidence rather than the historical reference alone"
+      ],
+      "hypnosis_question": "Can hypnosis help me quiet my mind at night?"
+    }
   }
 }

@@ -19,6 +19,13 @@ from services.conversation_engine import (
 )
 from services.persona_engine import get_persona_response
 from services.prompt_builder import build_prompt
+from services.clinical_evidence_engine import (
+    create_evidence_state,
+    update_evidence,
+    get_evidence_for_tutor
+)
+
+from services.evidence_extractor import extract_clinical_evidence
 
 app = FastAPI()
 
@@ -31,6 +38,22 @@ app.add_middleware(
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# ============================
+# PHASE 2B CLINICAL EVIDENCE
+# ============================
+
+session_evidence = {}
+
+
+def get_session_evidence(session_id, client_name):
+
+    if session_id not in session_evidence:
+
+        session_evidence[session_id] = create_evidence_state(
+            client_name=client_name
+        )
+
+    return session_evidence[session_id]
 
 
 class Message(BaseModel):
@@ -85,10 +108,51 @@ async def chat(msg: Message):
     except Exception:
         reply = "I'm not sure how to explain that… could you ask me in a different way?"
 
-    return {
+
+            # ============================
+    # PHASE 2B EVIDENCE EXTRACTION
+    # ============================
+
+    evidence_state = get_session_evidence(
+        session_id,
+        client_type
+    )
+
+    extracted_evidence = extract_clinical_evidence(
+        client=client,
+        history=msg.history,
+        latest_student_text=msg.text,
+        latest_client_reply=reply
+    )
+
+    for item in extracted_evidence:
+
+        update_evidence(
+            evidence_state=evidence_state,
+            domain=item["domain"],
+            value=item["value"],
+            status=item["status"],
+            confidence=item["confidence"],
+            evidence_text=item.get("evidence_text"),
+            clinical_significance=item.get(
+                "clinical_significance"
+            ),
+            applied_to_reasoning=item.get(
+                "applied_to_reasoning",
+                False
+            ),
+            flags=item.get("flags", [])
+        )
+
+        return {
         "reply": reply,
         "stage": stage,
-        "state": state
+        "state": state,
+
+        # Phase 2B
+        "clinicalEvidence": get_evidence_for_tutor(
+            evidence_state
+        )
     }
 
 
