@@ -35,6 +35,13 @@ def get_persona_response(client_name, stage, state):
     clinical_features = persona.get("clinical_features", {})
     simulation = persona.get("simulation", {})
 
+    healthcare = persona.get("healthcare", {})
+    hypnosis_history = persona.get("hypnosis_history", {})
+    safety = persona.get("safety", {})
+    motivation = persona.get("motivation", {})
+
+    medication = healthcare.get("medication", {})
+
     condition = identity.get("condition")
 
     presenting_problem = presentation.get("presenting_problem")
@@ -48,6 +55,21 @@ def get_persona_response(client_name, stage, state):
     symptoms = clinical_features.get("symptoms", [])
 
     hypnosis_question = simulation.get("hypnosis_question")
+    medical_history = healthcare.get("medical_history")
+    psychological_care = healthcare.get("psychological_care")
+    psychiatric_care = healthcare.get("psychiatric_care")
+    medication_current = medication.get("current")
+    professionals_involved = healthcare.get("professionals_involved", [])
+    referral_required = healthcare.get("referral_or_permission_required")
+
+    previous_hypnosis = hypnosis_history.get("previous_experience")
+
+    risk_factors = safety.get("risk_factors", [])
+    contraindications = safety.get("contraindications", [])
+    safeguarding_concerns = safety.get("safeguarding_concerns", [])
+
+    why_now = motivation.get("why_now")
+    readiness = motivation.get("readiness")
 
     tone = "neutral"
 
@@ -102,6 +124,62 @@ Symptoms:
 
 Hypnosis question/concern:
 {hypnosis_question}
+
+HEALTHCARE / SAFETY CASE STATUS
+
+Medical history:
+{medical_history}
+
+Psychological care:
+{psychological_care}
+
+Psychiatric care:
+{psychiatric_care}
+
+Current medication:
+{medication_current}
+
+Healthcare professionals involved:
+{professionals_involved}
+
+Referral/permission required:
+{referral_required}
+
+Previous hypnosis experience:
+{previous_hypnosis}
+
+Risk factors:
+{risk_factors}
+
+Contraindications:
+{contraindications}
+
+Safeguarding concerns:
+{safeguarding_concerns}
+
+Why seeking help now:
+{why_now}
+
+Readiness:
+{readiness}
+
+IMPORTANT NULL/UNKNOWN RULE
+
+A value of None/null means UNKNOWN / NOT YET ESTABLISHED.
+It does NOT mean "No", "None", "Never", "Not taking", or
+"Not receiving".
+
+If the student asks about a field whose case value is None/null,
+do not invent either a positive or negative answer.
+
+Respond naturally as someone whose information has not yet been
+established in the simulation. Do not convert unknown information
+into a definite clinical fact.
+
+An empty safety list means that no risk factor, contraindication or
+safeguarding concern is currently established in the case record.
+Do not invent one, but do not claim that a clinical assessment has
+definitively ruled all risks out unless the conversation establishes it.
 
 CASE GROUNDING RULES
 
