@@ -71,6 +71,19 @@ def get_persona_response(client_name, stage, state):
     why_now = motivation.get("why_now")
     readiness = motivation.get("readiness")
 
+        # ============================
+    # CASE VALUE FORMATTER
+    # ============================
+
+    def case_value(value):
+        if value is None:
+            return "UNKNOWN — NOT SPECIFIED BY CASE"
+
+        if value == []:
+            return "NO SPECIFIC ITEM ESTABLISHED"
+
+        return value
+
     tone = "neutral"
 
     if trust > 70:
@@ -128,58 +141,76 @@ Hypnosis question/concern:
 HEALTHCARE / SAFETY CASE STATUS
 
 Medical history:
-{medical_history}
+{case_value(medical_history)}
 
 Psychological care:
-{psychological_care}
+{case_value(psychological_care)}
 
 Psychiatric care:
-{psychiatric_care}
+{case_value(psychiatric_care)}
 
 Current medication:
-{medication_current}
+{case_value(medication_current)}
 
 Healthcare professionals involved:
-{professionals_involved}
+{case_value(professionals_involved)}
 
 Referral/permission required:
-{referral_required}
+{case_value(referral_required)}
 
 Previous hypnosis experience:
-{previous_hypnosis}
+{case_value(previous_hypnosis)}
 
 Risk factors:
-{risk_factors}
+{case_value(risk_factors)}
 
 Contraindications:
-{contraindications}
+{case_value(contraindications)}
 
 Safeguarding concerns:
-{safeguarding_concerns}
+{case_value(safeguarding_concerns)}
 
 Why seeking help now:
-{why_now}
+{case_value(why_now)}
 
 Readiness:
-{readiness}
+{case_value(readiness)}
 
-IMPORTANT NULL/UNKNOWN RULE
+IMPORTANT UNKNOWN-FIELD SIMULATION RULE
 
-A value of None/null means UNKNOWN / NOT YET ESTABLISHED.
-It does NOT mean "No", "None", "Never", "Not taking", or
-"Not receiving".
+Some clinical facts are intentionally undefined because the training
+case has not specified them.
 
-If the student asks about a field whose case value is None/null,
-do not invent either a positive or negative answer.
+"UNKNOWN — NOT SPECIFIED BY CASE" means the case author has not
+provided a definite value.
 
-Respond naturally as someone whose information has not yet been
-established in the simulation. Do not convert unknown information
-into a definite clinical fact.
+It MUST NOT be interpreted as:
+- No
+- None
+- Never
+- Not currently
+- Not taking medication
+- Not receiving treatment
 
-An empty safety list means that no risk factor, contraindication or
-safeguarding concern is currently established in the case record.
-Do not invent one, but do not claim that a clinical assessment has
-definitively ruled all risks out unless the conversation establishes it.
+When the student directly asks about an undefined healthcare,
+treatment, medication, hypnosis-history, referral or clinical-history
+field, do NOT invent either a positive or negative answer.
+
+Stay in character and communicate naturally that a definite answer
+cannot be established from the case information.
+
+For example:
+- "I'm not sure that's something I can give you a definite answer about."
+- "That's something we'd probably need to clarify as part of my history."
+
+Do NOT answer "No" simply because the field is unknown.
+
+This rule takes priority over conversational realism for undefined
+clinical-history fields.
+
+"NO SPECIFIC ITEM ESTABLISHED" means the case record does not currently
+specify an item in that category. It does not prove that a complete
+clinical assessment has ruled everything out.
 
 CASE GROUNDING RULES
 
