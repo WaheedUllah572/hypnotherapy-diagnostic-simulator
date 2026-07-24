@@ -107,14 +107,20 @@ async def chat(msg: Message):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            timeout=10
+            timeout=25
         )
+
         reply = response.choices[0].message.content
-    except Exception:
+
+    except Exception as e:
+        print("========== OPENAI ERROR ==========")
+        print(type(e).__name__)
+        print(str(e))
+        print("==================================")
+
         reply = "I'm not sure how to explain that… could you ask me in a different way?"
 
-
-            # ============================
+    # ============================
     # PHASE 2B EVIDENCE EXTRACTION
     # ============================
 
@@ -131,7 +137,6 @@ async def chat(msg: Message):
     )
 
     for item in extracted_evidence:
-
         update_evidence(
             evidence_state=evidence_state,
             domain=item["domain"],
@@ -139,9 +144,7 @@ async def chat(msg: Message):
             status=item["status"],
             confidence=item["confidence"],
             evidence_text=item.get("evidence_text"),
-            clinical_significance=item.get(
-                "clinical_significance"
-            ),
+            clinical_significance=item.get("clinical_significance"),
             applied_to_reasoning=item.get(
                 "applied_to_reasoning",
                 False
@@ -149,12 +152,10 @@ async def chat(msg: Message):
             flags=item.get("flags", [])
         )
 
-        return {
+    return {
         "reply": reply,
         "stage": stage,
         "state": state,
-
-        # Phase 2B
         "clinicalEvidence": get_evidence_for_tutor(
             evidence_state
         )
