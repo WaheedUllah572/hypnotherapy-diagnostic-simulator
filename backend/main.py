@@ -136,6 +136,13 @@ async def chat(msg: Message):
         latest_client_reply=reply
     )
 
+    print("\n========== PHASE 2B EVIDENCE DEBUG ==========")
+    print("SESSION:", session_id)
+    print("CLIENT:", client_type)
+    print("EXTRACTED EVIDENCE:")
+    print(extracted_evidence)
+    print("==============================================\n")
+
     for item in extracted_evidence:
         update_evidence(
             evidence_state=evidence_state,
