@@ -28,6 +28,28 @@ IMPORTANT RULES
 7. If information is ambiguous, use a lower confidence.
 8. Safety-related information must be captured accurately without making
    diagnostic conclusions.
+9. An uncertain, unknown, evasive, or "not established" client response
+   does NOT establish evidence for the clinical domain being asked about.
+
+10. Examples such as:
+    - "I'm not sure."
+    - "I can't give you a definite answer."
+    - "That would need to be clarified."
+    - "I don't know."
+    - "That's not something that's been established."
+    must NOT create medication, medical_history, psychological_care,
+    psychiatric_care, healthcare_professionals, previous_hypnosis,
+    referral_permission, risk, contraindications, or safeguarding evidence
+    unless the response also contains an actual supported clinical fact.
+
+11. A therapist asking about a domain means that domain was explored,
+    but exploration alone is NOT established clinical evidence.
+    Do not return that domain unless the client's answer supplies a
+    definite supported fact.
+
+12. Do not encode uncertainty itself as a clinical fact.
+    For example, "uncertainty about current medication" is NOT medication
+    evidence.
 
 Allowed evidence domains:
 
