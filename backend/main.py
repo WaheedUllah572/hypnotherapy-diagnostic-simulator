@@ -24,7 +24,7 @@ from services.clinical_evidence_engine import (
     update_evidence,
     get_evidence_for_tutor
 )
-
+from services.risk_safety_engine import evaluate_safety
 from services.evidence_extractor import extract_clinical_evidence
 
 app = FastAPI()
@@ -136,6 +136,8 @@ async def chat(msg: Message):
         latest_client_reply=reply
     )
 
+    
+
     print("\n========== PHASE 2B EVIDENCE DEBUG ==========")
     print("SESSION:", session_id)
     print("CLIENT:", client_type)
@@ -159,13 +161,29 @@ async def chat(msg: Message):
             flags=item.get("flags", [])
         )
 
+            # ============================
+    # PHASE 2B RISK & SAFETY
+    # ============================
+
+    safety_state = evaluate_safety(
+        extracted_evidence
+    )
+
+    print("\n========== PHASE 2B SAFETY DEBUG ==========")
+    print("SESSION:", session_id)
+    print("CLIENT:", client_type)
+    print("SAFETY STATE:")
+    print(safety_state)
+    print("============================================\n")
+
     return {
         "reply": reply,
         "stage": stage,
         "state": state,
         "clinicalEvidence": get_evidence_for_tutor(
             evidence_state
-        )
+        ),
+        "safetyState": safety_state
     }
 
 
