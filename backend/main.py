@@ -84,9 +84,16 @@ async def chat(msg: Message):
     except Exception:
         state = get_state(session_id)
 
-        persona_style = get_persona_response(client_type, stage, state)
+    persona_style = get_persona_response(
+        client_type,
+        stage,
+        state
+    )
 
-    system_prompt = build_prompt(stage, persona_style)
+    system_prompt = build_prompt(
+        stage,
+        persona_style
+    )
 
     # Raw authoritative client data
     case_data = case_histories.get(client_type, {})
