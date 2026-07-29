@@ -4,12 +4,11 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
-
+from services.unknown_response_engine import build_unknown_response_guidance
 load_dotenv()
 
 from services.session_tracker import save_session, get_sessions
 from services.progress_engine import calculate_progress
-
 # ✅ UPDATED IMPORTS (Phase 2A)
 from services.conversation_engine import (
     get_stage,
@@ -17,7 +16,7 @@ from services.conversation_engine import (
     update_state,
     get_state
 )
-from services.persona_engine import get_persona_response
+from services.persona_engine import get_persona_response, case_histories
 from services.prompt_builder import build_prompt
 from services.clinical_evidence_engine import (
     create_evidence_state,
@@ -85,8 +84,30 @@ async def chat(msg: Message):
     except Exception:
         state = get_state(session_id)
 
-    persona = get_persona_response(client_type, stage, state)
-    system_prompt = build_prompt(stage, persona)
+        persona_style = get_persona_response(client_type, stage, state)
+
+    system_prompt = build_prompt(stage, persona_style)
+
+    # Raw authoritative client data
+    case_data = case_histories.get(client_type, {})
+
+    # Previous client responses for variation
+    recent_client_messages = [
+        m.get("text", "")
+        for m in msg.history
+        if m.get("role") == "client"
+    ]
+
+    # Add special guidance only when the student asks about
+    # an undefined protected clinical field
+    unknown_guidance = build_unknown_response_guidance(
+        student_text=msg.text,
+        persona=case_data,
+        recent_client_messages=recent_client_messages,
+    )
+
+    if unknown_guidance:
+        system_prompt += "\n\n" + unknown_guidance["instruction"]
     print("\n========== PHASE 2B PROMPT DEBUG ==========")
     print(f"Client: {client_type}")
     print(f"Stage: {stage}")
@@ -119,6 +140,7 @@ async def chat(msg: Message):
         print("==================================")
 
         reply = "I'm not sure how to explain that… could you ask me in a different way?"
+
 
     # ============================
     # PHASE 2B EVIDENCE EXTRACTION
