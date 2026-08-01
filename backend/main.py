@@ -91,10 +91,11 @@ async def chat(msg: Message):
         state = get_state(session_id)
 
     persona_style = get_persona_response(
-        client_type,
-        stage,
-        state
-    )
+    client_type,
+    stage,
+    state,
+    msg.treatmentApproach
+)
 
     system_prompt = build_prompt(
     stage,
