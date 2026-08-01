@@ -130,6 +130,7 @@ async def chat(msg: Message):
 
     if unknown_guidance:
         system_prompt += "\n\n" + unknown_guidance["instruction"]
+        messages[0]["content"] = system_prompt
     print("\n========== PHASE 2B PROMPT DEBUG ==========")
     print(f"Client: {client_type}")
     print(f"Stage: {stage}")

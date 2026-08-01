@@ -81,18 +81,19 @@ def get_persona_response(
     why_now = motivation.get("why_now")
     readiness = motivation.get("readiness")
 
-        # ============================
-    # CASE VALUE FORMATTER
     # ============================
+# CASE VALUE FORMATTER
+# ============================
 
-    def case_value(value):
-        if value is None:
-            return "UNKNOWN — NOT SPECIFIED BY CASE"
+def case_value(value):
 
-        if value == []:
-            return "NO SPECIFIC ITEM ESTABLISHED"
+    if value is None:
+        return "__UNDEFINED__"
 
-        return value
+    if value == []:
+        return "__UNDEFINED__"
+
+    return value
 
     tone = "neutral"
 
@@ -196,6 +197,18 @@ appropriate rather than inventing clinical history.
 
 Do not replace an established timeline, symptom, thought,
 feeling, past experience or goal with a different one.
+
+SPECIAL RULE FOR __UNDEFINED__
+
+Whenever a field is marked as __UNDEFINED__:
+
+- Do NOT answer Yes.
+- Do NOT answer No.
+- Do NOT assume the most likely situation.
+- Do NOT invent absence of treatment.
+- Do NOT invent presence of treatment.
+- Respond with natural uncertainty only.
+- Preserve the fact that the case does not establish this information.
 
 ====================================
 FACT PRESERVATION
