@@ -6,9 +6,7 @@ import os
 from dotenv import load_dotenv
 from services.unknown_response_engine import build_unknown_response_guidance
 load_dotenv()
-from services.protected_domain_engine import (
-    process_protected_question
-)
+
 from services.session_tracker import save_session, get_sessions
 from services.progress_engine import calculate_progress
 # ✅ UPDATED IMPORTS (Phase 2A)
@@ -112,8 +110,21 @@ async def chat(msg: Message):
     }
 ]
 
-    # Raw authoritative client data
+        # Raw authoritative client data
     case_data = case_histories.get(client_type, {})
+
+    protected = process_protected_question(
+        question=msg.text,
+        persona=case_data
+    )
+
+    if protected.get("handled"):
+        system_prompt += "\n\n" + protected["instruction"]
+        messages[0]["content"] = system_prompt
+
+    if protected.get("handled"):
+        system_prompt += "\n\n" + protected["instruction"]
+        messages[0]["content"] = system_prompt
 
     # Previous client responses for variation
     recent_client_messages = [
@@ -133,14 +144,7 @@ async def chat(msg: Message):
        system_prompt += "\n\n" + unknown_guidance["instruction"]
        messages[0]["content"] = system_prompt
 
-    protected = process_protected_question(
-        question=msg.text,
-        persona=case_data
-    )
-
-    if protected["handled"]:
-        system_prompt += "\n\n" + protected["instruction"]
-        messages[0]["content"] = system_prompt
+    
     print("\n========== PHASE 2B PROMPT DEBUG ==========")
     print(f"Client: {client_type}")
     print(f"Stage: {stage}")
