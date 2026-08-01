@@ -136,7 +136,49 @@ async def chat(msg: Message):
 )
 
     if protected["handled"]:
-     system_prompt += "\n\n" + protected["instruction"]
+
+     reply = protected["response"]
+
+    extracted_evidence = extract_clinical_evidence(
+        client=client,
+        history=msg.history,
+        latest_student_text=msg.text,
+        latest_client_reply=reply
+    )
+
+    evidence_state = get_session_evidence(
+        session_id,
+        client_type
+    )
+
+    for item in extracted_evidence:
+
+        update_evidence(
+            evidence_state=evidence_state,
+            domain=item["domain"],
+            value=item["value"],
+            status=item["status"],
+            confidence=item["confidence"],
+            evidence_text=item.get("evidence_text"),
+            clinical_significance=item.get("clinical_significance"),
+            applied_to_reasoning=item.get(
+                "applied_to_reasoning",
+                False
+            ),
+            flags=item.get("flags", [])
+        )
+
+    safety_state = evaluate_safety(extracted_evidence)
+
+    return {
+        "reply": reply,
+        "stage": stage,
+        "state": state,
+        "clinicalEvidence": get_evidence_for_tutor(
+            evidence_state
+        ),
+        "safetyState": safety_state
+    }
     
 
     if unknown_guidance:

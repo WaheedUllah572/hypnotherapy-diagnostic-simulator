@@ -101,20 +101,28 @@ def process_protected_question(question: str, persona: dict):
             "handled": False
         }
 
+    UNCERTAIN_RESPONSES = {
+
+    "medication":
+        "I'm not really sure about that right now. I'd need to check.",
+
+    "psychological_care":
+        "I'm not completely sure about that at the moment.",
+
+    "psychiatric_care":
+        "I can't honestly say for certain right now.",
+
+    "previous_hypnosis":
+        "I'm not really sure. I can't clearly remember.",
+
+    "healthcare_professionals":
+        "I'm not certain about that at the moment.",
+
+    "risk":
+        "I'm not sure how to answer that right now."
+}
+
     return {
-        "handled": True,
-        "domain": domain,
-        "instruction": f"""
-The student's question concerns the protected domain '{domain}'.
-
-The AUTHORITATIVE CLIENT CASE does NOT establish this information.
-
-Do NOT answer Yes.
-Do NOT answer No.
-Do NOT invent absence of treatment.
-Do NOT invent presence of treatment.
-Do NOT infer the most likely situation.
-
-Respond naturally with uncertainty while remaining conversational.
-"""
-    }
+    "handled": True,
+    "response": UNCERTAIN_RESPONSES[domain]
+}
