@@ -61,6 +61,12 @@ class Message(BaseModel):
     history: list = []
     sessionId: str | None = None
 
+    treatmentApproach: str = "cbh"
+    text: str
+    clientType: str
+    history: list = []
+    sessionId: str | None = None
+
 
 class TutorRequest(BaseModel):
     submission: dict
@@ -91,9 +97,10 @@ async def chat(msg: Message):
     )
 
     system_prompt = build_prompt(
-        stage,
-        persona_style
-    )
+    stage,
+    persona_style,
+    msg.treatmentApproach
+)
 
     # Raw authoritative client data
     case_data = case_histories.get(client_type, {})
