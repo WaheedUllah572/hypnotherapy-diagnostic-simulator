@@ -1,3 +1,4 @@
+from services.treatment_approach_engine import get_treatment_approach
 import json
 import os
 
@@ -11,7 +12,12 @@ with open(DATA_PATH, "r", encoding="utf-8") as f:
     case_histories = json.load(f)
 
 
-def get_persona_response(client_name, stage, state):
+def get_persona_response(
+    client_name,
+    stage,
+    state,
+    treatment_approach="cbh"
+):
 
     trust = state["trust"]
     distress = state["distress"]
@@ -24,6 +30,10 @@ def get_persona_response(client_name, stage, state):
     )
 
     persona = case_histories.get(client_name, {})
+
+    approach = get_treatment_approach(
+    treatment_approach
+)
 
     # ============================
     # AUTHORITATIVE CASE DATA
@@ -390,6 +400,54 @@ Respond consistently with the established conversation.
 Do not invent suicidal intent, self-harm, diagnosis or other
 serious risk information that has not actually been
 established.
+"""
+    response_style += f"""
+
+============================
+CLIENT COMMUNICATION STYLE
+============================
+
+Current treatment approach:
+
+{approach["name"]}
+
+Speak naturally in a way that reflects this treatment approach.
+
+The clinical facts MUST remain identical.
+
+Do NOT change:
+
+- presenting problem
+- symptoms
+- history
+- timeline
+- goals
+- safety information
+
+Only change:
+
+- communication style
+- emotional emphasis
+- conversational focus
+- natural wording
+
+Conversation focus:
+
+{approach["conversation_focus"]}
+
+Client communication style:
+
+{approach["client_style"]}
+
+Language style:
+
+{approach["language_style"]}
+
+Natural behavioural guidance:
+
+{approach["prompt_guidance"]}
+
+Never mention the treatment approach by name.
 """
 
     return response_style

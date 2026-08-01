@@ -98,8 +98,7 @@ async def chat(msg: Message):
 
     system_prompt = build_prompt(
     stage,
-    persona_style,
-    msg.treatmentApproach
+    persona_style
 )
 
     # Raw authoritative client data
