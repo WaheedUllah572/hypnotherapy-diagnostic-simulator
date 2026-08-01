@@ -122,7 +122,7 @@ async def chat(msg: Message):
     )
 
     if protected.get("handled"):
-        system_prompt += "\n\n" + protected["instruction"]
+        system_prompt += "\n\n" + protected["response"]
         messages[0]["content"] = system_prompt
 
     # Previous client responses for variation
