@@ -130,10 +130,10 @@ async def chat(msg: Message):
         recent_client_messages=recent_client_messages,
     )
     if unknown_guidance:
-        system_prompt += "\n\n" + unknown_guidance["instruction"]
-        messages[0]["content"] = system_prompt
+       system_prompt += "\n\n" + unknown_guidance["instruction"]
+       messages[0]["content"] = system_prompt
 
-        protected = process_protected_question(
+    protected = process_protected_question(
         question=msg.text,
         persona=case_data
     )
