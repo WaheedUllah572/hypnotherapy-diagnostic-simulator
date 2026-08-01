@@ -99,8 +99,16 @@ async def chat(msg: Message):
 
     system_prompt = build_prompt(
     stage,
-    persona_style
+    persona_style,
+    msg.treatmentApproach
 )
+
+    messages = [
+    {
+        "role": "system",
+        "content": system_prompt
+    }
+]
 
     # Raw authoritative client data
     case_data = case_histories.get(client_type, {})
@@ -128,7 +136,38 @@ async def chat(msg: Message):
     print(system_prompt)
     print("===========================================\n")
 
-    messages = [{"role": "system", "content": system_prompt}]
+    identity = case_data.get("identity", {})
+    presentation = case_data.get("presentation", {})
+
+    grounding = f"""
+    AUTHORITATIVE CASE FACTS
+
+    Presenting problem:
+    {presentation.get("presenting_problem")}
+
+    Timeline:
+    {presentation.get("timeline")}
+
+    Thoughts:
+    {presentation.get("thoughts")}
+
+    Feelings:
+    {presentation.get("feelings")}
+
+    Physical:
+    {presentation.get("physical")}
+
+    Goal:
+    {presentation.get("goal")}
+
+    The above facts are authoritative.
+    Never change or reinterpret them.
+    """
+
+    messages.append({
+        "role": "system",
+        "content": grounding
+    })
 
     for m in msg.history:
         if m["role"] == "therapist":
