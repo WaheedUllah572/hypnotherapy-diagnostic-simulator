@@ -1,4 +1,14 @@
-def build_prompt(stage, persona_style):
+from services.treatment_approach_engine import get_treatment_approach
+
+
+def build_prompt(
+    stage,
+    persona_style,
+    treatment_approach
+):
+    approach = get_treatment_approach(
+        treatment_approach
+    )
 
     return f"""
 You are role-playing a specific therapy client in a clinical
@@ -110,6 +120,28 @@ CLINICAL BEHAVIOUR
 
 Current assessment stage:
 {stage}
+
+============================
+TREATMENT APPROACH
+============================
+
+Treatment approach:
+{approach["name"]}
+
+Therapist style:
+{approach["therapist_style"]}
+
+Client communication:
+{approach["client_style"]}
+
+Conversation focus:
+{approach["conversation_focus"]}
+
+Language style:
+{approach["language_style"]}
+
+Behaviour guidance:
+{approach["prompt_guidance"]}
 
 ============================
 FINAL RESPONSE CHECK
