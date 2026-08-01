@@ -6,7 +6,9 @@ import os
 from dotenv import load_dotenv
 from services.unknown_response_engine import build_unknown_response_guidance
 load_dotenv()
-
+from services.protected_domain_engine import (
+    process_protected_question
+)
 from services.session_tracker import save_session, get_sessions
 from services.progress_engine import calculate_progress
 # ✅ UPDATED IMPORTS (Phase 2A)
@@ -127,6 +129,15 @@ async def chat(msg: Message):
         persona=case_data,
         recent_client_messages=recent_client_messages,
     )
+
+    protected = process_protected_question(
+    question=msg.text,
+    persona=case_data
+)
+
+    if protected["handled"]:
+     system_prompt += "\n\n" + protected["instruction"]
+    
 
     if unknown_guidance:
         system_prompt += "\n\n" + unknown_guidance["instruction"]
