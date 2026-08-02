@@ -121,9 +121,11 @@ async def chat(msg: Message):
         persona=case_data
     )
 
+    print("PROTECTED =", protected)
+
     if protected.get("handled"):
-        system_prompt += "\n\n" + protected["response"]
-        messages[0]["content"] = system_prompt
+       system_prompt += "\n\n" + protected["instruction"]
+       messages[0]["content"] = system_prompt
 
     # Previous client responses for variation
     recent_client_messages = [
