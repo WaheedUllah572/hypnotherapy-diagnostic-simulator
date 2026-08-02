@@ -124,19 +124,5 @@ def process_protected_question(question: str, persona: dict):
 
     return {
     "handled": True,
-    "instruction": f"""
-The student's question concerns '{domain}'.
-
-The client case does not establish this information.
-
-Do NOT answer Yes.
-Do NOT answer No.
-Do NOT invent a fact.
-
-Respond naturally with uncertainty.
-
-Use wording similar to:
-
-{UNCERTAIN_RESPONSES[domain]}
-"""
+    "response": UNCERTAIN_RESPONSES[domain]
 }
