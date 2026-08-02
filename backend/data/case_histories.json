@@ -90,7 +90,9 @@
     },
 
     "safety": {
-      "risk_factors": [],
+      "risk_factors": [
+    "No self-harm history"
+],
       "contraindications": [],
       "safeguarding_concerns": [],
       "professional_boundary_considerations": []
