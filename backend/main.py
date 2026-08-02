@@ -124,8 +124,21 @@ async def chat(msg: Message):
     print("PROTECTED =", protected)
 
     if protected.get("handled"):
-       system_prompt += "\n\n" + protected["instruction"]
-       messages[0]["content"] = system_prompt
+        return {
+            "reply": protected["response"],
+            "stage": stage,
+            "state": state,
+            "clinicalEvidence": [],
+            "safetyState": {
+                "level": "unestablished",
+                "requires_attention": False,
+                "requires_referral_review": False,
+                "requires_safeguarding_review": False,
+                "evidence": [],
+                "flags": [],
+                "established_domains": []
+            }
+        }
 
     # Previous client responses for variation
     recent_client_messages = [
