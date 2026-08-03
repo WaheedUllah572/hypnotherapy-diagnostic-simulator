@@ -98,15 +98,20 @@ def update_state(session_id, student_text):
     # MODALITY / BEHAVIOURAL RULE
     # ============================
     if any(x in text for x in [
-        "what do you do to relax",
-        "what helps you relax",
-        "what do you enjoy",
-        "what do you do for fun",
-        "how do you switch off",
-        "downtime",
-        "spare time",
-        "hobbies"
-    ]):
+    "what do you do to relax",
+    "what helps you relax",
+    "how do you relax",
+    "what do you enjoy",
+    "what do you enjoy outside work",
+    "what do you enjoy outside of work",
+    "what do you like doing",
+    "what do you do for fun",
+    "how do you switch off",
+    "downtime",
+    "free time",
+    "spare time",
+    "hobbies"
+]):
 
         state["behaviour_explored"] = True
 
@@ -129,10 +134,14 @@ def update_state(session_id, student_text):
     # RISK DETECTION
     # ============================
     if any(x in text for x in [
-        "suicide",
-        "can't go on",
-        "give up"
-    ]):
+    "suicide",
+    "self harm",
+    "harm yourself",
+    "hurt yourself",
+    "ending your life",
+    "can't go on",
+    "give up"
+]):
 
         state["risk_flag"] = "moderate"
         state["distress"] += 20
@@ -182,12 +191,10 @@ def get_stage(session_id):
 # ============================
 # ADVANCE STAGE
 # ============================
-def advance_stage(session_id):
+def set_stage(session_id, stage):
 
-    if session_id in session_stages:
-
-        if session_stages[session_id] < len(stages_order) - 1:
-            session_stages[session_id] += 1
+    if stage in stages_order:
+        session_stages[session_id] = stages_order.index(stage)
 
 
 # ============================
@@ -200,32 +207,90 @@ def detect_stage_from_question(text):
     if any(x in text for x in [
         "hello",
         "hi",
-        "how can i help"
+        "how can i help",
+        "what brings",
+        "what brought you",
+        "what brings you here",
+        "what made you seek",
+        "what would you like to talk about",
+        "how can i support you"
     ]):
         return "presenting_problem"
 
-    elif "what brings" in text:
-        return "presenting_problem"
-
-    elif "when did" in text:
+    elif any(x in text for x in [
+        "when did",
+        "when did it start",
+        "when did this start",
+        "when did you first",
+        "how long",
+        "first notice",
+        "first begin",
+        "started",
+        "began"
+    ]):
         return "timeline"
 
-    elif "what do you think" in text:
+    elif any(x in text for x in [
+        "what do you think",
+        "what goes through your mind",
+        "what was going through your mind",
+        "what were you thinking",
+        "thoughts",
+        "mind"
+    ]):
         return "thoughts"
 
-    elif "how do you feel" in text:
+    elif any(x in text for x in [
+        "how do you feel",
+        "how did you feel",
+        "emotionally",
+        "what was that like emotionally",
+        "how does that make you feel",
+        "feel inside"
+    ]):
         return "feelings"
 
-    elif "body" in text:
+    elif any(x in text for x in [
+        "body",
+        "physical",
+        "physically",
+        "what happens physically",
+        "heart",
+        "breathing",
+        "chest",
+        "tension"
+    ]):
         return "body"
 
-    elif "past" in text:
+    elif any(x in text for x in [
+        "past",
+        "before",
+        "earlier",
+        "previously",
+        "have you experienced",
+        "does this remind you",
+        "first remember"
+    ]):
         return "past"
 
-    elif "goal" in text:
+    elif any(x in text for x in [
+        "goal",
+        "what would you like",
+        "what are you hoping",
+        "what would be different",
+        "what would success",
+        "six months",
+        "future"
+    ]):
         return "goal"
 
-    elif "hypnotherapy" in text:
+    elif any(x in text for x in [
+        "hypnosis",
+        "hypnotherapy",
+        "concerns about hypnosis",
+        "questions about hypnosis",
+        "worried about hypnosis"
+    ]):
         return "hypnosis_question"
 
     return None

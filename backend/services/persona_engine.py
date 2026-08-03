@@ -1,4 +1,5 @@
 from services.treatment_approach_engine import get_treatment_approach
+from services.dynamic_behaviour_controller import get_dynamic_behaviour
 import json
 import os
 
@@ -34,6 +35,18 @@ def get_persona_response(
     approach = get_treatment_approach(
     treatment_approach
 )
+
+    behaviour = get_dynamic_behaviour(
+    client_name=client_name,
+    trust=trust,
+    distress=distress,
+    resistance=resistance,
+    risk=risk,
+    treatment_approach=treatment_approach
+)
+
+    variation = behaviour["variation"]
+    personality = behaviour["personality"]
 
     # ============================
     # AUTHORITATIVE CASE DATA
@@ -82,18 +95,18 @@ def get_persona_response(
     readiness = motivation.get("readiness")
 
     # ============================
-# CASE VALUE FORMATTER
-# ============================
+    # CASE VALUE FORMATTER
+    # ============================
 
-def case_value(value):
+    def case_value(value):
 
-    if value is None:
-        return "__UNDEFINED__"
+        if value is None:
+            return "__UNDEFINED__"
 
-    if value == []:
-        return "__UNDEFINED__"
+        if value == []:
+            return "__UNDEFINED__"
 
-    return value
+        return value
 
     tone = "neutral"
 
@@ -113,6 +126,49 @@ Trust: {trust}
 Distress: {distress}
 Resistance: {resistance}
 Tone: {tone}
+
+RESPONSE STYLE
+
+Response length:
+{variation["response_length"]}
+
+Openness:
+{variation["openness"]}
+
+Hesitation:
+{variation["hesitation"]}
+
+Emotional depth:
+{variation["emotional_depth"]}
+
+Reflection:
+{variation["reflection"]}
+
+Future focus:
+{variation["future_focus"]}
+
+Past focus:
+{variation["past_focus"]}
+
+PERSONALITY
+
+Baseline style:
+{personality["baseline_style"]}
+
+Emotional expression:
+{personality["emotional_expression"]}
+
+Talkativeness:
+{personality["talkativeness"]}
+
+Baseline openness:
+{personality["openness"]}
+
+Natural reflection:
+{personality["reflection"]}
+
+Communication tendency:
+{personality["communication"]}
 
 AUTHORITATIVE CLIENT CASE
 
@@ -314,17 +370,30 @@ Do not invent suicidal intent, self-harm, diagnosis or other
 serious risk information that has not actually been
 established.
 """
+
     response_style += f"""
 
 ============================
-CLIENT COMMUNICATION STYLE
+TREATMENT-INFORMED CLIENT BEHAVIOUR
 ============================
 
-Current treatment approach:
+The therapist is intentionally working from:
 
 {approach["name"]}
 
-Speak naturally in a way that reflects this treatment approach.
+Allow this treatment approach to subtly influence HOW you communicate.
+
+It may subtly influence:
+
+• what you naturally elaborate on
+
+• what feels emotionally important
+
+• how reflective or future-focused you become
+
+• how you describe your experiences
+
+It must NEVER alter the established clinical facts.
 
 The clinical facts MUST remain identical.
 
@@ -341,10 +410,10 @@ Only change:
 
 - communication style
 - emotional emphasis
-- conversational focus
+- communication priorities
 - natural wording
 
-Conversation focus:
+Natural conversational emphasis:
 
 {approach["conversation_focus"]}
 
@@ -360,7 +429,33 @@ Natural behavioural guidance:
 
 {approach["prompt_guidance"]}
 
+Do not force this communication style into every response.
+
+Always answer the therapist's actual question first.
+
+Your communication should also follow the calculated response profile above.
+
+Also follow the client's stable personality profile.
+
+The personality represents who this client naturally is.
+
+The conversation state determines how open or guarded they become.
+
+The treatment approach subtly influences communication style.
+
+None of these may change the established clinical facts.
+
+Allow response length, openness, hesitation, emotional depth and reflection to naturally influence your replies.
+
+These behavioural characteristics should shape HOW you respond, but must NEVER change the established clinical facts.
+
+The treatment approach should subtly shape your communication rather than dominate it.
+
+If more than one clinically accurate response is possible, prefer the one that best reflects this treatment approach while preserving every established clinical fact.
 Never mention the treatment approach by name.
 """
 
+    
+
     return response_style
+

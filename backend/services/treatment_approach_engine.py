@@ -205,3 +205,32 @@ def get_treatment_approach(name: str):
         name.lower(),
         TREATMENT_APPROACHS["cbh"]
     )
+
+def get_treatment_prompt(name: str) -> str:
+
+    approach = get_treatment_approach(name)
+
+    return f"""
+TREATMENT APPROACH
+
+{approach["name"]}
+
+PHILOSOPHY
+{approach["philosophy"]}
+
+THERAPIST STYLE
+{approach["therapist_style"]}
+
+CLIENT STYLE
+{approach["client_style"]}
+
+CONVERSATION FOCUS
+{approach["conversation_focus"]}
+
+LANGUAGE STYLE
+{approach["language_style"]}
+
+IMPORTANT GUIDANCE
+
+{approach["prompt_guidance"]}
+"""

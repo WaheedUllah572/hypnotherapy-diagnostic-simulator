@@ -9,12 +9,15 @@ load_dotenv()
 from services.protected_domain_engine import (
     process_protected_question
 )
-
+from services.treatment_approach_engine import (
+    get_treatment_prompt
+)
 from services.session_tracker import save_session, get_sessions
 from services.progress_engine import calculate_progress
 # ✅ UPDATED IMPORTS (Phase 2A)
 from services.conversation_engine import (
     get_stage,
+    set_stage,
     detect_stage_from_question,
     update_state,
     get_state
@@ -63,12 +66,7 @@ class Message(BaseModel):
     clientType: str
     history: list = []
     sessionId: str | None = None
-
     treatmentApproach: str = "cbh"
-    text: str
-    clientType: str
-    history: list = []
-    sessionId: str | None = None
 
 
 class TutorRequest(BaseModel):
@@ -86,7 +84,13 @@ async def chat(msg: Message):
     client_type = msg.clientType or "Daniel"
     session_id = msg.sessionId or (client_type + "_session")
 
-    stage = detect_stage_from_question(msg.text) or get_stage(session_id)
+    detected = detect_stage_from_question(msg.text)
+
+    if detected:
+        set_stage(session_id, detected)
+        stage = detected
+    else:
+        stage = get_stage(session_id) 
 
     try:
         state = update_state(session_id, msg.text)
@@ -106,12 +110,19 @@ async def chat(msg: Message):
     msg.treatmentApproach
 )
 
+
+    system_prompt += "\n\n"
+
+    system_prompt += get_treatment_prompt(
+        msg.treatmentApproach
+    )
+
     messages = [
-    {
-        "role": "system",
-        "content": system_prompt
-    }
-]
+        {
+            "role": "system",
+            "content": system_prompt
+        }
+    ]
 
         # Raw authoritative client data
     case_data = case_histories.get(client_type, {})
