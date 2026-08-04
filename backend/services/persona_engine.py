@@ -17,7 +17,8 @@ def get_persona_response(
     client_name,
     stage,
     state,
-    treatment_approach="cbh"
+    treatment_approach="cbh",
+    behaviour=None
 ):
 
     trust = state["trust"]
