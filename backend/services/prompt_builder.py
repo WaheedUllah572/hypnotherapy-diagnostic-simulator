@@ -4,7 +4,8 @@ from services.treatment_approach_engine import get_treatment_approach
 def build_prompt(
     stage,
     persona_style,
-    treatment_approach
+    treatment_approach,
+    behaviour
 ):
     approach = get_treatment_approach(
         treatment_approach
@@ -122,6 +123,44 @@ Emotionally exploratory questions may produce richer emotional responses.
 - Modality evidence should emerge through behaviour when the student
   meaningfully explores hobbies, relaxation, downtime, enjoyable activities
   or ways of switching off.
+
+
+  ============================
+DYNAMIC CLIENT BEHAVIOUR
+============================
+
+Current trust level:
+{behaviour["trust_level"]}
+
+Current resistance level:
+{behaviour["resistance_level"]}
+
+Current distress level:
+{behaviour["distress_level"]}
+
+Behaviour guidance:
+
+{chr(10).join("- " + x for x in behaviour["behaviour_guidance"])}
+
+These behaviours should influence HOW you answer.
+
+They must NEVER change:
+
+- diagnosis
+- symptoms
+- presenting problem
+- timeline
+- goals
+- healthcare history
+- safety information
+
+Only change:
+
+- openness
+- response length
+- emotional expression
+- conversational style
+- willingness to elaborate
 
 Current assessment stage:
 {stage}

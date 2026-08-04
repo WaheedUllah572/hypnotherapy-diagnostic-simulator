@@ -24,6 +24,9 @@ from services.conversation_engine import (
 )
 from services.persona_engine import get_persona_response, case_histories
 from services.prompt_builder import build_prompt
+from services.dynamic_behaviour_controller import (
+    get_dynamic_behaviour
+)
 from services.clinical_evidence_engine import (
     create_evidence_state,
     update_evidence,
@@ -97,17 +100,28 @@ async def chat(msg: Message):
     except Exception:
         state = get_state(session_id)
 
+    behaviour = get_dynamic_behaviour(
+    client_name=client_type,
+    trust=state["trust"],
+    distress=state["distress"],
+    resistance=state["resistance"],
+    risk=state["risk_flag"],
+    treatment_approach=msg.treatmentApproach
+)
+
     persona_style = get_persona_response(
     client_type,
     stage,
     state,
-    msg.treatmentApproach
+    msg.treatmentApproach,
+    behaviour
 )
 
     system_prompt = build_prompt(
     stage,
     persona_style,
-    msg.treatmentApproach
+    msg.treatmentApproach,
+    behaviour
 )
 
 
