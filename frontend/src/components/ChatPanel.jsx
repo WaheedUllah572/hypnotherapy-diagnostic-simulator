@@ -20,6 +20,14 @@ export default function ChatPanel({
 
   const sessionIdRef = useRef(Date.now().toString());
 
+  const clarificationResponses = [
+  "I'm not quite sure I understood that. Could you explain it another way?",
+  "Sorry, I'm not certain what you mean. Could you rephrase that?",
+  "Could you say that a little differently?",
+  "I'm not sure I follow. Could you explain what you're asking?",
+  "I don't think I understood the question properly."
+];
+
   useEffect(() => {
     setChatHistory(chat);
 
@@ -106,13 +114,15 @@ export default function ChatPanel({
           ...c,
           {
             role: "client",
-            text: "The client pauses… you may need to rephrase your question."
+            text: clarificationResponses[
+  Math.floor(Math.random() * clarificationResponses.length)
+]
           }
         ]);
 
         setTyping(false);
       }
-    }, 18000);
+    }, 12000);
 
     try {
       const res = await callAPI({
@@ -156,7 +166,9 @@ export default function ChatPanel({
           ...c,
           {
             role: "client",
-            text: "The client seems unsure how to respond… try asking differently."
+            text: clarificationResponses[
+  Math.floor(Math.random() * clarificationResponses.length)
+]
           }
         ]);
 
