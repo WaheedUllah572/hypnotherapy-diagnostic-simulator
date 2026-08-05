@@ -73,8 +73,8 @@ export default function SessionSimulator() {
   });
 
   useEffect(() => {
-    randomiseClient();
-  }, []);
+  setClient(clientProfiles[0]);
+}, []);
 
   const randomiseClient = () => {
     let newClient;
@@ -87,17 +87,19 @@ export default function SessionSimulator() {
   };
 
   const resetSession = () => {
-    randomiseClient();
-    setChatHistory([]);
-    setSubmission({
-      chosenApproach: "",
-      clientModality: "",
-      clientObjective: "",
-      clientReassurance: ""
-    });
-    setStage("session");
-    setStateData(null); // ✅ reset
-  };
+  setChatHistory([]);
+
+  setSubmission({
+    chosenApproach: "",
+    clientModality: "",
+    clientObjective: "",
+    clientReassurance: ""
+  });
+
+  setStage("session");
+
+  setStateData(null);
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-slate-100 to-teal-100">
@@ -117,6 +119,39 @@ export default function SessionSimulator() {
           Client Presentation Session
         </h2>
 
+        <div className="flex items-center gap-4 mb-6">
+
+  <label className="font-medium">
+    Client
+  </label>
+
+  <select
+    value={client.name}
+    onChange={(e) => {
+      const selected = clientProfiles.find(
+        c => c.name === e.target.value
+      );
+
+      setClient(selected);
+    }}
+    className="border rounded-lg px-3 py-2 bg-white"
+  >
+    {clientProfiles.map(c => (
+      <option key={c.name} value={c.name}>
+        {c.name}
+      </option>
+    ))}
+  </select>
+
+  <button
+    onClick={resetSession}
+    className="bg-teal-600 text-white px-4 py-2 rounded-lg"
+  >
+    New Session
+  </button>
+
+</div>
+
         <div className="grid grid-cols-12 gap-8">
           {/* LEFT */}
           <aside className="col-span-4">
@@ -130,12 +165,13 @@ export default function SessionSimulator() {
             <div className="glass p-6 lift">
               {stage === "session" && (
                 <ChatPanel
-                  isActive={true}
-                  onEndSession={() => setStage("reflection")}
-                  setChatHistory={setChatHistory}
-                  clientType={client.name}
-                  setStateData={setStateData} // ✅ PASS STATE
-                />
+    key={client.name + stage}
+    isActive={true}
+    onEndSession={() => setStage("reflection")}
+    setChatHistory={setChatHistory}
+    clientType={client.name}
+    setStateData={setStateData}
+/>
               )}
 
               {stage === "reflection" && (
