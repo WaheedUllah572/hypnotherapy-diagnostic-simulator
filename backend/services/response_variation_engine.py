@@ -29,13 +29,19 @@ def get_response_variation(
     # ==========================================
 
     if resistance >= 70:
-        response_length = "short"
+     response_length = "very_short"
 
-    elif trust >= 75:
-        response_length = "long"
+    elif resistance >= 45:
+     response_length = "short"
+
+    elif trust >= 85:
+     response_length = "very_long"
+
+    elif trust >= 70:
+     response_length = "long"
 
     else:
-        response_length = "medium"
+     response_length = "medium"
 
     # ==========================================
     # OPENNESS
@@ -58,13 +64,16 @@ def get_response_variation(
     # ==========================================
 
     if resistance >= 70:
-        hesitation = "high"
+     hesitation = "very_high"
 
-    elif distress >= 70:
-        hesitation = "medium"
+    elif distress >= 75:
+     hesitation = "high"
+
+    elif distress >= 50:
+     hesitation = "medium"
 
     else:
-        hesitation = "low"
+      hesitation = "low"
 
     # ==========================================
     # EMOTIONAL DEPTH
@@ -116,6 +125,22 @@ def get_response_variation(
         reflection = "high"
         future_focus = "medium"
         past_focus = "medium"
+
+        # ==========================================
+    # CONVERSATIONAL STYLE
+    # ==========================================
+
+    if trust >= 80 and resistance < 30:
+        conversational_style = "warm"
+
+    elif resistance >= 70:
+        conversational_style = "guarded"
+
+    elif distress >= 75:
+        conversational_style = "emotional"
+
+    else:
+        conversational_style = "neutral"
 
     # ==========================================
     # RETURN PROFILE

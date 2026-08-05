@@ -133,12 +133,18 @@ def update_state(session_id, student_text):
     # GOOD EXPLORATORY QUESTIONS
     # ============================
     if any(x in text for x in [
-        "how do you feel",
-        "can you tell me more",
-        "what does that feel like",
-        "can you describe",
-        "how has that affected you"
-    ]):
+    "how do you feel",
+    "can you tell me more",
+    "what does that feel like",
+    "can you describe",
+    "how has",
+    "affected your life",
+    "affected your day",
+    "affected your daily life",
+    "impact",
+    "how is this affecting",
+    "what effect has this had"
+]):
 
         state["engagement"] += 3
         state["trust"] += 2

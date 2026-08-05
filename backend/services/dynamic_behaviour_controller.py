@@ -159,74 +159,99 @@ def get_dynamic_behaviour(
 
     if trust_level == "low":
      behaviour_guidance.append(
-        "Be cautious. Give shorter answers. Do not volunteer extra information."
+        "Be cautious. Answer only the therapist's question. Keep replies brief. Avoid volunteering extra information or discussing emotions unless directly invited."
     )
 
     elif trust_level == "medium":
      behaviour_guidance.append(
-        "Answer comfortably but only elaborate when invited."
+        "Answer naturally. Provide a little additional context when appropriate, but wait for invitations before giving deeper emotional detail."
     )
 
     else:
      behaviour_guidance.append(
-        "You feel comfortable with the therapist. You may naturally provide a little more reflection and emotional openness."
+        "You feel safe with the therapist. Speak warmly, volunteer one small relevant detail naturally, and reflect more openly on your thoughts and feelings."
     )
 
 # Resistance
 
     if resistance_level == "high":
      behaviour_guidance.append(
-        "Be hesitant and slightly guarded. Avoid long explanations."
+        "Pause before answering. Keep replies short. Avoid unnecessary elaboration and only discuss sensitive topics if the therapist gently explores them."
     )
 
     elif resistance_level == "medium":
      behaviour_guidance.append(
-        "Be cooperative but slightly cautious when discussing difficult topics."
+        "Be cooperative but slightly cautious. Discuss difficult topics carefully without becoming defensive."
     )
 
     else:
      behaviour_guidance.append(
-        "Answer questions openly without sounding overly defensive."
+        "Respond openly. Expand naturally when appropriate and do not sound guarded."
     )
 
 # Distress
 
     if distress_level == "high":
      behaviour_guidance.append(
-        "Emotionally difficult topics should feel noticeably overwhelming."
+        "Emotionally difficult topics should feel overwhelming. It is natural to hesitate, become emotional, or struggle to describe difficult experiences."
     )
 
     elif distress_level == "medium":
      behaviour_guidance.append(
-        "Show emotion when discussing the presenting problem, but remain composed during neutral topics."
+        "Show emotion when discussing the presenting problem but remain calm during neutral parts of the conversation."
     )
 
     else:
      behaviour_guidance.append(
-        "Remain emotionally calm unless discussing distressing experiences."
+        "Remain emotionally calm and composed. Discuss difficult experiences without becoming overwhelmed."
+    )
+
+
+     # ==========================================
+# COMBINED BEHAVIOUR RULES
+# ==========================================
+
+    if trust >= 80 and resistance < 30:
+         behaviour_guidance.append(
+            "You now trust the therapist enough to volunteer one small relevant detail naturally without being asked."
+        )
+
+    if trust < 40 and resistance >= 60:
+        behaviour_guidance.append(
+            "Remain polite but reserved. Answer only what was asked and avoid unnecessary elaboration."
+        )
+
+    if distress >= 80 and trust >= 70:
+        behaviour_guidance.append(
+            "Although discussing difficult emotions is upsetting, you feel safe enough to describe them honestly."
+        )
+
+    behaviour_guidance.append(
+        personality["communication"]
     )
 
     return {
 
-    "personality": personality,
+        "personality": personality,
 
-    "variation": variation,
+        "variation": variation,
 
-    "trust_level": trust_level,
+        "trust_level": trust_level,
 
-    "distress_level": distress_level,
+        "distress_level": distress_level,
 
-    "resistance_level": resistance_level,
+        "resistance_level": resistance_level,
 
-    "behaviour_guidance": behaviour_guidance,
+        "behaviour_guidance": behaviour_guidance,
 
-    "self_disclosure": self_disclosure,
+        "self_disclosure": self_disclosure,
 
-    "defensiveness": defensiveness,
+        "defensiveness": defensiveness,
 
-    "emotional_access": emotional_access,
+        "emotional_access": emotional_access,
 
-    "cooperation": cooperation,
+        "cooperation": cooperation,
 
-    "risk_sensitivity": risk_sensitivity
-}
+        "risk_sensitivity": risk_sensitivity
+
+    }
