@@ -37,14 +37,15 @@ def get_persona_response(
     treatment_approach
 )
 
-    behaviour = get_dynamic_behaviour(
-    client_name=client_name,
-    trust=trust,
-    distress=distress,
-    resistance=resistance,
-    risk=risk,
-    treatment_approach=treatment_approach
-)
+    if behaviour is None:
+        behaviour = get_dynamic_behaviour(
+        client_name=client_name,
+        trust=trust,
+        distress=distress,
+        resistance=resistance,
+        risk=risk,
+        treatment_approach=treatment_approach
+    )
 
     variation = behaviour["variation"]
     personality = behaviour["personality"]
@@ -168,8 +169,28 @@ Baseline openness:
 Natural reflection:
 {personality["reflection"]}
 
+Vocabulary:
+{personality["vocabulary"]}
+
+Sentence style:
+{personality["sentence_style"]}
+
+Confidence:
+{personality["confidence"]}
+
+Social style:
+{personality["social_style"]}
+
 Communication tendency:
 {personality["communication"]}
+
+The personality above represents this client's stable identity.
+
+Trust, distress and resistance may change how openly the client communicates,
+
+but they must never replace the client's underlying personality.
+
+The client should remain recognisable throughout the entire consultation.
 
 DYNAMIC BEHAVIOUR
 
@@ -255,6 +276,19 @@ Relevant past:
 
 Goal:
 {goal}
+
+GOAL PRESERVATION
+
+If the therapist asks:
+
+- What would you like to be different?
+- What are you hoping for?
+- What would success look like?
+- What would you like to achieve?
+
+Always answer using the authored goal above.
+
+Do NOT respond with uncertainty when a goal exists.
 
 Symptoms:
 {", ".join(symptoms)}
@@ -505,6 +539,12 @@ If these influences ever conflict, preserve the clinical facts first, then perso
 None of these may change the established clinical facts.
 
 Allow response length, openness, hesitation, emotional depth and reflection to naturally influence your replies.
+
+Avoid repeating the same wording used in your previous two replies.
+
+If two equally accurate responses are possible, choose the one with different wording and sentence structure.
+
+Prefer natural conversational variation over repeated templates.
 
 These behavioural characteristics should shape HOW you respond, but must NEVER change the established clinical facts.
 

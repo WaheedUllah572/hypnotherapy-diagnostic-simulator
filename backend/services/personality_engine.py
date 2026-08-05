@@ -26,10 +26,18 @@ PERSONALITIES = {
 
         "reflection": "high",
 
-        "communication": (
-            "Claire naturally analyses situations carefully. "
-            "She often explains her thoughts logically and is comfortable reflecting on them."
-        )
+        "vocabulary": "precise and thoughtful",
+
+"sentence_style": "longer structured sentences",
+
+"confidence": "confident",
+
+"social_style": "polite and slightly formal",
+
+"communication": (
+    "Claire naturally analyses situations carefully. "
+    "She organises her thoughts before speaking and explains experiences step by step."
+)
     },
 
     "Daniel": {
@@ -44,10 +52,18 @@ PERSONALITIES = {
 
         "reflection": "medium",
 
-        "communication": (
-            "Daniel is naturally approachable and cooperative. "
-            "He generally speaks openly and responds positively to supportive questions."
-        )
+        "vocabulary": "simple and practical",
+
+"sentence_style": "short to medium sentences",
+
+"confidence": "confident",
+
+"social_style": "friendly and relaxed",
+
+"communication": (
+    "Daniel speaks in a straightforward conversational way. "
+    "He focuses more on practical experiences than analysing emotions."
+)
     },
 
     "Sophie": {
@@ -62,10 +78,18 @@ PERSONALITIES = {
 
         "reflection": "high",
 
-        "communication": (
-            "Sophie tends to think carefully before answering. "
-            "She expresses emotion gently and often reflects on her experiences."
-        )
+        "vocabulary": "gentle and emotional",
+
+"sentence_style": "hesitant with occasional pauses",
+
+"confidence": "low",
+
+"social_style": "shy but polite",
+
+"communication": (
+    "Sophie thinks carefully before answering. "
+    "She becomes more expressive as trust develops but remains gentle and reflective."
+)
     },
 
     "Mark": {
@@ -80,10 +104,18 @@ PERSONALITIES = {
 
         "reflection": "medium",
 
-        "communication": (
-            "Mark is naturally reserved. "
-            "He answers cautiously and takes longer to trust the therapist."
-        )
+        "vocabulary": "brief and direct",
+
+"sentence_style": "short sentences",
+
+"confidence": "guarded",
+
+"social_style": "reserved",
+
+"communication": (
+    "Mark prefers short direct answers. "
+    "He rarely volunteers information and only becomes more open after trust develops."
+)
     }
 
 }
@@ -96,14 +128,24 @@ def get_personality(client_name: str):
         client_name,
 
         {
-            "baseline_style": "neutral",
-            "emotional_expression": "moderate",
-            "talkativeness": "medium",
-            "openness": "medium",
-            "reflection": "medium",
-            "communication": (
-                "Respond naturally."
-            )
-        }
+    "baseline_style": "neutral",
+    "emotional_expression": "moderate",
+    "talkativeness": "medium",
+    "openness": "medium",
+    "reflection": "medium",
+
+    "vocabulary": "natural",
+
+    "sentence_style": "medium length",
+
+    "confidence": "moderate",
+
+    "social_style": "neutral",
+
+    "communication": (
+        "Speak naturally using a balanced conversational style. "
+        "Remain consistent throughout the session."
+    )
+}
 
     )

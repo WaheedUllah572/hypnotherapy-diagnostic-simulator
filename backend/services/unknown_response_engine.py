@@ -429,6 +429,7 @@ uncertainty and allowing further appropriate assessment.
 def build_unknown_response_guidance(
     student_text: str,
     persona: Dict[str, Any],
+    behaviour: Dict[str, Any],
     recent_client_messages: Optional[List[str]] = None,
 ) -> Optional[Dict[str, Any]]:
     """
@@ -511,6 +512,16 @@ Recent client responses:
 
 Never begin two consecutive responses with the same words.
 
+Do not repeatedly use:
+
+- I'm...
+- I think...
+- I don't think...
+
+If multiple equally accurate responses are possible, prefer one with a different sentence structure.
+
+Natural conversational diversity is preferred over repeated wording.
+
 If a previous response began with:
 
 "I'm not really sure..."
@@ -543,6 +554,17 @@ Do not merely replace those phrases with another repetitive template.
 
 Keep the answer concise and relevant to the therapist's exact question.
 
+Current Behaviour
+
+Trust:
+{behaviour["trust_level"]}
+
+Resistance:
+{behaviour["resistance_level"]}
+
+Distress:
+{behaviour["distress_level"]}
+
 Match the client's current behaviour.
 
 If trust is low:
@@ -560,7 +582,6 @@ If distress is high:
 - uncertainty may sound more emotional,
 but never change the underlying facts.
 """
-
     
 
     return {

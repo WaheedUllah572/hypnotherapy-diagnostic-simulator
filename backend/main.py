@@ -175,10 +175,11 @@ async def chat(msg: Message):
     # Add special guidance only when the student asks about
     # an undefined protected clinical field
     unknown_guidance = build_unknown_response_guidance(
-        student_text=msg.text,
-        persona=case_data,
-        recent_client_messages=recent_client_messages,
-    )
+    student_text=msg.text,
+    persona=case_data,
+    behaviour=behaviour,
+    recent_client_messages=recent_client_messages,
+)
     if unknown_guidance:
        system_prompt += "\n\n" + unknown_guidance["instruction"]
        messages[0]["content"] = system_prompt
