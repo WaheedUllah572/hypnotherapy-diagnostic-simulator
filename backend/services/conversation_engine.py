@@ -198,9 +198,34 @@ def update_state(session_id, student_text):
         state["distress"] += 20
         state["trust"] -= 10
 
+        # ============================
+    # QUESTION STYLE
     # ============================
+
+    if text.startswith((
+        "do ",
+        "did ",
+        "are ",
+        "is ",
+        "have ",
+        "has ",
+        "can ",
+        "will "
+    )):
+
+        if state["last_question_type"] == "closed":
+            state["engagement"] -= 3
+            state["resistance"] += 2
+
+        state["last_question_type"] = "closed"
+
+    else:
+        state["last_question_type"] = "open"
+
+        # ============================
     # CLAMP VALUES
     # ============================
+
     for k in [
         "trust",
         "distress",
@@ -214,32 +239,6 @@ def update_state(session_id, student_text):
         )
 
     return state
-
-# ============================
-# QUESTION STYLE
-# ============================
-
-if text.startswith((
-    "do ",
-    "did ",
-    "are ",
-    "is ",
-    "have ",
-    "has ",
-    "can ",
-    "will "
-)):
-
-    if state["last_question_type"] == "closed":
-        state["engagement"] -= 3
-        state["resistance"] += 2
-
-    state["last_question_type"] = "closed"
-
-else:
-
-    state["last_question_type"] = "open"
-
 
 # ============================
 # GET STATE
