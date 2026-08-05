@@ -489,7 +489,42 @@ VARIATION REQUIREMENT
 
 Avoid reusing the same uncertainty sentence from earlier responses.
 
+Natural uncertainty can be expressed in many different ways.
+
+Examples include:
+
+- I'm not completely sure.
+- I'd have to think about that.
+- Nothing immediately comes to mind.
+- I honestly can't say for certain.
+- That's not something I've really thought about.
+- I might need to check that.
+- I'm not confident enough to answer that properly.
+- I'm finding it difficult to remember.
+- I don't think I could answer that accurately.
+- I'd rather not guess.
+
+Do not repeatedly reuse any one of these examples.
+Create natural conversational variations instead.
+
 Recent client responses:
+
+Never begin two consecutive responses with the same words.
+
+If a previous response began with:
+
+"I'm not really sure..."
+
+begin differently this time.
+
+Vary:
+
+- sentence openings
+- sentence length
+- wording
+- conversational rhythm
+
+The client should sound like a real person rather than repeating templates.
 {recent_text if recent_text else "No recent client responses supplied."}
 
 The response must sound like something the client would actually say
@@ -507,10 +542,30 @@ Do NOT use system-like phrases such as:
 Do not merely replace those phrases with another repetitive template.
 
 Keep the answer concise and relevant to the therapist's exact question.
+
+Match the client's current behaviour.
+
+If trust is low:
+- answer briefly
+- sound slightly cautious
+
+If trust is high:
+- answer a little more openly
+- allow a little more reflection
+
+If resistance is high:
+- be more hesitant
+
+If distress is high:
+- uncertainty may sound more emotional,
+but never change the underlying facts.
 """
+
+    
 
     return {
         "domain": domain,
         "value": value,
         "instruction": instruction.strip(),
     }
+

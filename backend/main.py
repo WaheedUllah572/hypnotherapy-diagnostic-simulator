@@ -549,11 +549,6 @@ STRESS INDICATOR
 
     total = sum([q1, q2, q3, q4])
 
-    save_session(
-        req.clientName,
-        total
-    )
-
     return {
         "feedback": feedback.strip(),
         "score": {

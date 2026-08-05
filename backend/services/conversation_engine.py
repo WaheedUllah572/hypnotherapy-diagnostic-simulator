@@ -31,7 +31,15 @@ def init_session_state(session_id):
             "behaviour_explored": False,
 
             # ✅ REQUIRED FOR STRESS INDICATOR
-            "stress_indicator": False
+            "stress_indicator": False,
+
+            "last_question_type": None,
+
+            "good_responses": 0,
+
+            "poor_responses": 0,
+
+            "response_history": []
         }
 
 
@@ -62,9 +70,48 @@ def update_state(session_id, student_text):
         "that must be difficult"
     ]):
 
-        state["trust"] += 10
-        state["engagement"] += 5
-        state["distress"] -= 5
+        state["trust"] += 4
+        state["engagement"] += 3
+        state["distress"] -= 2
+
+        state["good_responses"] += 1
+
+
+# ============================
+# REFLECTION
+# ============================
+
+    if any(x in text for x in [
+      "it sounds like",
+      "what i'm hearing",
+      "so you're saying",
+      "it seems like",
+      "if i understand correctly"
+]):
+
+      state["trust"] += 4
+      state["resistance"] -= 2
+
+      state["good_responses"] += 1
+
+
+# ============================
+# VALIDATION
+# ============================
+
+    if any(x in text for x in [
+      "thank you for sharing",
+      "i appreciate you sharing",
+      "thank you for telling me",
+      "that sounds really difficult",
+      "that must have been hard",
+      "i can understand why"
+]):
+
+     state["trust"] += 4
+     state["distress"] -= 2
+
+     state["good_responses"] += 1
 
     # ============================
     # POOR THERAPEUTIC RESPONSES
@@ -77,8 +124,10 @@ def update_state(session_id, student_text):
         "you'll be fine"
     ]):
 
-        state["resistance"] += 15
-        state["trust"] -= 10
+        state["resistance"] += 5
+        state["trust"] -= 4
+
+        state["poor_responses"] += 1
 
     # ============================
     # GOOD EXPLORATORY QUESTIONS
@@ -91,8 +140,10 @@ def update_state(session_id, student_text):
         "how has that affected you"
     ]):
 
-        state["engagement"] += 5
-        state["trust"] += 5
+        state["engagement"] += 3
+        state["trust"] += 2
+
+        state["good_responses"] += 1
 
     # ============================
     # MODALITY / BEHAVIOURAL RULE
@@ -163,6 +214,31 @@ def update_state(session_id, student_text):
         )
 
     return state
+
+# ============================
+# QUESTION STYLE
+# ============================
+
+if text.startswith((
+    "do ",
+    "did ",
+    "are ",
+    "is ",
+    "have ",
+    "has ",
+    "can ",
+    "will "
+)):
+
+    if state["last_question_type"] == "closed":
+        state["engagement"] -= 3
+        state["resistance"] += 2
+
+    state["last_question_type"] = "closed"
+
+else:
+
+    state["last_question_type"] = "open"
 
 
 # ============================
