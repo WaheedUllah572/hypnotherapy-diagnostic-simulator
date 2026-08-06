@@ -134,16 +134,23 @@ def update_state(session_id, student_text):
     # ============================
     if any(x in text for x in [
     "how do you feel",
+    "how have you been feeling",
     "can you tell me more",
+    "could you tell me more",
     "what does that feel like",
     "can you describe",
     "how has",
     "affected your life",
     "affected your day",
     "affected your daily life",
+    "how has this affected",
+    "what effect has this had",
     "impact",
     "how is this affecting",
-    "what effect has this had"
+    "what happens when",
+    "what usually happens",
+    "could you explain",
+    "help me understand"
 ]):
 
         state["engagement"] += 3
@@ -159,14 +166,18 @@ def update_state(session_id, student_text):
     "what helps you relax",
     "how do you relax",
     "what do you enjoy",
+    "what hobbies",
+    "what are your hobbies",
     "what do you enjoy outside work",
     "what do you enjoy outside of work",
     "what do you like doing",
     "what do you do for fun",
-    "how do you switch off",
-    "downtime",
+    "how do you spend your free time",
     "free time",
     "spare time",
+    "downtime",
+    "how do you unwind",
+    "what helps you switch off",
     "hobbies"
 ]):
 
@@ -355,14 +366,20 @@ def detect_stage_from_question(text):
         return "past"
 
     elif any(x in text for x in [
-        "goal",
-        "what would you like",
-        "what are you hoping",
-        "what would be different",
-        "what would success",
-        "six months",
-        "future"
-    ]):
+    "goal",
+    "what would you like",
+    "what are you hoping",
+    "what would be different",
+    "what would success",
+    "what outcome",
+    "if therapy were successful",
+    "if therapy was successful",
+    "what would you like to achieve",
+    "what would you hope",
+    "what would improve",
+    "six months",
+    "future"
+]):
         return "goal"
 
     elif any(x in text for x in [

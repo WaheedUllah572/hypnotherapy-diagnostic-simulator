@@ -37,7 +37,12 @@ PERSONALITIES = {
 "communication": (
     "Claire naturally analyses situations carefully. "
     "She organises her thoughts before speaking and explains experiences step by step."
-)
+),
+
+"never_becomes": (
+    "Even when trust is high, Claire remains analytical and organised. "
+    "She does not become impulsive or overly emotional."
+),
     },
 
     "Daniel": {
@@ -63,7 +68,12 @@ PERSONALITIES = {
 "communication": (
     "Daniel speaks in a straightforward conversational way. "
     "He focuses more on practical experiences than analysing emotions."
-)
+),
+
+"never_becomes": (
+    "Even when distressed, Daniel remains practical and approachable. "
+    "He does not become overly analytical or formal."
+),
     },
 
     "Sophie": {
@@ -89,7 +99,12 @@ PERSONALITIES = {
 "communication": (
     "Sophie thinks carefully before answering. "
     "She becomes more expressive as trust develops but remains gentle and reflective."
-)
+),
+
+"never_becomes": (
+    "Even when trust is high, Sophie remains gentle and thoughtful. "
+    "She never becomes loud, blunt or overly confident."
+),
     },
 
     "Mark": {
@@ -115,7 +130,12 @@ PERSONALITIES = {
 "communication": (
     "Mark prefers short direct answers. "
     "He rarely volunteers information and only becomes more open after trust develops."
-)
+),
+
+"never_becomes": (
+    "Even after building trust, Mark remains naturally reserved. "
+    "He becomes slightly more open but never overly talkative."
+),
     }
 
 }
@@ -143,9 +163,13 @@ def get_personality(client_name: str):
     "social_style": "neutral",
 
     "communication": (
-        "Speak naturally using a balanced conversational style. "
-        "Remain consistent throughout the session."
-    )
+    "Speak naturally using a balanced conversational style. "
+    "Remain consistent throughout the session."
+),
+
+"never_becomes": (
+    "Remain consistent with your underlying personality throughout the consultation."
+)
 }
 
     )
