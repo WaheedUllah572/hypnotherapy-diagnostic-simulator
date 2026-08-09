@@ -319,6 +319,11 @@ def detect_stage_from_question(text):
         "first begin",
         "started",
         "began"
+        "when did this begin",
+"when did this first happen",
+"when did you notice",
+"how long has this been happening",
+"since when",
     ]):
         return "timeline"
 
@@ -356,12 +361,20 @@ def detect_stage_from_question(text):
 
     elif any(x in text for x in [
         "past",
-        "before",
-        "earlier",
-        "previously",
-        "have you experienced",
-        "does this remind you",
-        "first remember"
+"before",
+"earlier",
+"previously",
+"have you experienced",
+"have you ever experienced",
+"have you had anything similar",
+"anything like this before",
+"does this remind you",
+"first remember",
+"has this happened before",
+"have you had treatment",
+"have you received treatment",
+"medication",
+"therapy before"
     ]):
         return "past"
 
@@ -384,10 +397,15 @@ def detect_stage_from_question(text):
 
     elif any(x in text for x in [
         "hypnosis",
-        "hypnotherapy",
-        "concerns about hypnosis",
-        "questions about hypnosis",
-        "worried about hypnosis"
+"hypnotherapy",
+"hypnotised",
+"hypnotized",
+"concerns about hypnosis",
+"questions about hypnosis",
+"worried about hypnosis",
+"how do you feel about hypnosis",
+"what are your thoughts about hypnosis",
+"any concerns about hypnotherapy"
     ]):
         return "hypnosis_question"
 
