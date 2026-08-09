@@ -60,6 +60,7 @@ const clientProfiles = [
 ];
 export default function SessionSimulator() {
   const [stage, setStage] = useState("session");
+  const [sessionKey, setSessionKey] = useState(0);
   const [client, setClient] = useState(clientProfiles[0]);
   const [chatHistory, setChatHistory] = useState([]);
 
@@ -87,6 +88,9 @@ export default function SessionSimulator() {
   };
 
   const resetSession = () => {
+
+  setSessionKey(prev => prev + 1);
+
   setChatHistory([]);
 
   setSubmission({
@@ -96,9 +100,9 @@ export default function SessionSimulator() {
     clientReassurance: ""
   });
 
-  setStage("session");
-
   setStateData(null);
+
+  setStage("session");
 };
 
   return (
@@ -128,11 +132,27 @@ export default function SessionSimulator() {
   <select
     value={client.name}
     onChange={(e) => {
-      const selected = clientProfiles.find(
-        c => c.name === e.target.value
-      );
+  const selected = clientProfiles.find(
+    c => c.name === e.target.value
+  );
 
-      setClient(selected);
+  setClient(selected);
+
+  setSessionKey(prev => prev + 1);
+
+  setChatHistory([]);
+
+  setSubmission({
+    chosenApproach: "",
+    clientModality: "",
+    clientObjective: "",
+    clientReassurance: ""
+  });
+
+  setStateData(null);
+
+  setStage("session");
+
     }}
     className="border rounded-lg px-3 py-2 bg-white"
   >
@@ -165,7 +185,7 @@ export default function SessionSimulator() {
             <div className="glass p-6 lift">
               {stage === "session" && (
                 <ChatPanel
-    key={client.name + stage}
+    key={`${sessionKey}-${client.name}`}
     isActive={true}
     onEndSession={() => setStage("reflection")}
     setChatHistory={setChatHistory}
