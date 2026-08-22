@@ -39,9 +39,45 @@ def init_session_state(session_id):
 
             "poor_responses": 0,
 
-            "response_history": []
-        }
+            "response_history": [],
 
+            "clarification_count": 0,
+            "last_student_question": None,
+            "last_client_understood": True,
+
+
+        }
+def is_behaviour_question(text):
+
+    text = text.lower().strip()
+
+    behaviour_patterns = [
+        "what do you do to relax",
+        "what helps you relax",
+        "how do you relax",
+        "what did you used to do to relax",
+        "what do you enjoy",
+        "what hobbies",
+        "what are your hobbies",
+        "what do you enjoy outside work",
+        "what do you enjoy outside of work",
+        "what do you like doing",
+        "what do you do for fun",
+        "how do you spend your free time",
+        "how do you spend your spare time",
+        "how do you spend your downtime",
+        "what do you do when you're not working",
+        "what do you do when you are not working",
+        "what do you do outside work",
+        "what do you do outside of work",
+        "how do you unwind",
+        "what helps you switch off"
+    ]
+
+    return any(
+        pattern in text
+        for pattern in behaviour_patterns
+    )
 
 # ============================
 # STATE UPDATE
@@ -50,7 +86,7 @@ def update_state(session_id, student_text):
 
     init_session_state(session_id)
 
-    text = student_text.lower()
+    text = student_text.lower().strip()
 
     state = session_state[session_id]
 
@@ -73,45 +109,38 @@ def update_state(session_id, student_text):
         state["trust"] += 4
         state["engagement"] += 3
         state["distress"] -= 2
-
         state["good_responses"] += 1
 
-
-# ============================
-# REFLECTION
-# ============================
-
+    # ============================
+    # REFLECTION
+    # ============================
     if any(x in text for x in [
-      "it sounds like",
-      "what i'm hearing",
-      "so you're saying",
-      "it seems like",
-      "if i understand correctly"
-]):
+        "it sounds like",
+        "what i'm hearing",
+        "so you're saying",
+        "it seems like",
+        "if i understand correctly"
+    ]):
 
-      state["trust"] += 4
-      state["resistance"] -= 2
+        state["trust"] += 4
+        state["resistance"] -= 2
+        state["good_responses"] += 1
 
-      state["good_responses"] += 1
-
-
-# ============================
-# VALIDATION
-# ============================
-
+    # ============================
+    # VALIDATION
+    # ============================
     if any(x in text for x in [
-      "thank you for sharing",
-      "i appreciate you sharing",
-      "thank you for telling me",
-      "that sounds really difficult",
-      "that must have been hard",
-      "i can understand why"
-]):
+        "thank you for sharing",
+        "i appreciate you sharing",
+        "thank you for telling me",
+        "that sounds really difficult",
+        "that must have been hard",
+        "i can understand why"
+    ]):
 
-     state["trust"] += 4
-     state["distress"] -= 2
-
-     state["good_responses"] += 1
+        state["trust"] += 4
+        state["distress"] -= 2
+        state["good_responses"] += 1
 
     # ============================
     # POOR THERAPEUTIC RESPONSES
@@ -126,99 +155,80 @@ def update_state(session_id, student_text):
 
         state["resistance"] += 5
         state["trust"] -= 4
-
         state["poor_responses"] += 1
 
     # ============================
     # GOOD EXPLORATORY QUESTIONS
     # ============================
     if any(x in text for x in [
-    "how do you feel",
-    "how have you been feeling",
-    "can you tell me more",
-    "could you tell me more",
-    "what does that feel like",
-    "can you describe",
-    "how has",
-    "affected your life",
-    "affected your day",
-    "affected your daily life",
-    "how has this affected",
-    "what effect has this had",
-    "impact",
-    "how is this affecting",
-    "what happens when",
-    "what usually happens",
-    "could you explain",
-    "help me understand"
-]):
+        "how do you feel",
+        "how have you been feeling",
+        "can you tell me more",
+        "could you tell me more",
+        "what does that feel like",
+        "can you describe",
+        "how has",
+        "affected your life",
+        "affected your day",
+        "affected your daily life",
+        "how has this affected",
+        "what effect has this had",
+        "impact",
+        "how is this affecting",
+        "what happens when",
+        "what usually happens",
+        "could you explain",
+        "help me understand"
+    ]):
 
         state["engagement"] += 3
         state["trust"] += 2
-
         state["good_responses"] += 1
 
     # ============================
     # MODALITY / BEHAVIOURAL RULE
     # ============================
-    if any(x in text for x in [
-    "what do you do to relax",
-    "what helps you relax",
-    "how do you relax",
-    "what do you enjoy",
-    "what hobbies",
-    "what are your hobbies",
-    "what do you enjoy outside work",
-    "what do you enjoy outside of work",
-    "what do you like doing",
-    "what do you do for fun",
-    "how do you spend your free time",
-    "free time",
-    "spare time",
-    "downtime",
-    "how do you unwind",
-    "what helps you switch off",
-    "hobbies"
-]):
+    if is_behaviour_question(text):
 
+        state["last_student_question"] = text
         state["behaviour_explored"] = True
+        state["engagement"] += 1
 
-    # ============================
-    # STRESS INDICATOR RECOGNITION
-    # ============================
-    if any(x in text for x in [
-        "used to",
-        "stress",
-        "overwhelmed",
-        "impact",
-        "affecting",
-        "return to",
-        "begin again"
-    ]):
+        # ============================
+        # STRESS INDICATOR RECOGNITION
+        # ============================
+        if any(x in text for x in [
+            "used to",
+            "stress",
+            "overwhelmed",
+            "impact",
+            "affecting",
+            "return to",
+            "begin again"
+        ]):
 
-        state["stress_indicator"] = True
+            state["stress_indicator"] = True
 
     # ============================
     # RISK DETECTION
     # ============================
     if any(x in text for x in [
-    "suicide",
-    "self harm",
-    "harm yourself",
-    "hurt yourself",
-    "ending your life",
-    "can't go on",
-    "give up"
-]):
+        "suicide",
+        "self harm",
+        "harm yourself",
+        "hurt yourself",
+        "ending your life",
+        "can't go on",
+        "give up"
+    ]):
 
         state["risk_flag"] = "moderate"
         state["distress"] += 20
         state["trust"] -= 10
 
-        # ============================
+    # ============================
     # QUESTION STYLE
     # ============================
-
     if text.startswith((
         "do ",
         "did ",
@@ -237,12 +247,12 @@ def update_state(session_id, student_text):
         state["last_question_type"] = "closed"
 
     else:
+
         state["last_question_type"] = "open"
 
-        # ============================
+    # ============================
     # CLAMP VALUES
     # ============================
-
     for k in [
         "trust",
         "distress",
@@ -318,7 +328,7 @@ def detect_stage_from_question(text):
         "first notice",
         "first begin",
         "started",
-        "began"
+        "began",
         "when did this begin",
 "when did this first happen",
 "when did you notice",
