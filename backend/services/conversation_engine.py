@@ -27,16 +27,24 @@ def init_session_state(session_id):
             "resistance": 20,
             "risk_flag": "none",
 
-            # ✅ REQUIRED FOR MODALITY RULE
+            # ============================
+            # MODALITY / BEHAVIOUR
+            # ============================
             "behaviour_explored": False,
+            "behaviour_question_count": 0,
+            "behaviour_topic_progress": 0,
+            "last_behaviour_question": None,
+            "student_changed_tack": False,
+            "client_has_given_behaviour_clue": False,
 
-            # ✅ REQUIRED FOR STRESS INDICATOR
+            # ============================
+            # STRESS INDICATOR
+            # ============================
             "stress_indicator": False,
 
             "last_question_type": None,
 
             "good_responses": 0,
-
             "poor_responses": 0,
 
             "response_history": [],
@@ -44,8 +52,6 @@ def init_session_state(session_id):
             "clarification_count": 0,
             "last_student_question": None,
             "last_client_understood": True,
-
-
         }
 def is_behaviour_question(text):
 
@@ -185,18 +191,60 @@ def update_state(session_id, student_text):
         state["trust"] += 2
         state["good_responses"] += 1
 
-    # ============================
+        # ============================
     # MODALITY / BEHAVIOURAL RULE
     # ============================
     if is_behaviour_question(text):
 
-        state["last_student_question"] = text
+        previous_question = state.get(
+            "last_behaviour_question"
+        )
+
         state["behaviour_explored"] = True
+        state["behaviour_question_count"] += 1
         state["engagement"] += 1
 
-        # ============================
+        # --------------------------------
+        # Detect whether student changed tack
+        # --------------------------------
+        if previous_question:
+
+            if text != previous_question:
+
+                state["student_changed_tack"] = True
+                state["behaviour_topic_progress"] += 1
+
+        # --------------------------------
+        # Track the latest behaviour question
+        # --------------------------------
+        state["last_behaviour_question"] = text
+        state["last_student_question"] = text
+
+        # --------------------------------
+        # Behavioural exploration progress
+        # --------------------------------
+        if any(x in text for x in [
+            "used to",
+            "what did you",
+            "what do you enjoy",
+            "what hobbies",
+            "what do you like doing",
+            "what do you do for fun",
+            "how do you spend your free time",
+            "how do you spend your spare time",
+            "how do you spend your downtime",
+            "when you're not working",
+            "when you are not working",
+            "outside work",
+            "outside of work"
+        ]):
+
+            state["client_has_given_behaviour_clue"] = True
+            state["behaviour_topic_progress"] += 1
+
+        # --------------------------------
         # STRESS INDICATOR RECOGNITION
-        # ============================
+        # --------------------------------
         if any(x in text for x in [
             "used to",
             "stress",

@@ -162,5 +162,7 @@ def get_response_variation(
 
         "past_focus": past_focus,
 
+        "conversational_style": conversational_style,
+
         "natural_variation": True
     }

@@ -193,7 +193,7 @@ def get_dynamic_behaviour(
 
     if distress_level == "high":
      behaviour_guidance.append(
-        "Emotionally difficult topics should feel overwhelming. It is natural to hesitate, become emotional, or struggle to describe difficult experiences."
+        "Emotionally difficult topics may feel harder to discuss. You may hesitate, become more emotional, or struggle to describe difficult experiences, but do not exaggerate the distress."
     )
 
     elif distress_level == "medium":
@@ -229,6 +229,10 @@ def get_dynamic_behaviour(
     behaviour_guidance.append(
         personality["communication"]
     )
+
+    behaviour_guidance.append(
+    "Behavioural state changes how openly and comfortably you communicate, but it must never change the client's established personality or clinical facts."
+)
 
     return {
 
