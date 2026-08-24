@@ -15,8 +15,12 @@ export default function ChatPanel({
 
   const chatContainerRef = useRef(null);
   const recognitionRef = useRef(null);
-  const respondedRef = useRef(false);
-  const failSafeRef = useRef(null);
+const respondedRef = useRef(false);
+const failSafeRef = useRef(null);
+
+// Speech recognition state
+const finalTranscriptRef = useRef("");
+const shouldKeepListeningRef = useRef(false);
 
   const sessionIdRef = useRef(Date.now().toString());
 
@@ -40,38 +44,120 @@ export default function ChatPanel({
   }, [chat, typing]);
 
   const startListening = () => {
-    if (!("webkitSpeechRecognition" in window)) {
-      alert("Microphone not supported in this browser");
+  if (!("webkitSpeechRecognition" in window)) {
+    alert("Microphone not supported in this browser");
+    return;
+  }
+
+  // If already listening, stop manually
+  if (recognitionRef.current && shouldKeepListeningRef.current) {
+    shouldKeepListeningRef.current = false;
+    recognitionRef.current.stop();
+    return;
+  }
+
+  const recognition = new window.webkitSpeechRecognition();
+
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-GB";
+
+  // Start with any text that was already typed
+  finalTranscriptRef.current = msg;
+
+  shouldKeepListeningRef.current = true;
+  recognitionRef.current = recognition;
+
+  recognition.onstart = () => {
+    setListening(true);
+  };
+
+  recognition.onresult = (event) => {
+    let finalTranscript = finalTranscriptRef.current;
+    let interimTranscript = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalTranscript +=
+          (finalTranscript ? " " : "") + transcript.trim();
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+
+    finalTranscriptRef.current = finalTranscript;
+
+    const combinedText = (
+      finalTranscript +
+      (interimTranscript ? " " + interimTranscript : "")
+    ).trim();
+
+    setMsg(combinedText);
+  };
+
+  recognition.onerror = (event) => {
+    console.log("Speech recognition error:", event.error);
+
+    // Don't restart for a deliberate stop
+    if (!shouldKeepListeningRef.current) {
+      setListening(false);
       return;
     }
 
-    const recognition = new window.webkitSpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-GB";
-
-    recognition.onstart = () => setListening(true);
-
-    recognition.onresult = (event) => {
-      let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setMsg(transcript);
-    };
-
-    recognition.onerror = () => {
-      setListening(false);
-      recognition.stop();
-    };
-
-    recognition.onend = () => setListening(false);
-
-    recognition.start();
-    recognitionRef.current = recognition;
-
-    setTimeout(() => recognition.stop(), 6000);
+    // Some browsers produce temporary errors.
+    // Keep the session available for continued speech.
+    if (
+      event.error === "no-speech" ||
+      event.error === "audio-capture" ||
+      event.error === "network"
+    ) {
+      setTimeout(() => {
+        if (
+          shouldKeepListeningRef.current &&
+          recognitionRef.current === recognition
+        ) {
+          try {
+            recognition.start();
+          } catch (e) {
+            console.log("Recognition restart:", e);
+          }
+        }
+      }, 300);
+    }
   };
+
+  recognition.onend = () => {
+    // If the user did not manually stop,
+    // restart recognition so pauses don't end the session.
+    if (shouldKeepListeningRef.current) {
+      setTimeout(() => {
+        if (
+          shouldKeepListeningRef.current &&
+          recognitionRef.current === recognition
+        ) {
+          try {
+            recognition.start();
+          } catch (e) {
+            console.log("Recognition restart:", e);
+          }
+        }
+      }, 300);
+    } else {
+      setListening(false);
+      recognitionRef.current = null;
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch (error) {
+    console.error("Could not start speech recognition:", error);
+    shouldKeepListeningRef.current = false;
+    setListening(false);
+  }
+};
 
   const callAPI = async (payload, retry = 0) => {
     try {
@@ -249,11 +335,11 @@ export default function ChatPanel({
           <div className="flex gap-2">
 
             <button
-              onClick={startListening}
-              className="bg-slate-500 text-white px-3 py-2 rounded-xl text-sm"
-            >
-              🎤 Speak
-            </button>
+  onClick={startListening}
+  className="bg-slate-500 text-white px-3 py-2 rounded-xl text-sm"
+>
+  {listening ? "⏹ Stop" : "🎤 Speak"}
+</button>
 
             <button
               onClick={send}
