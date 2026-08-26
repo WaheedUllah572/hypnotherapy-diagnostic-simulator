@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 import os
+import json
 from dotenv import load_dotenv
 from services.unknown_response_engine import build_unknown_response_guidance
 load_dotenv()
@@ -191,33 +192,63 @@ async def chat(msg: Message):
     print(system_prompt)
     print("===========================================\n")
 
-    identity = case_data.get("identity", {})
-    presentation = case_data.get("presentation", {})
+        # ============================
+    # COMPLETE AUTHORITATIVE CASE
+    # ============================
 
     grounding = f"""
-    AUTHORITATIVE CASE FACTS
+AUTHORITATIVE CLIENT CASE — COMPLETE SOURCE OF TRUTH
 
-    Presenting problem:
-    {presentation.get("presenting_problem")}
+The following is the complete authored case for this client.
 
-    Timeline:
-    {presentation.get("timeline")}
+Every field in this case is authoritative.
 
-    Thoughts:
-    {presentation.get("thoughts")}
+If a field contains a definite value, preserve it.
 
-    Feelings:
-    {presentation.get("feelings")}
+If a field is null, empty, or an empty list, that means the case
+does NOT establish that information.
 
-    Physical:
-    {presentation.get("physical")}
+IMPORTANT:
 
-    Goal:
-    {presentation.get("goal")}
+Do NOT convert missing or empty information into a definite
+Yes or No.
 
-    The above facts are authoritative.
-    Never change or reinterpret them.
-    """
+Do NOT invent:
+- hobbies
+- relaxation activities
+- coping strategies
+- modality
+- previous experiences
+- treatment history
+- medical history
+- medication
+- healthcare professionals
+- referrals
+- safeguarding information
+- risk information
+- traumatic experiences
+- personality traits
+
+In particular, if:
+- coping_strategies is []
+- modality is null
+- communication_style is null
+- disclosure_style is null
+
+you MUST NOT invent information for those fields.
+
+The student may ask about these areas. Respond naturally as a
+real client, but preserve the uncertainty rather than creating
+new facts.
+
+COMPLETE CASE:
+
+{json.dumps(case_data, ensure_ascii=False, indent=2)}
+
+The case above is authoritative.
+
+Never introduce facts that are not supported by it.
+"""
 
     messages.append({
         "role": "system",
