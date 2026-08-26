@@ -24,11 +24,18 @@ PROTECTED_DOMAINS = {
 # ============================================================
 
 def detect_unknown_domain(student_text: str) -> Optional[str]:
+    """
+    Detect whether the therapist is asking about a protected
+    clinical-history/safety domain.
+
+    This does NOT decide whether the answer is known or unknown.
+    """
 
     text = (student_text or "").lower()
 
     # --------------------------------------------------------
     # RISK / HARM
+    # Check before generic medical/psychological detection.
     # --------------------------------------------------------
 
     if any(x in text for x in [
@@ -91,6 +98,9 @@ def detect_unknown_domain(student_text: str) -> Optional[str]:
         "prescription",
         "prescribed",
         "taking any tablets",
+        "taking tablets",
+        "taking any medication",
+        "currently taking",
     ]):
         return "medication"
 
@@ -105,6 +115,8 @@ def detect_unknown_domain(student_text: str) -> Optional[str]:
         "previous hypnosis",
         "experienced hypnotherapy",
         "experienced hypnosis",
+        "tried hypnotherapy",
+        "tried hypnosis",
     ]):
         return "previous_hypnosis"
 
@@ -117,6 +129,8 @@ def detect_unknown_domain(student_text: str) -> Optional[str]:
         "psychiatrist",
         "psychiatric treatment",
         "mental health psychiatrist",
+        "seen a psychiatrist",
+        "see a psychiatrist",
     ]):
         return "psychiatric_care"
 
@@ -128,11 +142,22 @@ def detect_unknown_domain(student_text: str) -> Optional[str]:
         "psychological care",
         "psychological treatment",
         "psychologist",
+        "psychological support",
+        "psychological therapy",
         "seeing a therapist",
+        "seen a therapist",
         "seeing a counsellor",
+        "seen a counsellor",
         "seeing a counselor",
+        "seen a counselor",
         "currently in therapy",
         "receiving therapy",
+        "had therapy",
+        "had counselling",
+        "had counseling",
+        "previous therapy",
+        "previous counselling",
+        "previous counseling",
     ]):
         return "psychological_care"
 
@@ -149,6 +174,9 @@ def detect_unknown_domain(student_text: str) -> Optional[str]:
         "professionals involved",
         "supporting you medically",
         "involved in supporting you",
+        "any doctors",
+        "any doctor",
+        "any healthcare professional",
     ]):
         return "healthcare_professionals"
 
@@ -162,8 +190,11 @@ def detect_unknown_domain(student_text: str) -> Optional[str]:
         "medical clearance",
         "doctor's permission",
         "doctors permission",
+        "doctor permission",
         "gp permission",
         "gp referral",
+        "doctor approval",
+        "medical approval",
     ]):
         return "referral_permission"
 
@@ -178,6 +209,9 @@ def detect_unknown_domain(student_text: str) -> Optional[str]:
         "physical health condition",
         "health condition",
         "health problems",
+        "health history",
+        "physical health",
+        "medical problems",
     ]):
         return "medical_history"
 
@@ -192,6 +226,10 @@ def get_domain_value(
     persona: Dict[str, Any],
     domain: str
 ) -> Any:
+    """
+    Read the relevant value directly from the authoritative
+    case structure.
+    """
 
     healthcare = persona.get("healthcare", {})
     hypnosis_history = persona.get("hypnosis_history", {})
@@ -239,6 +277,12 @@ def get_domain_value(
 # ============================================================
 
 def is_unestablished(value: Any) -> bool:
+    """
+    Null or empty protected fields mean that the authored case
+    has not established a definite positive OR negative fact.
+
+    They must therefore not automatically become "No".
+    """
 
     if value is None:
         return True
@@ -250,6 +294,83 @@ def is_unestablished(value: Any) -> bool:
         return True
 
     return False
+
+
+# ============================================================
+# DOMAIN-SPECIFIC TOPIC ANCHORS
+# ============================================================
+
+DOMAIN_TOPIC_ANCHORS = {
+
+    "medication": [
+        "medication",
+        "medicine",
+        "prescription",
+        "what I'm currently taking",
+    ],
+
+    "medical_history": [
+        "medical history",
+        "health history",
+        "health conditions",
+        "physical health",
+    ],
+
+    "psychological_care": [
+        "therapy",
+        "counselling",
+        "counseling",
+        "psychological support",
+        "psychological treatment",
+    ],
+
+    "psychiatric_care": [
+        "psychiatrist",
+        "psychiatric care",
+        "psychiatric treatment",
+    ],
+
+    "healthcare_professionals": [
+        "doctor",
+        "GP",
+        "healthcare professional",
+        "medical professional",
+    ],
+
+    "previous_hypnosis": [
+        "hypnosis",
+        "hypnotherapy",
+        "hypnotherapist",
+    ],
+
+    "referral_permission": [
+        "referral",
+        "permission",
+        "medical clearance",
+        "doctor's approval",
+    ],
+
+    "risk": [
+        "self-harm",
+        "suicidal thoughts",
+        "thoughts of harming myself",
+        "thoughts of harming someone else",
+    ],
+
+    "contraindications": [
+        "contraindication",
+        "suitability",
+        "medical or psychological factors",
+        "factors that could make hypnosis unsafe",
+    ],
+
+    "safeguarding": [
+        "safeguarding",
+        "personal safety",
+        "feeling safe",
+        "being harmed",
+    ],
+}
 
 
 # ============================================================
@@ -511,7 +632,7 @@ Do not invent:
 Do not claim definitely that there are no safeguarding concerns.
 
 Respond carefully and briefly while preserving uncertainty.
-"""
+""",
 }
 
 
@@ -525,6 +646,14 @@ def build_unknown_response_guidance(
     behaviour: Dict[str, Any],
     recent_client_messages: Optional[List[str]] = None,
 ) -> Optional[Dict[str, Any]]:
+    """
+    Return additional generation guidance only when:
+
+    1. The therapist asks about a protected clinical domain.
+    2. The authoritative case does not establish the answer.
+
+    The function does NOT generate the final client response.
+    """
 
     domain = detect_unknown_domain(student_text)
 
@@ -533,7 +662,7 @@ def build_unknown_response_guidance(
 
     value = get_domain_value(
         persona=persona,
-        domain=domain
+        domain=domain,
     )
 
     if not is_unestablished(value):
@@ -559,8 +688,15 @@ The response must clearly relate to the exact clinical topic the
 therapist asked about.
 
 Do not use a generic uncertainty statement by itself.
-"""
+""",
     )
+
+    topic_anchors = DOMAIN_TOPIC_ANCHORS.get(
+        domain,
+        [domain],
+    )
+
+    topic_anchor_text = ", ".join(topic_anchors)
 
     instruction = f"""
 ============================
@@ -576,6 +712,38 @@ Student's current question:
 {guidance}
 
 ============================
+MANDATORY TOPIC ANCHOR
+============================
+
+The response MUST naturally refer to the specific topic being asked
+about.
+
+Relevant topic words/concepts for this question are:
+
+{topic_anchor_text}
+
+At least ONE natural reference to the relevant topic MUST appear
+in the response.
+
+Do not merely express uncertainty.
+
+For example:
+
+If the therapist asks about medication, the response should naturally
+mention medication, medicine, prescription, or what the client is
+currently taking.
+
+If the therapist asks about psychiatric care, the response should
+naturally mention a psychiatrist or psychiatric care.
+
+If the therapist asks about previous hypnosis, the response should
+naturally mention hypnosis or hypnotherapy.
+
+Do not mechanically copy these examples.
+
+Use natural client language appropriate to the client personality.
+
+============================
 TOPIC-SPECIFIC UNCERTAINTY
 ============================
 
@@ -586,33 +754,22 @@ question.
 
 The response should make it clear WHAT the client is uncertain about.
 
+GOOD STRUCTURE:
+
+Specific topic + natural uncertainty.
+
 For example:
 
-If asked about medication:
+Medication:
+"I'm not certain what medication I'm currently taking, if any.
+I'd need to check that."
 
-GOOD:
-"I'm not certain what medication I'm currently taking, if any. I'd
-need to check that."
-
-BAD:
-"I'm not really sure."
-
-If asked about psychiatric care:
-
-GOOD:
+Psychiatric care:
 "I'm not sure whether I've ever seen a psychiatrist. I'd need to
 think back before I could answer properly."
 
-BAD:
-"I can't honestly say for certain."
-
-If asked about previous hypnosis:
-
-GOOD:
+Previous hypnosis:
 "I can't remember whether I've actually had hypnotherapy before."
-
-BAD:
-"I don't really know."
 
 These examples demonstrate the required structure only.
 
@@ -636,7 +793,7 @@ Never answer an undefined protected question using ONLY:
 - "I'd have to think about that."
 
 These phrases may appear as part of a longer,
-topic-specific response, but they must NOT constitute the entire
+topic-specific response, but they MUST NOT constitute the entire
 answer.
 
 The response must contain a natural reference to the actual domain.
@@ -647,15 +804,20 @@ DO NOT OVERDISCLOSE
 
 Topic-specific does NOT mean inventing details.
 
-If medication is undefined, do not invent a medication.
+If medication is undefined:
+do not invent a medication.
 
-If psychiatric care is undefined, do not invent a psychiatrist.
+If psychiatric care is undefined:
+do not invent a psychiatrist.
 
-If psychological care is undefined, do not invent therapy.
+If psychological care is undefined:
+do not invent therapy.
 
-If previous hypnosis is undefined, do not invent hypnosis experience.
+If previous hypnosis is undefined:
+do not invent hypnosis experience.
 
-If risk is undefined, do not invent risk.
+If risk is undefined:
+do not invent risk.
 
 The response should identify the uncertainty without filling the
 missing fact.
@@ -759,8 +921,9 @@ It must:
 5. Sound natural for the client.
 6. Avoid generic uncertainty-only responses.
 7. Avoid repeating the previous uncertainty wording.
+8. Include at least one natural topic reference.
 """
-    
+
     return {
         "domain": domain,
         "value": value,
