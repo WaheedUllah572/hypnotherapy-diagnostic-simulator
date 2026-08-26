@@ -1,55 +1,191 @@
+# ============================================================
+# PROTECTED CLINICAL DOMAINS
+# ============================================================
+
 PROTECTED_DOMAINS = {
     "medication": [
         "medication",
         "medicine",
+        "medicines",
         "tablets",
         "prescription",
-        "drug"
+        "prescribed",
+        "drug",
     ],
 
     "psychological_care": [
         "psychologist",
         "psychological care",
+        "psychological treatment",
+        "psychological support",
         "therapy",
-        "therapist"
+        "therapist",
+        "counselling",
+        "counseling",
+        "counsellor",
+        "counselor",
     ],
 
     "psychiatric_care": [
         "psychiatrist",
-        "psychiatric"
+        "psychiatric",
+        "psychiatric care",
+        "psychiatric treatment",
     ],
 
     "previous_hypnosis": [
         "hypnotherapy",
-        "hypnosis"
+        "hypnosis",
+        "hypnotherapist",
     ],
 
     "risk": [
         "harm yourself",
+        "harm myself",
+        "harming yourself",
         "hurt yourself",
+        "hurt myself",
         "suicide",
-        "self harm"
+        "suicidal",
+        "self harm",
+        "self-harm",
+        "harm someone else",
+        "hurt someone else",
+        "thoughts of harming",
     ],
 
     "healthcare_professionals": [
         "healthcare professional",
+        "healthcare professionals",
         "doctor",
-        "supporting you"
-    ]
+        "doctors",
+        "gp",
+        "supporting you medically",
+        "medical professional",
+        "professional involved",
+        "professionals involved",
+    ],
+
+    "medical_history": [
+        "medical history",
+        "medical condition",
+        "medical conditions",
+        "health condition",
+        "health conditions",
+        "health problems",
+        "medical problems",
+        "physical health",
+        "health history",
+    ],
+
+    "referral_permission": [
+        "referral",
+        "permission",
+        "medical clearance",
+        "doctor's permission",
+        "doctor permission",
+        "gp permission",
+        "gp referral",
+        "medical approval",
+    ],
+
+    "contraindications": [
+        "contraindication",
+        "contraindications",
+        "unsuitable",
+        "make hypnosis unsafe",
+        "make hypnotherapy unsafe",
+        "additional professional advice",
+    ],
+
+    "safeguarding": [
+        "safeguarding",
+        "abuse",
+        "being harmed",
+        "someone hurting you",
+        "safe at home",
+        "feel safe at home",
+    ],
 }
 
 
+# ============================================================
+# DOMAIN DETECTION
+# ============================================================
+
 def detect_domain(question: str):
 
-    question = question.lower()
+    question = (question or "").lower().strip()
 
-    for domain, keywords in PROTECTED_DOMAINS.items():
-        for keyword in keywords:
-            if keyword in question:
-                return domain
+    # Risk must be checked first because questions can contain
+    # overlapping clinical terminology.
+
+    risk_keywords = PROTECTED_DOMAINS["risk"]
+
+    for keyword in risk_keywords:
+        if keyword in question:
+            return "risk"
+
+    # Safeguarding
+
+    for keyword in PROTECTED_DOMAINS["safeguarding"]:
+        if keyword in question:
+            return "safeguarding"
+
+    # Contraindications
+
+    for keyword in PROTECTED_DOMAINS["contraindications"]:
+        if keyword in question:
+            return "contraindications"
+
+    # Medication
+
+    for keyword in PROTECTED_DOMAINS["medication"]:
+        if keyword in question:
+            return "medication"
+
+    # Previous hypnosis
+
+    for keyword in PROTECTED_DOMAINS["previous_hypnosis"]:
+        if keyword in question:
+            return "previous_hypnosis"
+
+    # Psychiatric care
+
+    for keyword in PROTECTED_DOMAINS["psychiatric_care"]:
+        if keyword in question:
+            return "psychiatric_care"
+
+    # Psychological care
+
+    for keyword in PROTECTED_DOMAINS["psychological_care"]:
+        if keyword in question:
+            return "psychological_care"
+
+    # Referral / permission
+
+    for keyword in PROTECTED_DOMAINS["referral_permission"]:
+        if keyword in question:
+            return "referral_permission"
+
+    # Healthcare professionals
+
+    for keyword in PROTECTED_DOMAINS["healthcare_professionals"]:
+        if keyword in question:
+            return "healthcare_professionals"
+
+    # Medical history
+
+    for keyword in PROTECTED_DOMAINS["medical_history"]:
+        if keyword in question:
+            return "medical_history"
 
     return None
 
+
+# ============================================================
+# AUTHORITATIVE VALUE CHECK
+# ============================================================
 
 def is_defined(persona: dict, domain: str):
 
@@ -58,27 +194,79 @@ def is_defined(persona: dict, domain: str):
     safety = persona.get("safety", {})
 
     if domain == "medication":
-        return healthcare.get("medication", {}).get("current") is not None
+        medication = healthcare.get("medication", {})
+
+        return (
+            medication.get("current") is not None
+            and medication.get("current") != ""
+        )
 
     if domain == "psychological_care":
-        return healthcare.get("psychological_care") is not None
+        value = healthcare.get("psychological_care")
+
+        return value not in (None, "")
 
     if domain == "psychiatric_care":
-        return healthcare.get("psychiatric_care") is not None
+        value = healthcare.get("psychiatric_care")
+
+        return value not in (None, "")
 
     if domain == "previous_hypnosis":
-        return hypnosis.get("previous_experience") is not None
+        value = hypnosis.get("previous_experience")
+
+        return value not in (None, "")
 
     if domain == "healthcare_professionals":
-        return healthcare.get("professionals_involved") not in (None, [])
+        value = healthcare.get("professionals_involved")
+
+        return value not in (None, [])
 
     if domain == "risk":
-        return safety.get("risk_factors") not in (None, [])
+        value = safety.get("risk_factors")
+
+        return value not in (None, [])
+
+    if domain == "contraindications":
+        value = safety.get("contraindications")
+
+        return value not in (None, [])
+
+    if domain == "safeguarding":
+        value = safety.get("safeguarding_concerns")
+
+        return value not in (None, [])
+
+    if domain == "medical_history":
+        value = healthcare.get("medical_history")
+
+        return value not in (None, "")
+
+    if domain == "referral_permission":
+        value = healthcare.get("referral_or_permission_required")
+
+        return value not in (None, "")
 
     return True
 
 
+# ============================================================
+# LEGACY BYPASS CHECK
+# ============================================================
+
 def should_bypass_llm(question: str, persona: dict):
+
+    """
+    Kept for compatibility with existing code.
+
+    This function identifies whether a protected domain is undefined.
+
+    IMPORTANT:
+    It does NOT generate a response.
+
+    Undefined protected questions must be passed to the
+    unknown_response_engine so that the response can be
+    topic-specific, natural and varied.
+    """
 
     domain = detect_domain(question)
 
@@ -87,42 +275,44 @@ def should_bypass_llm(question: str, persona: dict):
 
     return not is_defined(persona, domain)
 
-def process_protected_question(question: str, persona: dict):
+
+# ============================================================
+# PROTECTED QUESTION PROCESSOR
+# ============================================================
+
+def process_protected_question(
+    question: str,
+    persona: dict
+):
+
+    """
+    Identify protected clinical questions.
+
+    This function NO LONGER generates a hard-coded client response.
+
+    Undefined protected information must be handled by
+    unknown_response_engine.py.
+
+    Returning handled=False is intentional so that /chat continues
+    through the normal LLM generation pipeline.
+    """
 
     domain = detect_domain(question)
 
     if domain is None:
         return {
-            "handled": False
+            "handled": False,
+            "domain": None,
+            "defined": None,
         }
 
-    if is_defined(persona, domain):
-        return {
-            "handled": False
-        }
-
-    UNCERTAIN_RESPONSES = {
-
-    "medication":
-        "I'm not really sure about that right now. I'd need to check.",
-
-    "psychological_care":
-        "I'm not completely sure about that at the moment.",
-
-    "psychiatric_care":
-        "I can't honestly say for certain right now.",
-
-    "previous_hypnosis":
-        "I'm not really sure. I can't clearly remember.",
-
-    "healthcare_professionals":
-        "I'm not certain about that at the moment.",
-
-    "risk":
-        "I'm not sure how to answer that right now."
-}
+    defined = is_defined(
+        persona,
+        domain
+    )
 
     return {
-    "handled": True,
-    "response": UNCERTAIN_RESPONSES[domain]
-}
+        "handled": False,
+        "domain": domain,
+        "defined": defined,
+    }
