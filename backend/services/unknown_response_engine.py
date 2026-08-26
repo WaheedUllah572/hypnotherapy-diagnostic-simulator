@@ -1,299 +1,8 @@
 from typing import Any, Dict, List, Optional
 
-
-# ============================================================
-# PROTECTED CLINICAL DOMAINS
-# ============================================================
-
-PROTECTED_DOMAINS = {
-    "medication",
-    "medical_history",
-    "psychological_care",
-    "psychiatric_care",
-    "healthcare_professionals",
-    "previous_hypnosis",
-    "referral_permission",
-    "risk",
-    "contraindications",
-    "safeguarding",
-}
-
-
-# ============================================================
-# QUESTION → DOMAIN DETECTION
-# ============================================================
-
-def detect_unknown_domain(student_text: str) -> Optional[str]:
-    """
-    Detect whether the therapist is asking about a protected
-    clinical-history/safety domain.
-
-    This does NOT decide whether the answer is known or unknown.
-    """
-
-    text = (student_text or "").lower()
-
-    # --------------------------------------------------------
-    # RISK / HARM
-    # Check before generic medical/psychological detection.
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "harm yourself",
-        "harm myself",
-        "harming yourself",
-        "hurt yourself",
-        "hurt myself",
-        "suicidal",
-        "suicide",
-        "self-harm",
-        "self harm",
-        "harm anyone else",
-        "harm someone else",
-        "hurt anyone else",
-        "hurt someone else",
-        "thoughts of harming",
-    ]):
-        return "risk"
-
-    # --------------------------------------------------------
-    # SAFEGUARDING
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "safeguarding",
-        "abuse",
-        "being harmed",
-        "someone hurting you",
-        "feel safe at home",
-        "safe at home",
-    ]):
-        return "safeguarding"
-
-    # --------------------------------------------------------
-    # CONTRAINDICATION / SUITABILITY
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "unsuitable",
-        "contraindication",
-        "contraindications",
-        "make hypnotherapy unsafe",
-        "make hypnosis unsafe",
-        "might prevent hypnotherapy",
-        "additional professional advice",
-        "medical or psychological history that might",
-    ]):
-        return "contraindications"
-
-    # --------------------------------------------------------
-    # MEDICATION
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "medication",
-        "medications",
-        "medicine",
-        "medicines",
-        "prescription",
-        "prescribed",
-        "taking any tablets",
-        "taking tablets",
-        "taking any medication",
-        "currently taking",
-    ]):
-        return "medication"
-
-    # --------------------------------------------------------
-    # PREVIOUS HYPNOSIS
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "had hypnotherapy before",
-        "had hypnosis before",
-        "previous hypnotherapy",
-        "previous hypnosis",
-        "experienced hypnotherapy",
-        "experienced hypnosis",
-        "tried hypnotherapy",
-        "tried hypnosis",
-    ]):
-        return "previous_hypnosis"
-
-    # --------------------------------------------------------
-    # PSYCHIATRIC CARE
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "psychiatric care",
-        "psychiatrist",
-        "psychiatric treatment",
-        "mental health psychiatrist",
-        "seen a psychiatrist",
-        "see a psychiatrist",
-    ]):
-        return "psychiatric_care"
-
-    # --------------------------------------------------------
-    # PSYCHOLOGICAL CARE
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "psychological care",
-        "psychological treatment",
-        "psychologist",
-        "psychological support",
-        "psychological therapy",
-        "seeing a therapist",
-        "seen a therapist",
-        "seeing a counsellor",
-        "seen a counsellor",
-        "seeing a counselor",
-        "seen a counselor",
-        "currently in therapy",
-        "receiving therapy",
-        "had therapy",
-        "had counselling",
-        "had counseling",
-        "previous therapy",
-        "previous counselling",
-        "previous counseling",
-    ]):
-        return "psychological_care"
-
-    # --------------------------------------------------------
-    # HEALTHCARE PROFESSIONALS
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "healthcare professional",
-        "healthcare professionals",
-        "doctor involved",
-        "doctors involved",
-        "professional involved",
-        "professionals involved",
-        "supporting you medically",
-        "involved in supporting you",
-        "any doctors",
-        "any doctor",
-        "any healthcare professional",
-    ]):
-        return "healthcare_professionals"
-
-    # --------------------------------------------------------
-    # REFERRAL / PERMISSION
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "referral",
-        "permission",
-        "medical clearance",
-        "doctor's permission",
-        "doctors permission",
-        "doctor permission",
-        "gp permission",
-        "gp referral",
-        "doctor approval",
-        "medical approval",
-    ]):
-        return "referral_permission"
-
-    # --------------------------------------------------------
-    # GENERAL MEDICAL HISTORY
-    # --------------------------------------------------------
-
-    if any(x in text for x in [
-        "medical history",
-        "medical condition",
-        "medical conditions",
-        "physical health condition",
-        "health condition",
-        "health problems",
-        "health history",
-        "physical health",
-        "medical problems",
-    ]):
-        return "medical_history"
-
-    return None
-
-
-# ============================================================
-# GET AUTHORITATIVE VALUE FOR DOMAIN
-# ============================================================
-
-def get_domain_value(
-    persona: Dict[str, Any],
-    domain: str
-) -> Any:
-    """
-    Read the relevant value directly from the authoritative
-    case structure.
-    """
-
-    healthcare = persona.get("healthcare", {})
-    hypnosis_history = persona.get("hypnosis_history", {})
-    safety = persona.get("safety", {})
-
-    medication = healthcare.get("medication", {})
-
-    mapping = {
-        "medication":
-            medication.get("current"),
-
-        "medical_history":
-            healthcare.get("medical_history"),
-
-        "psychological_care":
-            healthcare.get("psychological_care"),
-
-        "psychiatric_care":
-            healthcare.get("psychiatric_care"),
-
-        "healthcare_professionals":
-            healthcare.get("professionals_involved"),
-
-        "previous_hypnosis":
-            hypnosis_history.get("previous_experience"),
-
-        "referral_permission":
-            healthcare.get("referral_or_permission_required"),
-
-        "risk":
-            safety.get("risk_factors"),
-
-        "contraindications":
-            safety.get("contraindications"),
-
-        "safeguarding":
-            safety.get("safeguarding_concerns"),
-    }
-
-    return mapping.get(domain)
-
-
-# ============================================================
-# DETERMINE WHETHER CASE VALUE IS UNESTABLISHED
-# ============================================================
-
-def is_unestablished(value: Any) -> bool:
-    """
-    Null or empty protected fields mean that the authored case
-    has not established a definite positive OR negative fact.
-
-    They must therefore not automatically become "No".
-    """
-
-    if value is None:
-        return True
-
-    if isinstance(value, list) and len(value) == 0:
-        return True
-
-    if isinstance(value, str) and not value.strip():
-        return True
-
-    return False
+from services.protected_domain_engine import (
+    detect_risk_question_type,
+)
 
 
 # ============================================================
@@ -352,6 +61,7 @@ DOMAIN_TOPIC_ANCHORS = {
 
     "risk": [
         "self-harm",
+        "self-harm thoughts",
         "suicidal thoughts",
         "thoughts of harming myself",
         "thoughts of harming someone else",
@@ -391,6 +101,7 @@ Do NOT give a generic uncertainty response that could apply to
 any unrelated question.
 
 For example, avoid responses consisting only of:
+
 - "I'm not sure."
 - "I can't say."
 - "I'd need to check."
@@ -403,6 +114,7 @@ currently take, cannot confidently recall the details, or would need
 to check.
 
 Do not invent:
+
 - a medication
 - a prescription
 - a reason for taking medication
@@ -449,6 +161,7 @@ previously received psychological support or whether a particular
 experience counts as psychological treatment.
 
 Do not invent:
+
 - therapy
 - counselling
 - psychological treatment
@@ -474,6 +187,7 @@ ever seen a psychiatrist, cannot confidently recall any psychiatric
 care, or would need to check before answering accurately.
 
 Do not invent:
+
 - a psychiatrist
 - psychiatric treatment
 - psychiatric diagnosis
@@ -501,6 +215,7 @@ has been involved in their healthcare or may need to check before
 answering accurately.
 
 Do not invent:
+
 - a GP
 - doctor
 - psychiatrist
@@ -527,6 +242,7 @@ experienced hypnosis or hypnotherapy before and may need to think
 before answering.
 
 Do not invent:
+
 - a previous hypnosis session
 - a hypnotherapist
 - an experience
@@ -557,18 +273,31 @@ Do not claim definitely that no permission is required.
 """,
 
     "risk": """
-The therapist is asking a sensitive question about RISK, including
-self-harm, suicidal thoughts, or harm to others.
+The therapist is asking a sensitive question about RISK.
 
-The authored case does not establish a definite positive OR negative
-answer.
+The authored case may contain some risk information, but that does
+NOT mean every type of risk question has been answered.
 
-This is safety-critical.
+You MUST distinguish the exact risk question being asked.
 
-The response MUST clearly acknowledge the specific safety topic being
-asked about while preserving genuine uncertainty.
+A statement such as:
+
+"No self-harm history"
+
+ONLY establishes information about a HISTORY OF SELF-HARM.
+
+It does NOT establish:
+
+- absence of suicidal thoughts
+- absence of self-harm thoughts
+- absence of suicide attempts
+- absence of thoughts of harming others
+
+Therefore, never infer a complete negative risk assessment from one
+risk factor.
 
 Do NOT invent:
+
 - suicidal thoughts
 - self-harm
 - violent thoughts
@@ -577,15 +306,19 @@ Do NOT invent:
 - previous attempts
 
 Do NOT convert missing information into:
+
 - "No"
 - "Never"
-- "I've never had those thoughts"
+- "I don't have those thoughts"
+- "I've never thought about that"
+- "I have no risk"
 - any other definite negative answer
 
-Do not use a generic uncertainty sentence with no indication of what
-the client is uncertain about.
+The response MUST clearly relate to the exact safety topic being asked
+about while preserving uncertainty when that specific information is
+not established.
 
-Keep the response brief and cautious.
+Keep the response brief, natural and cautious.
 """,
 
     "contraindications": """
@@ -598,7 +331,9 @@ answer.
 The response MUST clearly relate to suitability, contraindications,
 or relevant clinical factors.
 
-Do NOT simply say "I'm not sure."
+Do NOT simply say:
+
+"I'm not sure."
 
 Do not declare hypnotherapy safe.
 Do not declare hypnotherapy unsafe.
@@ -623,6 +358,7 @@ safety question.
 Do NOT respond with a generic uncertainty sentence alone.
 
 Do not invent:
+
 - abuse
 - neglect
 - danger
@@ -637,6 +373,105 @@ Respond carefully and briefly while preserving uncertainty.
 
 
 # ============================================================
+# RISK-SPECIFIC GUIDANCE
+# ============================================================
+
+RISK_QUESTION_GUIDANCE = {
+
+    "self_harm_history": """
+The therapist is asking specifically about a HISTORY OF SELF-HARM.
+
+The authored case may explicitly establish "No self-harm history".
+
+If that exact fact is present in the authoritative case, the client
+may answer that they do not have a history of self-harm.
+
+Do not expand that fact into claims about:
+
+- suicidal thoughts
+- self-harm thoughts
+- suicide attempts
+- thoughts of harming others
+
+Only answer the history question that was actually asked.
+""",
+
+    "suicidal_or_self_harm_ideation": """
+The therapist is asking specifically about SUICIDAL THOUGHTS or
+SELF-HARM IDEATION.
+
+IMPORTANT:
+
+A statement such as "No self-harm history" does NOT answer this
+question.
+
+The case has NOT established whether the client has suicidal thoughts
+or thoughts of self-harm.
+
+Therefore the client MUST preserve uncertainty.
+
+Do NOT answer:
+
+- "No."
+- "Never."
+- "I don't have those thoughts."
+- "I have no history of self-harm."
+
+Those answers would incorrectly convert an unestablished ideation
+field into a definite negative.
+
+The response should naturally identify that the uncertainty concerns
+thoughts of self-harm or suicide.
+
+Do not invent suicidal thoughts, self-harm thoughts, intent, plans,
+or previous attempts.
+""",
+
+    "suicide_attempt": """
+The therapist is asking specifically about SUICIDE ATTEMPTS.
+
+The authored case does not establish whether a suicide attempt has
+ever occurred.
+
+A statement about self-harm history does NOT establish the answer.
+
+The client must preserve uncertainty.
+
+Do not invent an attempt.
+Do not say definitely that there has never been an attempt.
+""",
+
+    "harm_to_others": """
+The therapist is asking specifically about THOUGHTS OF HARMING
+OTHER PEOPLE.
+
+The authored case does not establish whether such thoughts exist.
+
+Information about self-harm history does NOT answer this question.
+
+The client must preserve uncertainty.
+
+Do not invent violent thoughts, intent, plans, or behaviour.
+Do not give a definite negative answer.
+""",
+
+    "general_risk": """
+The therapist is asking a GENERAL RISK question.
+
+Do not infer that all risk domains are negative merely because one
+risk factor is known.
+
+The case does not establish a complete risk assessment.
+
+Preserve uncertainty and answer only what the therapist actually asks.
+
+Do not invent risk, self-harm, suicidal thoughts, violence, intent,
+plans or previous attempts.
+""",
+}
+
+
+# ============================================================
 # BUILD UNKNOWN RESPONSE INSTRUCTION
 # ============================================================
 
@@ -646,27 +481,50 @@ def build_unknown_response_guidance(
     behaviour: Dict[str, Any],
     recent_client_messages: Optional[List[str]] = None,
 ) -> Optional[Dict[str, Any]]:
-    """
-    Return additional generation guidance only when:
 
-    1. The therapist asks about a protected clinical domain.
-    2. The authoritative case does not establish the answer.
+    # --------------------------------------------------------
+    # Import here as well so this engine remains easy to load
+    # and the risk-specific classifier is used only when needed.
+    # --------------------------------------------------------
 
-    The function does NOT generate the final client response.
-    """
+    from services.protected_domain_engine import (
+        detect_domain,
+        get_domain_value,
+        is_defined,
+    )
 
-    domain = detect_unknown_domain(student_text)
+    domain = detect_domain(student_text)
 
     if not domain:
+        return None
+
+    # --------------------------------------------------------
+    # IMPORTANT:
+    #
+    # Use the protected engine's authoritative definition logic.
+    #
+    # This is especially important for risk because:
+    #
+    # "No self-harm history"
+    #
+    # does NOT mean:
+    #
+    # "No suicidal/self-harm thoughts".
+    # --------------------------------------------------------
+
+    defined = is_defined(
+        persona,
+        domain,
+        student_text,
+    )
+
+    if defined:
         return None
 
     value = get_domain_value(
         persona=persona,
         domain=domain,
     )
-
-    if not is_unestablished(value):
-        return None
 
     recent_client_messages = recent_client_messages or []
 
@@ -691,12 +549,38 @@ Do not use a generic uncertainty statement by itself.
 """,
     )
 
+    # ========================================================
+    # RISK QUESTION SUBTYPE
+    # ========================================================
+
+    risk_question_type = None
+    risk_guidance = ""
+
+    if domain == "risk":
+
+        risk_question_type = detect_risk_question_type(
+            student_text
+        )
+
+        risk_guidance = RISK_QUESTION_GUIDANCE.get(
+            risk_question_type,
+            RISK_QUESTION_GUIDANCE["general_risk"],
+        )
+
+    # ========================================================
+    # TOPIC ANCHORS
+    # ========================================================
+
     topic_anchors = DOMAIN_TOPIC_ANCHORS.get(
         domain,
         [domain],
     )
 
     topic_anchor_text = ", ".join(topic_anchors)
+
+    # ========================================================
+    # FULL GENERATION INSTRUCTION
+    # ========================================================
 
     instruction = f"""
 ============================
@@ -710,6 +594,14 @@ Student's current question:
 {student_text}
 
 {guidance}
+
+============================
+RISK QUESTION TYPE
+============================
+
+{f"Detected risk question type: {risk_question_type}" if domain == "risk" else "Not applicable."}
+
+{risk_guidance if domain == "risk" else ""}
 
 ============================
 MANDATORY TOPIC ANCHOR
@@ -739,9 +631,12 @@ naturally mention a psychiatrist or psychiatric care.
 If the therapist asks about previous hypnosis, the response should
 naturally mention hypnosis or hypnotherapy.
 
+If the therapist asks about self-harm thoughts, the response should
+naturally refer to thoughts of self-harm or the specific safety topic.
+
 Do not mechanically copy these examples.
 
-Use natural client language appropriate to the client personality.
+Use natural client language appropriate to the client.
 
 ============================
 TOPIC-SPECIFIC UNCERTAINTY
@@ -758,7 +653,7 @@ GOOD STRUCTURE:
 
 Specific topic + natural uncertainty.
 
-For example:
+Examples:
 
 Medication:
 "I'm not certain what medication I'm currently taking, if any.
@@ -770,6 +665,10 @@ think back before I could answer properly."
 
 Previous hypnosis:
 "I can't remember whether I've actually had hypnotherapy before."
+
+Medical history:
+"I'm not entirely sure about my medical history. I'd need to think
+about it more before I could answer accurately."
 
 These examples demonstrate the required structure only.
 
@@ -799,6 +698,52 @@ answer.
 The response must contain a natural reference to the actual domain.
 
 ============================
+RISK SAFETY OVERRIDE
+============================
+
+If the current domain is "risk", NEVER use another risk subtype
+as an answer to the current question.
+
+For example:
+
+Question:
+"Have you ever had thoughts of harming yourself?"
+
+INVALID:
+"No, I don't have a history of self-harm."
+
+Why invalid:
+That answers self-harm HISTORY, not self-harm IDEATION.
+
+Question:
+"Have you ever harmed yourself?"
+
+If the authoritative case says:
+"No self-harm history"
+
+then that specific fact may be used.
+
+Question:
+"Have you ever attempted suicide?"
+
+INVALID:
+"No, I don't have a history of self-harm."
+
+Why invalid:
+Self-harm history does not establish suicide-attempt history.
+
+Question:
+"Have you had thoughts of harming someone else?"
+
+INVALID:
+"No, I don't have a history of self-harm."
+
+Why invalid:
+Self-harm concerns are not the same as harm-to-others ideation.
+
+Always answer the exact risk subtype being asked.
+
+============================
 DO NOT OVERDISCLOSE
 ============================
 
@@ -818,6 +763,15 @@ do not invent hypnosis experience.
 
 If risk is undefined:
 do not invent risk.
+
+If suicidal/self-harm ideation is undefined:
+do not invent suicidal or self-harm thoughts.
+
+If suicide attempts are undefined:
+do not invent an attempt.
+
+If harm-to-others ideation is undefined:
+do not invent violent thoughts.
 
 The response should identify the uncertainty without filling the
 missing fact.
@@ -858,6 +812,7 @@ The response must sound like the client speaking during an actual
 consultation.
 
 Do not sound like:
+
 - a database
 - a medical form
 - a system
@@ -865,6 +820,7 @@ Do not sound like:
 - an AI assistant
 
 Do not say:
+
 - "the case"
 - "the information provided"
 - "not established"
@@ -922,6 +878,8 @@ It must:
 6. Avoid generic uncertainty-only responses.
 7. Avoid repeating the previous uncertainty wording.
 8. Include at least one natural topic reference.
+9. If this is a risk question, answer the EXACT risk subtype rather
+   than substituting another risk fact.
 """
 
     return {
