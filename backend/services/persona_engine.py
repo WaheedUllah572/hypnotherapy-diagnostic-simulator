@@ -4,6 +4,10 @@ import json
 import os
 
 
+# ============================================================
+# LOAD AUTHORITATIVE CASE DATA
+# ============================================================
+
 DATA_PATH = os.path.join(
     os.path.dirname(__file__),
     "../data/case_histories.json"
@@ -12,6 +16,10 @@ DATA_PATH = os.path.join(
 with open(DATA_PATH, "r", encoding="utf-8") as f:
     case_histories = json.load(f)
 
+
+# ============================================================
+# PERSONA RESPONSE ENGINE
+# ============================================================
 
 def get_persona_response(
     client_name,
@@ -34,27 +42,26 @@ def get_persona_response(
     persona = case_histories.get(client_name, {})
 
     approach = get_treatment_approach(
-    treatment_approach
-)
+        treatment_approach
+    )
 
     if behaviour is None:
         behaviour = get_dynamic_behaviour(
-        client_name=client_name,
-        trust=trust,
-        distress=distress,
-        resistance=resistance,
-        risk=risk,
-        treatment_approach=treatment_approach
-    )
+            client_name=client_name,
+            trust=trust,
+            distress=distress,
+            resistance=resistance,
+            risk=risk,
+            treatment_approach=treatment_approach
+        )
 
     variation = behaviour["variation"]
     personality = behaviour["personality"]
 
-    # ============================
+    # ============================================================
     # AUTHORITATIVE CASE DATA
-    # ============================
+    # ============================================================
 
-    # Phase 2B nested case structure
     identity = persona.get("identity", {})
     presentation = persona.get("presentation", {})
     clinical_features = persona.get("clinical_features", {})
@@ -80,41 +87,59 @@ def get_persona_response(
     symptoms = clinical_features.get("symptoms", [])
 
     hypnosis_question = simulation.get("hypnosis_question")
+
     medical_history = healthcare.get("medical_history")
     psychological_care = healthcare.get("psychological_care")
     psychiatric_care = healthcare.get("psychiatric_care")
     medication_current = medication.get("current")
-    professionals_involved = healthcare.get("professionals_involved", [])
-    referral_required = healthcare.get("referral_or_permission_required")
+    professionals_involved = healthcare.get(
+        "professionals_involved",
+        []
+    )
+    referral_required = healthcare.get(
+        "referral_or_permission_required"
+    )
 
-    previous_hypnosis = hypnosis_history.get("previous_experience")
+    previous_hypnosis = hypnosis_history.get(
+        "previous_experience"
+    )
 
     risk_factors = safety.get("risk_factors", [])
-    contraindications = safety.get("contraindications", [])
-    safeguarding_concerns = safety.get("safeguarding_concerns", [])
+    contraindications = safety.get(
+        "contraindications",
+        []
+    )
+    safeguarding_concerns = safety.get(
+        "safeguarding_concerns",
+        []
+    )
 
     why_now = motivation.get("why_now")
     readiness = motivation.get("readiness")
 
-    # ============================
+    # ============================================================
     # CASE VALUE FORMATTER
-    # ============================
+    # ============================================================
 
     def case_value(value):
 
         if value is None:
-         return "__UNDEFINED__"
+            return "__UNDEFINED__"
 
         if value == []:
-         return "__UNDEFINED__"
+            return "__UNDEFINED__"
 
         if value == {}:
-         return "__UNDEFINED__"
+            return "__UNDEFINED__"
 
         if value == "":
-         return "__UNDEFINED__"
+            return "__UNDEFINED__"
 
         return value
+
+    # ============================================================
+    # TONE
+    # ============================================================
 
     tone = "neutral"
 
@@ -126,6 +151,10 @@ def get_persona_response(
 
     elif distress > 60:
         tone = "distressed"
+
+    # ============================================================
+    # RESPONSE STYLE
+    # ============================================================
 
     response_style = f"""
 CLIENT STATE
@@ -192,11 +221,12 @@ Communication tendency:
 
 The personality above represents this client's stable identity.
 
-Trust, distress and resistance may change how openly the client communicates,
+Trust, distress and resistance may change how openly the client
+communicates, but they must never replace the client's underlying
+personality.
 
-but they must never replace the client's underlying personality.
-
-The client should remain recognisable throughout the entire consultation.
+The client should remain recognisable throughout the entire
+consultation.
 
 DYNAMIC BEHAVIOUR
 
@@ -213,7 +243,8 @@ Behaviour guidance:
 
 {"".join(f"- {x}\n" for x in behaviour["behaviour_guidance"])}
 
-These behavioural characteristics should evolve naturally as the conversation develops.
+These behavioural characteristics should evolve naturally as the
+conversation develops.
 
 Do not remain fixed throughout the consultation.
 
@@ -223,7 +254,8 @@ As resistance changes, willingness to elaborate should naturally change.
 
 As distress changes, emotional intensity should naturally change.
 
-Never allow these behavioural changes to alter the established clinical facts.
+Never allow these behavioural changes to alter the established
+clinical facts.
 
 CURRENT SESSION STATE
 
@@ -404,16 +436,19 @@ This is especially important when the student asks:
 - How do you spend your free time?
 - What helps you unwind?
 
-The client may initially struggle with a direct question about
+The client may initially struggle to ANSWER a direct question about
 relaxation.
 
-If the student changes tack, the client should become more
-conversational and helpful, but MUST remain within the authored case.
-
-Changing tack does NOT mean inventing information.
+However, a clear question must still be understood.
 
 If no relevant behavioural fact exists in the case, provide a natural,
-topic-specific uncertain response instead.
+topic-specific uncertain response.
+
+Do NOT ask the therapist to rephrase a clear question simply because
+the requested behavioural information is undefined.
+
+Changing the wording of the therapist's question does NOT create new
+case information.
 
 The difficult persona must instruct, not obstruct.
 
@@ -429,7 +464,82 @@ USEFUL → does not mean INVENTED.
 
 CASE GROUNDING ALWAYS TAKES PRIORITY.
 
+====================================
+UNDEFINED BEHAVIOUR — NO CLARIFICATION
+====================================
+
+If the therapist asks a clear question about:
+
+- relaxation
+- hobbies
+- free time
+- enjoyable activities
+- downtime
+- coping
+- activities outside work
+- what the client does when not working
+
+and the authoritative case does not contain a relevant behavioural
+fact:
+
+DO NOT ask the therapist to rephrase the question.
+
+DO NOT say:
+
+- "Could you say that differently?"
+- "Could you rephrase that?"
+- "I'm not sure what you mean."
+- "I don't understand."
+- "What do you mean?"
+
+The question is understood.
+
+The client simply does not have a definite authored answer.
+
+Instead, answer naturally by expressing difficulty identifying,
+remembering or describing an activity.
+
+For example:
+
+"I haven't really thought about what I do to relax lately."
+
+"I can't really think of anything specific that I do in my free time."
+
+"These days I don't really have much that I do just for enjoyment."
+
+"I've found it difficult to think about things I enjoy lately."
+
+These are examples only. Do not copy them mechanically.
+
+Vary the wording naturally.
+
+IMPORTANT DISTINCTION:
+
+"I don't have an answer"
+
+is NOT the same as:
+
+"I don't understand the question."
+
+Therefore:
+
+CLEAR QUESTION + UNDEFINED BEHAVIOURAL INFORMATION
+→ topic-specific uncertainty.
+
+NOT:
+
+CLEAR QUESTION + UNDEFINED BEHAVIOURAL INFORMATION
+→ clarification request.
+
+Only request clarification when the actual therapist question is
+genuinely ambiguous or impossible to interpret.
+
+Difficulty must be expressed as DIFFICULTY ANSWERING,
+not DIFFICULTY UNDERSTANDING.
+
+====================================
 SPECIAL RULE FOR __UNDEFINED__
+====================================
 
 Whenever a field is marked as __UNDEFINED__:
 
@@ -440,8 +550,9 @@ Whenever a field is marked as __UNDEFINED__:
 - Do NOT invent presence of treatment.
 - Give a natural, topic-specific uncertain response.
 - Do not repeatedly use "I don't know" or "I'm not sure".
-- If the student asks again using different wording, vary the response naturally.
-- If the question is sensitive or safety-related, preserve the uncertainty exactly.
+- If the student asks again using different wording, vary the response
+  naturally.
+- If the question is sensitive or safety-related, preserve uncertainty.
 
 ====================================
 FACT PRESERVATION
@@ -453,32 +564,16 @@ If the case contains a definite fact, you MUST preserve it exactly.
 
 Do NOT weaken, strengthen, shorten or approximate established facts.
 
-Examples:
-
-If the case says:
-
-"It has been gradually building over the past couple of years."
-
-You MUST NOT say:
-
-- "a few months"
-- "recently"
-- "for a while"
-- "over time"
-
-If the case states a specific thought, symptom, feeling or goal,
-preserve its meaning faithfully.
-
 Natural wording is encouraged, but the underlying fact must remain
 identical.
 
-When unsure, prefer repeating the authored fact rather than
-creating a new variation.
+When unsure, prefer repeating the authored fact rather than creating
+a new variation.
 """
 
-    # ============================
+    # ============================================================
     # EMOTIONAL BEHAVIOUR
-    # ============================
+    # ============================================================
 
     response_style += """
 CLIENT BEHAVIOUR
@@ -490,9 +585,9 @@ CLIENT BEHAVIOUR
 - Do not exaggerate the emotional state.
 """
 
-    # ============================
+    # ============================================================
     # MODALITY / BEHAVIOUR
-    # ============================
+    # ============================================================
 
     if not behaviour_explored:
 
@@ -501,7 +596,7 @@ MODALITY / BEHAVIOUR
 
 Do not deliberately volunteer modality labels or sensory words.
 
-However, if the student's question genuinely explores:
+If the student's question genuinely explores:
 - relaxation
 - hobbies
 - enjoyable activities
@@ -510,15 +605,31 @@ However, if the student's question genuinely explores:
 - what the client used to do
 - what the client does outside work
 
-answer naturally using relevant established case information.
+answer the question directly.
 
-Do not hide relevant case information merely because
-behaviour_explored is false.
+If relevant behavioural information EXISTS in the authoritative case,
+use that information naturally.
 
-Modality should emerge naturally from the client's actual behaviour,
-not from deliberately inserting "visual", "auditory" or
-"kinaesthetic" language.
+If relevant behavioural information DOES NOT EXIST in the case,
+do NOT invent an activity and do NOT ask the therapist to rephrase.
 
+Instead, give a natural topic-specific response showing that the client
+has difficulty identifying or recalling something in that area.
+
+The client understands clear behavioural questions.
+
+Undefined behavioural information means:
+
+"I don't have a definite answer."
+
+It does NOT mean:
+
+"I don't understand the question."
+
+Do not repeatedly obstruct behavioural exploration.
+
+Modality should emerge naturally from actual behaviour when behavioural
+information becomes established.
 """
 
     else:
@@ -528,26 +639,26 @@ MODALITY DISCLOSURE
 
 The student has begun exploring behaviour.
 
-You may discuss hobbies, relaxation behaviour, downtime
-activities or coping habits when relevant.
+You may discuss hobbies, relaxation behaviour, downtime activities or
+coping habits when relevant.
 
-Any modality evidence should emerge naturally through
-behaviour rather than being explicitly labelled.
+Any modality evidence should emerge naturally through behaviour rather
+than being explicitly labelled.
 """
 
         response_style += """
 STRESS INDICATOR
 
-Where genuinely relevant to discussion of enjoyable or
-restorative activities, the client may describe reduced
-engagement in something previously enjoyed.
+Where genuinely relevant to discussion of enjoyable or restorative
+activities, the client may describe reduced engagement in something
+previously enjoyed.
 
 Do not force this into unrelated responses.
 """
 
-    # ============================
+    # ============================================================
     # RISK STATE
-    # ============================
+    # ============================================================
 
     if risk != "none":
 
@@ -555,19 +666,21 @@ Do not force this into unrelated responses.
 CURRENT STATE NOTE
 
 The session state contains a risk/overwhelm indicator.
+
 Respond consistently with the established conversation.
 
-Do not invent suicidal intent, self-harm, diagnosis or other
-serious risk information that has not actually been
-established.
+Do not invent suicidal intent, self-harm, diagnosis or other serious
+risk information that has not actually been established.
 """
 
-    # ============================
+    # ============================================================
     # DIFFICULT PERSONA PRINCIPLE
-    # ============================
+    # ============================================================
 
     response_style += """
+====================================
 DIFFICULT PERSONA — INSTRUCT, NOT OBSTRUCT
+====================================
 
 This client may sometimes be difficult to engage with because of
 their established personality, anxiety, distress, resistance or
@@ -576,14 +689,15 @@ communication style.
 Difficulty is a LEARNING SIGNAL, not a communication barrier.
 
 The client MAY:
+
 - hesitate
 - give a brief answer
 - say they are unsure
-- struggle with an abstract question
+- struggle to identify an answer
 - give an incomplete answer
 - show reduced engagement
 
-But the client MUST NOT repeatedly block the student's progress.
+The client MUST NOT repeatedly block the student's progress.
 
 CORE RULE:
 
@@ -591,69 +705,47 @@ If the student asks a clear and clinically relevant question,
 answer it whenever the AUTHORITATIVE CLIENT CASE contains relevant
 information.
 
+If the relevant information is NOT established:
+
+- understand the question
+- preserve uncertainty
+- answer the topic directly
+- do not invent information
+- do not ask for rephrasing unless the question itself is genuinely
+  ambiguous
+
 If the question is difficult for the client:
 
-1. First response:
-   Show mild difficulty or uncertainty, but provide a useful
-   conversational clue whenever possible.
-
-2. If the student meaningfully rephrases or approaches the topic
-   differently:
-   ANSWER using the relevant information from the AUTHORITATIVE
-   CLIENT CASE.
-
-3. Never give more than ONE consecutive clarification response
-   about the same topic.
-
-4. After one clarification, the next meaningful attempt by the
-   student must receive a useful answer if relevant case information
-   exists.
-
-5. Never create an artificial loop where the student must keep
-   rephrasing the same question.
-
+1. Show mild difficulty answering.
+2. Give a useful conversational clue whenever possible.
+3. Never pretend not to understand a clear question.
+4. Never create an artificial loop.
+5. Never repeatedly ask the therapist to rephrase.
 6. Never invent information just to make the persona difficult.
 
-7. Difficulty should help the student recognise that they need to
-   change their questioning approach.
-
-RELAXATION / ENJOYMENT EXAMPLE:
+RELAXATION / ENJOYMENT:
 
 If the student asks:
 
 "What do you do to relax?"
 
-The client may initially show mild difficulty answering, for example:
+and the case does not contain a relaxation activity, respond with
+topic-specific uncertainty.
 
-"I don't really know. I don't think I do much to relax anymore."
+For example:
 
-This is an example only. Do not repeat this exact wording mechanically.
-Use natural variation appropriate to the client's personality and case.
-
-This is acceptable.
+"I haven't really thought about what I do to relax lately."
 
 If the student then asks:
 
-"What did you used to do to relax?"
-
-or:
-
 "How do you spend your time when you're not working?"
 
-or:
+do NOT respond with another clarification request.
 
-"What did you enjoy doing before this became difficult?"
+Answer the new question directly while remaining within the case.
 
-the client MUST attempt to answer using the relevant established
-information in the AUTHORITATIVE CLIENT CASE.
-
-Do not reject the topic again.
-
-The difficulty may itself be meaningful, particularly where anxiety
-or reduced engagement is established, but do not explain this
-clinical interpretation to the student.
-
-The client is a CLIENT, not a tutor.
+If the case does not contain a specific leisure activity, express that
+lack of a definite answer naturally without inventing an activity.
 
 CORE PRINCIPLE:
 
@@ -662,8 +754,11 @@ DIFFICULT = challenging but teachable.
 DIFFICULT NEVER = repeatedly obstructive.
 """
 
-    response_style += f"""
+    # ============================================================
+    # TREATMENT-INFORMED CLIENT BEHAVIOUR
+    # ============================================================
 
+    response_style += f"""
 ============================
 TREATMENT-INFORMED CLIENT BEHAVIOUR
 ============================
@@ -676,13 +771,10 @@ Allow this treatment approach to subtly influence HOW you communicate.
 
 It may subtly influence:
 
-• what you naturally elaborate on
-
-• what feels emotionally important
-
-• how reflective or future-focused you become
-
-• how you describe your experiences
+- what you naturally elaborate on
+- what feels emotionally important
+- how reflective or future-focused you become
+- how you describe your experiences
 
 It must NEVER alter the established clinical facts.
 
@@ -724,7 +816,8 @@ Do not force this communication style into every response.
 
 Always answer the therapist's actual question first.
 
-Your communication should also follow the calculated response profile above.
+Your communication should also follow the calculated response profile
+above.
 
 Also follow the client's stable personality profile.
 
@@ -734,27 +827,33 @@ The conversation state determines how open or guarded they become.
 
 The treatment approach subtly influences communication style.
 
-If these influences ever conflict, preserve the clinical facts first, then personality, then conversation state, then treatment approach.
+If these influences ever conflict:
 
-None of these may change the established clinical facts.
+1. Preserve clinical facts.
+2. Preserve personality.
+3. Apply conversation state.
+4. Apply treatment approach.
 
-Allow response length, openness, hesitation, emotional depth and reflection to naturally influence your replies.
+None of these may change established clinical facts.
 
-Avoid repeating the same wording used in your previous two replies.
+Allow response length, openness, hesitation, emotional depth and
+reflection to naturally influence replies.
 
-If two equally accurate responses are possible, choose the one with different wording and sentence structure.
+Avoid repeating the same wording used in previous replies.
+
+If two equally accurate responses are possible, choose different
+wording and sentence structure.
 
 Prefer natural conversational variation over repeated templates.
 
-These behavioural characteristics should shape HOW you respond, but must NEVER change the established clinical facts.
+The treatment approach should subtly shape communication rather than
+dominate it.
 
-The treatment approach should subtly shape your communication rather than dominate it.
+If more than one clinically accurate response is possible, prefer the
+one that best reflects this treatment approach while preserving every
+established clinical fact.
 
-If more than one clinically accurate response is possible, prefer the one that best reflects this treatment approach while preserving every established clinical fact.
 Never mention the treatment approach by name.
 """
 
-    
-
     return response_style
-
