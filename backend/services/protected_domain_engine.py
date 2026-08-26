@@ -147,26 +147,18 @@ def detect_domain(question: str) -> Optional[str]:
 
     text = (question or "").lower().strip()
 
-    # --------------------------------------------------------
-    # IMPORTANT:
-    # Check risk FIRST.
-    #
-    # A safety question must never accidentally be classified
-    # as another protected domain.
-    # --------------------------------------------------------
+    # ========================================================
+    # RISK FIRST
+    # ========================================================
 
-    risk_keywords = PROTECTED_DOMAINS["risk"]
-
-    for keyword in risk_keywords:
+    for keyword in PROTECTED_DOMAINS["risk"]:
 
         if keyword in text:
-
             return "risk"
 
-
-    # --------------------------------------------------------
+    # ========================================================
     # OTHER PROTECTED DOMAINS
-    # --------------------------------------------------------
+    # ========================================================
 
     domain_order = [
         "safeguarding",
@@ -180,34 +172,52 @@ def detect_domain(question: str) -> Optional[str]:
         "medical_history",
     ]
 
-
     for domain in domain_order:
 
         for keyword in PROTECTED_DOMAINS[domain]:
 
             if keyword in text:
-
                 return domain
-
 
     return None
 
 
 # ============================================================
-# CHECK WHETHER AUTHORITATIVE CASE DEFINES THE DOMAIN
+# VALUE NORMALISISATION
 # ============================================================
 
-def is_defined(
+def _is_empty(value: Any) -> bool:
+
+    if value is None:
+        return True
+
+    if isinstance(value, str):
+        return not value.strip()
+
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) == 0
+
+    return False
+
+
+# ============================================================
+# GET AUTHORITATIVE DOMAIN VALUE
+#
+# This function is intentionally included here so other modules
+# can safely import it if required.
+# ============================================================
+
+def get_domain_value(
     persona: Dict[str, Any],
     domain: str
-) -> bool:
+) -> Any:
 
     healthcare = persona.get(
         "healthcare",
         {}
     )
 
-    hypnosis = persona.get(
+    hypnosis_history = persona.get(
         "hypnosis_history",
         {}
     )
@@ -217,171 +227,81 @@ def is_defined(
         {}
     )
 
+    medication = healthcare.get(
+        "medication",
+        {}
+    )
 
-    # --------------------------------------------------------
-    # MEDICATION
-    # --------------------------------------------------------
+    mapping = {
 
-    if domain == "medication":
+        "medication":
+            medication.get("current"),
 
-        medication = healthcare.get(
-            "medication",
-            {}
-        )
+        "medical_history":
+            healthcare.get("medical_history"),
 
-        value = medication.get(
-            "current"
-        )
+        "psychological_care":
+            healthcare.get("psychological_care"),
 
-        return value is not None
+        "psychiatric_care":
+            healthcare.get("psychiatric_care"),
 
+        "healthcare_professionals":
+            healthcare.get("professionals_involved"),
 
-    # --------------------------------------------------------
-    # PSYCHOLOGICAL CARE
-    # --------------------------------------------------------
+        "previous_hypnosis":
+            hypnosis_history.get("previous_experience"),
 
-    if domain == "psychological_care":
-
-        return (
-            healthcare.get(
-                "psychological_care"
-            )
-            is not None
-        )
-
-
-    # --------------------------------------------------------
-    # PSYCHIATRIC CARE
-    # --------------------------------------------------------
-
-    if domain == "psychiatric_care":
-
-        return (
-            healthcare.get(
-                "psychiatric_care"
-            )
-            is not None
-        )
-
-
-    # --------------------------------------------------------
-    # PREVIOUS HYPNOSIS
-    # --------------------------------------------------------
-
-    if domain == "previous_hypnosis":
-
-        return (
-            hypnosis.get(
-                "previous_experience"
-            )
-            is not None
-        )
-
-
-    # --------------------------------------------------------
-    # HEALTHCARE PROFESSIONALS
-    # --------------------------------------------------------
-
-    if domain == "healthcare_professionals":
-
-        value = healthcare.get(
-            "professionals_involved"
-        )
-
-        return value not in (
-            None,
-            []
-        )
-
-
-    # --------------------------------------------------------
-    # RISK
-    #
-    # IMPORTANT:
-    #
-    # Claire's:
-    #
-    # ["No self-harm history"]
-    #
-    # is a defined fact about HISTORY OF SELF-HARM.
-    #
-    # It does NOT establish whether she has had thoughts of
-    # harming herself.
-    #
-    # Therefore risk questions must be handled according to
-    # the exact question.
-    # --------------------------------------------------------
-
-    if domain == "risk":
-
-        return False
-
-
-    # --------------------------------------------------------
-    # MEDICAL HISTORY
-    # --------------------------------------------------------
-
-    if domain == "medical_history":
-
-        return (
-            healthcare.get(
-                "medical_history"
-            )
-            is not None
-        )
-
-
-    # --------------------------------------------------------
-    # REFERRAL / PERMISSION
-    # --------------------------------------------------------
-
-    if domain == "referral_permission":
-
-        return (
+        "referral_permission":
             healthcare.get(
                 "referral_or_permission_required"
-            )
-            is not None
-        )
+            ),
 
+        "risk":
+            safety.get("risk_factors"),
 
-    # --------------------------------------------------------
-    # CONTRAINDICATIONS
-    # --------------------------------------------------------
+        "contraindications":
+            safety.get("contraindications"),
 
-    if domain == "contraindications":
+        "safeguarding":
+            safety.get("safeguarding_concerns"),
+    }
 
-        value = safety.get(
-            "contraindications"
-        )
-
-        return value not in (
-            None,
-            []
-        )
-
-
-    # --------------------------------------------------------
-    # SAFEGUARDING
-    # --------------------------------------------------------
-
-    if domain == "safeguarding":
-
-        value = safety.get(
-            "safeguarding_concerns"
-        )
-
-        return value not in (
-            None,
-            []
-        )
-
-
-    return True
+    return mapping.get(domain)
 
 
 # ============================================================
-# SHOULD BYPASS LLM?
+# CHECK WHETHER DOMAIN IS DEFINED
+# ============================================================
+
+def is_defined(
+    persona: Dict[str, Any],
+    domain: str
+) -> bool:
+
+    value = get_domain_value(
+        persona,
+        domain
+    )
+
+    # --------------------------------------------------------
+    # RISK REQUIRES EXACT QUESTION INTERPRETATION.
+    #
+    # A case saying:
+    # "No self-harm history"
+    #
+    # does NOT automatically answer:
+    # "Have you ever had thoughts of harming yourself?"
+    # --------------------------------------------------------
+
+    if domain == "risk":
+        return False
+
+    return not _is_empty(value)
+
+
+# ============================================================
+# SHOULD BYPASS LLM
 # ============================================================
 
 def should_bypass_llm(
@@ -394,9 +314,7 @@ def should_bypass_llm(
     )
 
     if domain is None:
-
         return False
-
 
     return not is_defined(
         persona,
@@ -405,7 +323,7 @@ def should_bypass_llm(
 
 
 # ============================================================
-# DETERMINE EXACT RISK QUESTION
+# EXACT RISK QUESTION TYPE
 # ============================================================
 
 def detect_risk_question_type(
@@ -416,108 +334,119 @@ def detect_risk_question_type(
         question or ""
     ).lower().strip()
 
-
     # --------------------------------------------------------
     # SELF-HARM / SUICIDAL THOUGHTS
-    #
-    # MUST BE CHECKED BEFORE GENERAL "SELF-HARM".
     # --------------------------------------------------------
 
-    if any(x in text for x in [
+    if any(
+        x in text
+        for x in [
 
-        "thoughts of harming yourself",
-        "thoughts of harming myself",
+            "thoughts of harming yourself",
+            "thoughts of harming myself",
 
-        "thoughts of hurting yourself",
-        "thoughts of hurting myself",
+            "thoughts of hurting yourself",
+            "thoughts of hurting myself",
 
-        "thoughts of self harm",
-        "thoughts of self-harm",
+            "thoughts of self harm",
+            "thoughts of self-harm",
 
-        "suicidal thoughts",
-        "thoughts about suicide",
-        "thoughts of suicide",
+            "suicidal thoughts",
+            "thoughts about suicide",
+            "thoughts of suicide",
 
-        "have you ever thought about harming yourself",
-        "have you ever thought about hurting yourself",
+            "have you ever thought about harming yourself",
+            "have you ever thought about hurting yourself",
 
-    ]):
+            "have you had thoughts of harming yourself",
+            "have you had thoughts of hurting yourself",
+
+        ]
+    ):
 
         return "self_harm_thoughts"
-
 
     # --------------------------------------------------------
     # SUICIDE ATTEMPT
     # --------------------------------------------------------
 
-    if any(x in text for x in [
+    if any(
+        x in text
+        for x in [
 
-        "attempted suicide",
-        "suicide attempt",
-        "attempted to kill yourself",
-        "attempted to kill myself",
-        "tried to kill yourself",
-        "tried to kill myself",
-        "tried to end your life",
-        "tried to end my life",
+            "attempted suicide",
+            "suicide attempt",
+            "attempted to kill yourself",
+            "attempted to kill myself",
+            "tried to kill yourself",
+            "tried to kill myself",
+            "tried to end your life",
+            "tried to end my life",
 
-    ]):
+        ]
+    ):
 
         return "suicide_attempt"
 
-
     # --------------------------------------------------------
-    # HISTORY OF SELF-HARM
+    # SELF-HARM HISTORY
     # --------------------------------------------------------
 
-    if any(x in text for x in [
+    if any(
+        x in text
+        for x in [
 
-        "history of self harm",
-        "history of self-harm",
-        "history of harming yourself",
-        "history of hurting yourself",
+            "history of self harm",
+            "history of self-harm",
+            "history of harming yourself",
+            "history of hurting yourself",
 
-        "ever harmed yourself",
-        "ever harmed myself",
+            "ever harmed yourself",
+            "ever harmed myself",
 
-        "ever hurt yourself",
-        "ever hurt myself",
+            "ever hurt yourself",
+            "ever hurt myself",
 
-        "self harm before",
-        "self-harm before",
+            "self harm before",
+            "self-harm before",
 
-        "self harm history",
-        "self-harm history",
+            "self harm history",
+            "self-harm history",
 
-    ]):
+            "have you self harmed",
+            "have you ever self harmed",
+
+        ]
+    ):
 
         return "self_harm_history"
-
 
     # --------------------------------------------------------
     # HARM TO OTHERS
     # --------------------------------------------------------
 
-    if any(x in text for x in [
+    if any(
+        x in text
+        for x in [
 
-        "thoughts of harming someone else",
-        "thoughts of harming anyone else",
-        "thoughts of hurting someone else",
-        "thoughts of hurting anyone else",
+            "thoughts of harming someone else",
+            "thoughts of harming anyone else",
+            "thoughts of hurting someone else",
+            "thoughts of hurting anyone else",
 
-        "thoughts about harming someone",
-        "thoughts about hurting someone",
+            "thoughts about harming someone",
+            "thoughts about hurting someone",
 
-        "harm someone else",
-        "hurt someone else",
+            "harm someone else",
+            "hurt someone else",
 
-        "harm anyone else",
-        "hurt anyone else",
+            "harm anyone else",
+            "hurt anyone else",
 
-    ]):
+        ]
+    ):
 
         return "harm_to_others"
-
 
     # --------------------------------------------------------
     # GENERAL RISK
@@ -527,7 +456,7 @@ def detect_risk_question_type(
 
 
 # ============================================================
-# GET UNDEFINED PROTECTED RESPONSE
+# GET PROTECTED UNCERTAIN RESPONSE
 # ============================================================
 
 def get_uncertain_response(
@@ -546,12 +475,8 @@ def get_uncertain_response(
             question
         )
 
-
         # ----------------------------------------------------
-        # THOUGHTS OF SELF-HARM / SUICIDE
-        #
-        # Undefined in Claire's authored case.
-        # Do NOT convert "No self-harm history" into "No".
+        # THOUGHTS OF SELF-HARM
         # ----------------------------------------------------
 
         if risk_type == "self_harm_thoughts":
@@ -560,7 +485,6 @@ def get_uncertain_response(
                 "I'm not sure whether I've had thoughts like that. "
                 "I'd need to think about it."
             )
-
 
         # ----------------------------------------------------
         # SUICIDE ATTEMPT
@@ -573,11 +497,8 @@ def get_uncertain_response(
                 "anything like that. I'd need to think about it."
             )
 
-
         # ----------------------------------------------------
         # SELF-HARM HISTORY
-        #
-        # This IS explicitly established for Claire.
         # ----------------------------------------------------
 
         if risk_type == "self_harm_history":
@@ -592,25 +513,22 @@ def get_uncertain_response(
                 []
             )
 
+            for item in risk_factors:
 
-            if any(
-                "no self-harm history"
-                in str(item).lower()
-                for item in risk_factors
-            ):
+                if "no self-harm history" in str(
+                    item
+                ).lower():
 
-                return (
-                    "No, I don't have a history of self-harm. "
-                    "My main difficulty has been the anxiety "
-                    "around driving on motorways."
-                )
-
+                    return (
+                        "No, I don't have a history of self-harm. "
+                        "My main difficulty has been the anxiety "
+                        "around driving on motorways."
+                    )
 
             return (
                 "I'm not certain about my history in that area. "
                 "I'd need to think about it."
             )
-
 
         # ----------------------------------------------------
         # HARM TO OTHERS
@@ -623,7 +541,6 @@ def get_uncertain_response(
                 "about harming someone else."
             )
 
-
         # ----------------------------------------------------
         # GENERAL RISK
         # ----------------------------------------------------
@@ -632,7 +549,6 @@ def get_uncertain_response(
             "I'm not sure how to answer that properly. "
             "I'd need to think about it."
         )
-
 
     # ========================================================
     # MEDICATION
@@ -645,7 +561,6 @@ def get_uncertain_response(
             "if any. I'd need to check that."
         )
 
-
     # ========================================================
     # PSYCHOLOGICAL CARE
     # ========================================================
@@ -656,7 +571,6 @@ def get_uncertain_response(
             "I'm not sure whether I've had psychological treatment "
             "or support before. I'd need to think back."
         )
-
 
     # ========================================================
     # PSYCHIATRIC CARE
@@ -669,7 +583,6 @@ def get_uncertain_response(
             "I'd need to think back before I could answer properly."
         )
 
-
     # ========================================================
     # PREVIOUS HYPNOSIS
     # ========================================================
@@ -680,7 +593,6 @@ def get_uncertain_response(
             "I can't remember whether I've had hypnotherapy or "
             "hypnosis before."
         )
-
 
     # ========================================================
     # HEALTHCARE PROFESSIONALS
@@ -693,7 +605,6 @@ def get_uncertain_response(
             "are currently involved in my care."
         )
 
-
     # ========================================================
     # MEDICAL HISTORY
     # ========================================================
@@ -705,9 +616,8 @@ def get_uncertain_response(
             "I'd need to think about it more."
         )
 
-
     # ========================================================
-    # REFERRAL
+    # REFERRAL / PERMISSION
     # ========================================================
 
     if domain == "referral_permission":
@@ -716,7 +626,6 @@ def get_uncertain_response(
             "I'm not sure whether I need a referral or medical "
             "clearance for this."
         )
-
 
     # ========================================================
     # CONTRAINDICATIONS
@@ -729,7 +638,6 @@ def get_uncertain_response(
             "psychological factors that could affect my suitability."
         )
 
-
     # ========================================================
     # SAFEGUARDING
     # ========================================================
@@ -741,7 +649,6 @@ def get_uncertain_response(
             "personal safety without thinking about it more."
         )
 
-
     # ========================================================
     # FALLBACK
     # ========================================================
@@ -752,7 +659,7 @@ def get_uncertain_response(
 
 
 # ============================================================
-# MAIN PROTECTED QUESTION PROCESSOR
+# MAIN PROCESSOR
 # ============================================================
 
 def process_protected_question(
@@ -763,7 +670,6 @@ def process_protected_question(
     domain = detect_domain(
         question
     )
-
 
     # --------------------------------------------------------
     # NOT PROTECTED
@@ -776,38 +682,24 @@ def process_protected_question(
             "domain": None,
         }
 
-
     # --------------------------------------------------------
-    # DEFINED DOMAIN
-    #
-    # Except risk, which is intentionally handled by the exact
-    # question type because the existing case may define only
-    # one risk subtype.
+    # DEFINED NON-RISK DOMAIN
     # --------------------------------------------------------
 
-    if domain != "risk" and is_defined(
-        persona,
-        domain
-    ):
+    if domain != "risk":
 
-        return {
-            "handled": False,
-            "domain": domain,
-        }
+        if is_defined(
+            persona,
+            domain
+        ):
 
+            return {
+                "handled": False,
+                "domain": domain,
+            }
 
     # --------------------------------------------------------
-    # UNDEFINED / EXACT-RISK RESPONSE
-    #
-    # IMPORTANT:
-    #
-    # This response is generated WITHOUT the LLM.
-    #
-    # Therefore:
-    #
-    # "Could you rephrase?"
-    #
-    # cannot occur for this protected question.
+    # RISK IS ALWAYS INTERPRETED BY EXACT QUESTION TYPE
     # --------------------------------------------------------
 
     response = get_uncertain_response(
@@ -815,7 +707,6 @@ def process_protected_question(
         question=question,
         persona=persona
     )
-
 
     return {
         "handled": True,
