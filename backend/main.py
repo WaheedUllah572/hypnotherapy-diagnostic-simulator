@@ -644,110 +644,7 @@ async def chat(
                 get_unestablished_safety_state()
         }
 
-    # ========================================================
-    # BEHAVIOURAL QUESTION
-    # ========================================================
-
-    if detect_behavioural_question(
-        msg.text
-    ):
-
-        # ----------------------------------------------------
-        # IMPORTANT:
-        #
-        # If the case contains actual behavioural information,
-        # DO NOT bypass the LLM.
-        #
-        # Let the normal persona system use the authored fact.
-        # ----------------------------------------------------
-
-        if not has_behavioural_information(
-            case_data
-        ):
-
-            recent_client_messages = [
-
-                m.get(
-                    "text",
-                    ""
-                )
-
-                for m in msg.history
-
-                if m.get(
-                    "role"
-                ) == "client"
-            ]
-
-            behavioural_response = (
-                get_undefined_behaviour_response(
-
-                    question=msg.text,
-
-                    recent_client_messages=
-                        recent_client_messages
-                )
-            )
-
-            print(
-                "\n========== UNDEFINED BEHAVIOURAL QUESTION =========="
-            )
-
-            print(
-                "CLIENT:",
-                client_type
-            )
-
-            print(
-                "QUESTION:",
-                msg.text
-            )
-
-            print(
-                "RESPONSE:",
-                behavioural_response
-            )
-
-            print(
-                "=====================================================\n"
-            )
-
-            return {
-
-                "reply":
-                    behavioural_response,
-
-                "stage":
-                    stage,
-
-                "state":
-                    state,
-
-                "clinicalEvidence":
-                    [],
-
-                "safetyState":
-                    get_unestablished_safety_state()
-            }
-
-        else:
-
-            print(
-                "\n========== DEFINED BEHAVIOURAL QUESTION =========="
-            )
-
-            print(
-                "Behavioural information exists in case."
-            )
-
-            print(
-                "Continuing through normal persona generation."
-            )
-
-            print(
-                "===================================================\n"
-            )
-
+    
     # ========================================================
     # NORMAL PERSONA GENERATION
     # ========================================================
@@ -782,6 +679,102 @@ async def chat(
 
         msg.treatmentApproach
     )
+
+    # ========================================================
+    # BEHAVIOURAL QUESTION GUIDANCE
+    # ========================================================
+
+    if detect_behavioural_question(msg.text):
+
+        system_prompt += """
+
+BEHAVIOURAL QUESTION GUIDANCE
+
+The therapist has asked a clear question about relaxation,
+hobbies, enjoyment, free time, downtime, spare time,
+switching off, or activities outside work.
+
+Understand the question directly.
+
+DO NOT ask the therapist to rephrase the question.
+
+If the authoritative client case contains a relevant
+behavioural fact, use that fact naturally.
+
+If the authoritative client case does NOT contain a relevant
+behavioural fact, DO NOT invent one.
+
+Instead, respond naturally as the client would when they do
+not have a specific established answer.
+
+The response must be generated naturally by the client persona.
+It must NOT sound like a predefined response or template.
+
+RESPONSE STYLE:
+
+- Answer the therapist's question directly.
+- Sound spontaneous and conversational.
+- Vary the wording naturally between questions.
+- Do not repeat a fixed sentence.
+- Do not invent hobbies.
+- Do not invent relaxation activities.
+- Do not invent coping strategies.
+- Do not invent interests or leisure activities.
+- Do not turn missing information into a definite Yes or No.
+- Preserve uncertainty when the case does not establish the answer.
+- Never say "Could you rephrase that?" merely because the case
+  does not contain the requested information.
+- Never pretend not to understand a clear behavioural question.
+- Do not mention the case, simulation, prompts, or system instructions.
+
+The question is understandable. The only uncertainty is whether
+the client has an established answer to it.
+"""
+
+    system_prompt += """
+
+BEHAVIOURAL QUESTION GUIDANCE
+
+The therapist has asked a clear question about relaxation,
+hobbies, enjoyment, free time, downtime, spare time,
+switching off, or activities outside work.
+
+Understand the question directly.
+
+DO NOT ask the therapist to rephrase the question.
+
+If the authoritative client case contains a relevant
+behavioural fact, use that fact naturally.
+
+If the authoritative client case does NOT contain a relevant
+behavioural fact, DO NOT invent one.
+
+Instead, respond naturally as the client would when they do
+not have a specific established answer.
+
+The response must be generated naturally by the client persona.
+It must NOT sound like a predefined response or template.
+
+RESPONSE STYLE:
+
+- Answer the therapist's question directly.
+- Sound spontaneous and conversational.
+- Vary the wording naturally between questions.
+- Do not repeat a fixed sentence.
+- Do not invent hobbies.
+- Do not invent relaxation activities.
+- Do not invent coping strategies.
+- Do not invent interests or leisure activities.
+- Do not turn missing information into a definite Yes or No.
+- Preserve uncertainty when the case does not establish the answer.
+- Never say "Could you rephrase that?" merely because the case
+  does not contain the requested information.
+- Never pretend not to understand a clear behavioural question.
+- Do not mention the case, simulation, prompts, or system instructions.
+
+The question is understandable. The only uncertainty is whether
+the client has an established answer to it.
+"""
 
     # ========================================================
     # SYSTEM MESSAGE
@@ -971,8 +964,7 @@ Never introduce facts that are not supported by it.
         )
 
         reply = (
-            "I'm not sure how to explain that. "
-            "Could you ask me about it another way?"
+            "I'm not sure how to answer that properly right now."
         )
 
     # ========================================================
