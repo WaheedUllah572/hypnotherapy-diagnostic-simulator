@@ -13,27 +13,17 @@ from services.clinical_evidence_engine import (
 # PHASE 2B — CLINICAL EVIDENCE EXTRACTION
 # ============================================================
 #
-# IMPORTANT ARCHITECTURE
+# The LLM performs semantic extraction.
 #
-# The LLM is used for semantic extraction.
+# Deterministic validation protects safety-critical evidence.
 #
-# Deterministic validation is then applied to safety-critical
-# evidence so that an LLM domain-classification mistake cannot
-# turn a negative risk statement into safeguarding evidence.
+# IMPORTANT:
 #
-# Examples:
-#
-# "No history of self-harm."
-#     -> risk
-#
-# "I have harmed myself."
-#     -> risk
-#
-# "I'm not sure whether I've harmed myself."
-#     -> NO risk evidence
-#
-# "There are safeguarding concerns at home."
-#     -> safeguarding
+# - Therapist questions are NOT evidence.
+# - Client uncertainty is NOT evidence.
+# - Explicit negative safety statements ARE evidence.
+# - Self-harm / suicide information belongs to "risk".
+# - Safeguarding is reserved for actual safeguarding concerns.
 #
 # ============================================================
 
@@ -112,8 +102,6 @@ an actual fact.
 ============================================================
 SAFETY DOMAIN DEFINITIONS
 ============================================================
-
-Use these domains carefully.
 
 risk
 ----
@@ -306,6 +294,30 @@ applied
 integrated
 
 ============================================================
+CONFIDENCE
+============================================================
+
+Confidence must represent how clearly the CLIENT established the fact.
+
+Use:
+
+0.90 - 1.00
+for an explicit, direct client statement.
+
+0.70 - 0.89
+for a clear but slightly less direct statement.
+
+0.50 - 0.69
+for a reasonably supported but less explicit statement.
+
+Below 0.50
+only when the evidence is genuinely weak or ambiguous.
+
+Do NOT output confidence 0.0 for a definite client statement.
+
+If no evidence exists, return an empty evidence list instead.
+
+============================================================
 OUTPUT
 ============================================================
 
@@ -317,7 +329,7 @@ Return valid JSON using exactly:
       "domain": "domain_name",
       "value": "structured or concise evidence",
       "status": "mentioned",
-      "confidence": 0.0,
+      "confidence": 0.95,
       "evidence_text": "short supporting evidence",
       "clinical_significance": null,
       "applied_to_reasoning": false,
@@ -458,6 +470,18 @@ NEGATIVE_PHRASES = [
     "no risk factors",
 
     "no contraindications",
+
+    "no current medication",
+    "not taking any medication",
+
+    "no medication",
+
+    "never had psychological treatment",
+    "never had counselling",
+    "never had counseling",
+
+    "no psychological treatment",
+    "no psychiatric treatment",
 ]
 
 
@@ -614,34 +638,10 @@ def _contains_safeguarding_information(
 # ============================================================
 # DETERMINISTIC SAFETY DOMAIN CORRECTION
 # ============================================================
-#
-# This is the critical fix.
-#
-# The LLM may return:
-#
-# {
-#   "domain": "safeguarding",
-#   "value": "No history of self-harm."
-# }
-#
-# We correct it to:
-#
-# {
-#   "domain": "risk",
-#   "value": "No history of self-harm."
-# }
-#
-# because self-harm is a risk domain.
-#
-# ============================================================
 
 def _correct_safety_domain(
     item: Dict[str, Any]
 ) -> Dict[str, Any]:
-
-    domain = item.get(
-        "domain"
-    )
 
     value = item.get(
         "value"
@@ -666,8 +666,8 @@ def _correct_safety_domain(
 
         item["domain"] = "risk"
 
-        # Negative self-harm information must never carry
-        # positive safety flags.
+        # Explicit negative risk information must not
+        # contain positive risk flags.
         if _is_negative_text(
             combined_text
         ):
@@ -773,6 +773,97 @@ def _remove_positive_safety_flags(
 
 
 # ============================================================
+# DETERMINISTIC CONFIDENCE FOR EXPLICIT SAFETY INFORMATION
+# ============================================================
+
+def _ensure_safety_confidence(
+    item: Dict[str, Any]
+) -> Dict[str, Any]:
+
+    domain = item.get(
+        "domain"
+    )
+
+    value = item.get(
+        "value"
+    )
+
+    evidence_text = item.get(
+        "evidence_text"
+    )
+
+    combined_text = (
+        f"{value or ''} "
+        f"{evidence_text or ''}"
+    ).strip()
+
+    # --------------------------------------------------------
+    # Never manufacture confidence for uncertainty.
+    # --------------------------------------------------------
+
+    if _is_uncertain_text(
+        combined_text
+    ):
+
+        return item
+
+    # --------------------------------------------------------
+    # Explicit safety statements are deterministic facts.
+    # Give them enough confidence to reach the safety engine.
+    # --------------------------------------------------------
+
+    if domain == "risk":
+
+        if _contains_self_harm_information(
+            combined_text
+        ):
+
+            item["confidence"] = max(
+                float(
+                    item.get(
+                        "confidence",
+                        0.0
+                    ) or 0.0
+                ),
+                0.95
+            )
+
+    elif domain == "safeguarding":
+
+        if _contains_safeguarding_information(
+            combined_text
+        ):
+
+            item["confidence"] = max(
+                float(
+                    item.get(
+                        "confidence",
+                        0.0
+                    ) or 0.0
+                ),
+                0.90
+            )
+
+    elif domain == "contraindications":
+
+        if _is_negative_text(
+            combined_text
+        ):
+
+            item["confidence"] = max(
+                float(
+                    item.get(
+                        "confidence",
+                        0.0
+                    ) or 0.0
+                ),
+                0.90
+            )
+
+    return item
+
+
+# ============================================================
 # LOCAL SAFETY VALIDATION
 # ============================================================
 
@@ -799,6 +890,22 @@ def _validate_extracted_evidence(
 
             continue
 
+        # ----------------------------------------------------
+        # FIRST:
+        # Correct safety domain.
+        # ----------------------------------------------------
+
+        item = _correct_safety_domain(
+            item
+        )
+
+        domain = item.get(
+            "domain"
+        )
+
+        if domain not in EVIDENCE_DOMAINS:
+            continue
+
         value = item.get(
             "value"
         )
@@ -814,26 +921,6 @@ def _validate_extracted_evidence(
             f"{value or ''} "
             f"{evidence_text}"
         ).strip()
-
-        # ----------------------------------------------------
-        # FIRST:
-        # Correct safety domain.
-        # ----------------------------------------------------
-
-        item = _correct_safety_domain(
-            item
-        )
-
-        domain = item.get(
-            "domain"
-        )
-
-        # ----------------------------------------------------
-        # If domain changed, make sure it remains valid.
-        # ----------------------------------------------------
-
-        if domain not in EVIDENCE_DOMAINS:
-            continue
 
         # ----------------------------------------------------
         # UNKNOWN / UNCERTAIN SAFETY ANSWERS
@@ -860,7 +947,7 @@ def _validate_extracted_evidence(
                 continue
 
         # ----------------------------------------------------
-        # NEGATIVE SAFETY EVIDENCE
+        # REMOVE POSITIVE FLAGS FROM NEGATIVE EVIDENCE
         # ----------------------------------------------------
 
         item = _remove_positive_safety_flags(
@@ -868,7 +955,7 @@ def _validate_extracted_evidence(
         )
 
         # ----------------------------------------------------
-        # Confidence
+        # CONFIDENCE
         # ----------------------------------------------------
 
         try:
@@ -896,6 +983,14 @@ def _validate_extracted_evidence(
         )
 
         item["confidence"] = confidence
+
+        # ----------------------------------------------------
+        # Deterministic safety confidence correction.
+        # ----------------------------------------------------
+
+        item = _ensure_safety_confidence(
+            item
+        )
 
         # ----------------------------------------------------
         # Status
@@ -1077,21 +1172,6 @@ def extract_clinical_evidence(
             content
         )
 
-        print(
-    "\n========== RAW EVIDENCE EXTRACTION JSON =========="
-)
-
-print(
-    json.dumps(
-        parsed,
-        ensure_ascii=False,
-        indent=2
-    )
-)
-
-print(
-    "==================================================\n"
-)
 
         extracted = parsed.get(
             "evidence",
