@@ -4,28 +4,46 @@ from typing import Any, Dict, List
 
 from openai import OpenAI
 
-from services.clinical_evidence_engine import (
-    EVIDENCE_DOMAINS
-)
+from services.clinical_evidence_engine import EVIDENCE_DOMAINS
 
 
 # ============================================================
 # PHASE 2B — CLINICAL EVIDENCE EXTRACTION
 # ============================================================
 #
-# The LLM performs semantic extraction.
+# Responsibilities:
 #
-# Deterministic validation protects safety-critical evidence.
+# 1. Extract only evidence established by the CLIENT.
+# 2. Never treat therapist questions as evidence.
+# 3. Preserve explicit negative statements.
+# 4. Keep uncertainty separate from established facts.
+# 5. Route self-harm/suicide information to risk.
+# 6. Keep safeguarding separate from self-harm/risk.
+# 7. Never invent missing information.
+# 8. Never allow extraction failure to break the conversation.
 #
-# IMPORTANT:
+# The extractor does NOT:
 #
-# - Therapist questions are NOT evidence.
-# - Client uncertainty is NOT evidence.
-# - Explicit negative safety statements ARE evidence.
-# - Self-harm / suicide information belongs to "risk".
-# - Safeguarding is reserved for actual safeguarding concerns.
+# - diagnose
+# - recommend treatment
+# - score the student
+# - decide tutor outcomes
+# - decide whether a treatment approach is correct
 #
 # ============================================================
+
+
+# ============================================================
+# ALLOWED STATUSES
+# ============================================================
+
+ALLOWED_STATUSES = {
+    "mentioned",
+    "clarified",
+    "understood",
+    "applied",
+    "integrated",
+}
 
 
 # ============================================================
@@ -36,75 +54,133 @@ EXTRACTION_SYSTEM_PROMPT = """
 You are the Clinical Evidence Extraction component of an educational
 hypnotherapy consultation simulator.
 
-Your task is NOT to diagnose the client.
+Your ONLY task is to identify information that has actually been
+established by the CLIENT in the supplied conversation.
 
-Your task is NOT to recommend treatment.
+You are NOT the therapist.
 
-Your task is NOT to score the student.
+You are NOT the tutor.
 
-Your task is ONLY to identify clinical evidence that has actually been
-established in the supplied therapist/client conversation.
+You are NOT a diagnostic system.
+
+You are NOT a treatment recommendation system.
+
+You are NOT a student-scoring system.
 
 ============================================================
-CORE RULE
+PRIMARY RULE
 ============================================================
 
-Only extract information actually stated or clearly established
-by the CLIENT.
+ONLY extract evidence from CLIENT statements.
 
-A therapist question is NOT evidence.
+Therapist/student questions are NEVER evidence by themselves.
 
-A client's uncertainty is NOT evidence of the thing being asked.
+Do not infer an answer merely because the therapist asked about it.
 
-A client's lack of memory is NOT evidence of the thing being asked.
+Example:
 
-Do not infer facts from the therapist's question.
+Therapist:
+"Are you currently taking medication?"
+
+Client:
+"I'm not sure."
+
+Do NOT extract:
+medication = yes
+
+Do NOT extract:
+medication = no
+
+There is no established medication fact.
+
+============================================================
+CLIENT-ONLY EVIDENCE
+============================================================
+
+If the therapist says:
+
+"Have you ever seen a psychiatrist?"
+
+that is NOT evidence of psychiatric care.
+
+If the client says:
+
+"No, I've never seen a psychiatrist."
+
+that IS evidence.
+
+If the client says:
+
+"Yes, I saw a psychiatrist last year."
+
+that IS evidence.
 
 ============================================================
 POLARITY
 ============================================================
 
-You MUST distinguish:
+Distinguish three situations.
 
 1. POSITIVE / ESTABLISHED
 
-Example:
-
 Client:
-"Yes, I have taken medication for anxiety."
+"I currently take medication for anxiety."
 
 This establishes medication information.
 
 2. NEGATIVE / ESTABLISHED
 
-Example:
-
 Client:
-"No, I don't have a history of self-harm."
+"I don't take any medication."
 
-This establishes a NEGATIVE self-harm-history fact.
-
-It does NOT establish positive self-harm risk.
+This establishes a negative medication statement.
 
 3. UNKNOWN / UNESTABLISHED
 
-Example:
-
 Client:
-"I'm not sure whether I've ever had thoughts like that."
+"I'm not sure whether I take anything for that."
 
-This does NOT establish self-harm thoughts.
-
-If the only client response is uncertainty, return no evidence
-for that domain unless another part of the conversation establishes
-an actual fact.
+Do NOT create a definite medication fact.
 
 ============================================================
-SAFETY DOMAIN DEFINITIONS
+UNCERTAINTY
+============================================================
+
+Common uncertainty expressions include:
+
+"I'm not sure."
+"I don't know."
+"I can't remember."
+"I don't remember."
+"I'd need to think about it."
+"I'd need to check."
+"I'm not certain."
+"I can't say for certain."
+"Maybe."
+"Perhaps."
+
+If uncertainty is the ONLY information provided about a domain,
+do not create a definite fact.
+
+However, do NOT discard a complete client statement merely because
+it contains an uncertainty phrase.
+
+Example:
+
+"I'm not sure when it started, but I know it became much worse
+after I was promoted."
+
+This contains useful evidence about worsening after promotion.
+
+Extract the established part.
+
+============================================================
+SAFETY DOMAINS
 ============================================================
 
 risk
 ----
+
 Use "risk" for explicit information concerning:
 
 - self-harm
@@ -114,124 +190,78 @@ Use "risk" for explicit information concerning:
 - thoughts of harming another person
 - violence/aggression risk
 - actual harm-related behaviour
-- explicit absence/history of the above
+- explicit absence/history of these issues
 
 Examples:
 
-"No, I don't have a history of self-harm."
--> risk
+"I've never harmed myself."
+-> risk, negative evidence
 
-"I have never attempted suicide."
--> risk
+"I've attempted suicide before."
+-> risk, positive evidence
 
-"I sometimes think about harming myself."
--> risk
+"Sometimes I think about harming myself."
+-> risk, positive evidence
 
-"I'm not sure whether I've had thoughts like that."
--> NO risk evidence
+"I'm not sure if I've ever had thoughts like that."
+-> no definite risk evidence
 
 IMPORTANT:
-Self-harm and suicide-related information belongs to "risk",
-NOT "safeguarding".
 
-safeguarding
-------------
-Use "safeguarding" only for actual safeguarding information,
-such as:
+Self-harm and suicide information belongs to "risk".
+
+Do NOT classify it as "safeguarding" merely because it is safety-related.
+
+============================================================
+SAFEGUARDING
+============================================================
+
+Use "safeguarding" only for actual safeguarding information such as:
 
 - abuse
 - neglect
 - exploitation
 - domestic abuse
-- child/adult safeguarding concerns
 - unsafe living situation
 - coercion
-- vulnerability requiring safeguarding consideration
+- child protection
+- vulnerable adult/child concerns
+- actual safeguarding concerns
 
-Do NOT classify self-harm history as safeguarding merely because
-it is safety-related.
+Do NOT use safeguarding merely because something is emotionally
+distressing or safety-related.
+
+============================================================
+OTHER SAFETY DOMAINS
+============================================================
 
 contraindications
 -----------------
-Use for actual contraindication information.
+Actual contraindication information.
 
 medical_history
 ---------------
-Use for actual medical history.
+Actual medical history.
 
 medication
 ----------
-Use for actual medication information.
+Actual medication information.
 
 psychological_care
 ------------------
-Use for actual psychological treatment/care.
+Actual psychological treatment/care.
 
 psychiatric_care
 ----------------
-Use for actual psychiatric treatment/care.
+Actual psychiatric treatment/care.
 
 healthcare_professionals
 ------------------------
-Use for actual healthcare professional involvement.
+Actual healthcare professional involvement.
 
 referral_permission
 -------------------
-Use for actual referral/permission information.
-
-============================================================
-NEGATION
-============================================================
-
-Preserve explicit negative statements as negative evidence when
-they are clinically relevant.
-
-Examples:
-
-"No history of self-harm."
-"No current medication."
-"I've never seen a psychiatrist."
-"No contraindications that I know of."
-
-Do NOT convert these into positive findings.
-
-Do NOT attach positive risk/safeguarding flags to negative statements.
-
-============================================================
-UNCERTAINTY
-============================================================
-
-The following indicate uncertainty:
-
-"I'm not sure."
-"I don't know."
-"I can't remember."
-"I'd need to think about it."
-"I'd need to check."
-"I'm not certain."
-"I can't say for certain."
-"I don't remember whether..."
-"Perhaps."
-"Maybe."
-
-If uncertainty is the entire answer, do NOT extract a definite
-clinical fact.
-
-Example:
-
-Therapist:
-"Have you ever had thoughts of harming yourself?"
-
-Client:
-"I'm not sure whether I've had thoughts like that."
-
-Return:
-
-{
-  "evidence": []
-}
-
-Do NOT convert the uncertainty into risk evidence.
+Actual referral or permission information.
 
 ============================================================
 BEHAVIOURAL INFORMATION
@@ -239,50 +269,55 @@ BEHAVIOURAL INFORMATION
 
 If the client says:
 
+"I go for walks to clear my head."
+
+This establishes a coping/behavioural fact.
+
+If the client says:
+
 "I don't really do much to relax."
 
-That is an established behavioural statement.
+This establishes that the client reports limited relaxation activity,
+but does NOT establish a specific activity.
 
 If the client says:
 
 "I'm not sure what I do to relax."
 
-That does NOT establish a specific relaxation activity.
+This does NOT establish a specific relaxation activity.
 
-Do not invent an activity.
-
-============================================================
-DOMAINS
-============================================================
-
-Allowed evidence domains:
-
-presenting_problem
-history
-symptoms
-triggers
-maintaining_factors
-functional_impact
-coping_strategies
-previous_hypnosis
-medical_history
-psychological_care
-psychiatric_care
-medication
-healthcare_professionals
-referral_permission
-why_now
-readiness
-goals
-risk
-contraindications
-safeguarding
-professional_boundaries
-modality
-treatment_reasoning
+Never invent a hobby, coping strategy, leisure activity or modality.
 
 ============================================================
-EVIDENCE STATUS
+MODALITY
+============================================================
+
+Only extract modality evidence when the client's actual language or
+behaviour provides a reasonable basis for it.
+
+Do not extract "Visual", "Auditory", or "Kinaesthetic" merely because
+the therapist asks:
+
+"Are you more visual or auditory?"
+
+A modality label must not be created from the therapist's question.
+
+============================================================
+TREATMENT REASONING
+============================================================
+
+Do not infer treatment reasoning merely because the therapist asks:
+
+"Why did you choose this approach?"
+
+Only extract treatment reasoning if the CLIENT actually provides
+reasoning relevant to their own understanding/experience.
+
+Student treatment reasoning belongs to the tutor/evaluation workflow,
+not automatically to client evidence.
+
+============================================================
+STATUS
 ============================================================
 
 Allowed statuses:
@@ -293,44 +328,42 @@ understood
 applied
 integrated
 
+Use "mentioned" unless the client clearly establishes greater depth.
+
+Do not use "applied" or "integrated" merely because a fact was stated.
+
 ============================================================
 CONFIDENCE
 ============================================================
 
-Confidence must represent how clearly the CLIENT established the fact.
-
-Use:
-
 0.90 - 1.00
-for an explicit, direct client statement.
+Explicit direct client statement.
 
 0.70 - 0.89
-for a clear but slightly less direct statement.
+Clear but slightly indirect client statement.
 
 0.50 - 0.69
-for a reasonably supported but less explicit statement.
+Reasonably supported but less explicit.
 
 Below 0.50
-only when the evidence is genuinely weak or ambiguous.
+Only for genuinely weak evidence.
 
-Do NOT output confidence 0.0 for a definite client statement.
-
-If no evidence exists, return an empty evidence list instead.
+If there is no evidence, return an empty evidence list.
 
 ============================================================
 OUTPUT
 ============================================================
 
-Return valid JSON using exactly:
+Return valid JSON only:
 
 {
   "evidence": [
     {
       "domain": "domain_name",
-      "value": "structured or concise evidence",
+      "value": "concise established evidence",
       "status": "mentioned",
       "confidence": 0.95,
-      "evidence_text": "short supporting evidence",
+      "evidence_text": "short client statement supporting it",
       "clinical_significance": null,
       "applied_to_reasoning": false,
       "flags": []
@@ -338,14 +371,30 @@ Return valid JSON using exactly:
   ]
 }
 
-If no meaningful evidence has been established:
+If no evidence has been established:
 
 {
   "evidence": []
 }
 
-Never create evidence merely because the therapist asked a question.
+Never invent evidence.
 """
+
+
+# ============================================================
+# TEXT NORMALISATION
+# ============================================================
+
+def _normalise_text(text: Any) -> str:
+    """
+    Normalise whitespace and case for deterministic checks.
+    """
+
+    return re.sub(
+        r"\s+",
+        " ",
+        str(text or "").lower().strip()
+    )
 
 
 # ============================================================
@@ -355,6 +404,12 @@ Never create evidence merely because the therapist asked a question.
 def _normalise_history(
     history: List[Dict[str, Any]]
 ) -> List[Dict[str, str]]:
+    """
+    Keep only valid therapist/client messages.
+
+    The original conversation structure is converted into a
+    predictable representation for the extraction model.
+    """
 
     cleaned = []
 
@@ -376,24 +431,22 @@ def _normalise_history(
             continue
 
         if role == "therapist":
-
             cleaned.append({
                 "speaker": "therapist",
-                "text": text
+                "text": text,
             })
 
         elif role == "client":
-
             cleaned.append({
                 "speaker": "client",
-                "text": text
+                "text": text,
             })
 
     return cleaned
 
 
 # ============================================================
-# TEXT HELPERS
+# UNCERTAINTY PHRASES
 # ============================================================
 
 UNCERTAINTY_PHRASES = [
@@ -408,20 +461,25 @@ UNCERTAINTY_PHRASES = [
 
     "i don't know",
     "i dont know",
+    "i do not know",
 
     "i can't remember",
     "i cant remember",
+    "i cannot remember",
 
     "i don't remember",
     "i dont remember",
+    "i do not remember",
 
     "i'd need to think",
     "id need to think",
+    "i would need to think",
 
     "i need to think",
 
     "i'd need to check",
     "id need to check",
+    "i would need to check",
 
     "i need to check",
 
@@ -431,10 +489,21 @@ UNCERTAINTY_PHRASES = [
 
     "can't say for certain",
     "cannot say for certain",
+
+    "maybe",
+    "perhaps",
 ]
 
 
+# ============================================================
+# NEGATIVE PHRASES
+# ============================================================
+
 NEGATIVE_PHRASES = [
+
+    # --------------------------------------------------------
+    # Risk
+    # --------------------------------------------------------
 
     "no history of self-harm",
     "no history of self harm",
@@ -443,14 +512,12 @@ NEGATIVE_PHRASES = [
     "no self harm history",
 
     "never harmed myself",
-    "never harmed themselves",
-
     "have never harmed myself",
-    "have never harmed themselves",
 
     "never attempted suicide",
-    "no suicide attempts",
+    "have never attempted suicide",
 
+    "no suicide attempts",
     "no history of suicide attempts",
 
     "no suicidal thoughts",
@@ -462,28 +529,63 @@ NEGATIVE_PHRASES = [
     "no thoughts of harming anyone",
     "no thoughts of harming someone",
 
+    # --------------------------------------------------------
+    # Safeguarding
+    # --------------------------------------------------------
+
     "no safeguarding concerns",
     "no safeguarding issues",
+
+    # --------------------------------------------------------
+    # General safety
+    # --------------------------------------------------------
 
     "no safety concerns",
     "no known risk factors",
     "no risk factors",
 
+    # --------------------------------------------------------
+    # Contraindications
+    # --------------------------------------------------------
+
     "no contraindications",
+
+    # --------------------------------------------------------
+    # Medication
+    # --------------------------------------------------------
 
     "no current medication",
     "not taking any medication",
-
+    "i'm not taking any medication",
+    "im not taking any medication",
     "no medication",
+
+    # --------------------------------------------------------
+    # Psychological care
+    # --------------------------------------------------------
 
     "never had psychological treatment",
     "never had counselling",
     "never had counseling",
 
     "no psychological treatment",
+
+    # --------------------------------------------------------
+    # Psychiatric care
+    # --------------------------------------------------------
+
+    "never had psychiatric treatment",
     "no psychiatric treatment",
+
+    "never seen a psychiatrist",
+    "i've never seen a psychiatrist",
+    "ive never seen a psychiatrist",
 ]
 
+
+# ============================================================
+# RISK PATTERNS
+# ============================================================
 
 SELF_HARM_PATTERNS = [
 
@@ -513,6 +615,9 @@ SELF_HARM_PATTERNS = [
     "thought about harming myself",
     "thought about harming themselves",
 
+    "thinking about harming myself",
+    "thinking about harming themselves",
+
     "harming someone else",
     "harm someone else",
     "harmed someone else",
@@ -521,6 +626,10 @@ SELF_HARM_PATTERNS = [
     "harm another person",
 ]
 
+
+# ============================================================
+# SAFEGUARDING PATTERNS
+# ============================================================
 
 SAFEGUARDING_PATTERNS = [
 
@@ -553,27 +662,20 @@ SAFEGUARDING_PATTERNS = [
 
 
 # ============================================================
-# NORMALISE TEXT
-# ============================================================
-
-def _normalise_text(
-    text: Any
-) -> str:
-
-    return re.sub(
-        r"\s+",
-        " ",
-        str(text or "").lower().strip()
-    )
-
-
-# ============================================================
 # UNCERTAINTY CHECK
 # ============================================================
 
 def _is_uncertain_text(
     text: str
 ) -> bool:
+    """
+    Detect whether a statement contains uncertainty language.
+
+    This is only a helper.
+
+    It must NOT automatically discard a complete statement because
+    uncertainty and established facts can coexist.
+    """
 
     value = _normalise_text(
         text
@@ -604,7 +706,7 @@ def _is_negative_text(
 
 
 # ============================================================
-# SAFETY DOMAIN DETECTION
+# RISK DETECTION
 # ============================================================
 
 def _contains_self_harm_information(
@@ -621,6 +723,10 @@ def _contains_self_harm_information(
     )
 
 
+# ============================================================
+# SAFEGUARDING DETECTION
+# ============================================================
+
 def _contains_safeguarding_information(
     text: str
 ) -> bool:
@@ -636,12 +742,146 @@ def _contains_safeguarding_information(
 
 
 # ============================================================
-# DETERMINISTIC SAFETY DOMAIN CORRECTION
+# CLIENT TEXT COLLECTION
+# ============================================================
+
+def _get_client_texts(
+    conversation: List[Dict[str, str]]
+) -> List[str]:
+    """
+    Return all client statements from the supplied conversation.
+    """
+
+    return [
+        message["text"]
+        for message in conversation
+        if message.get("speaker") == "client"
+        and message.get("text")
+    ]
+
+
+# ============================================================
+# EVIDENCE TEXT MATCHING
+# ============================================================
+
+def _evidence_is_supported_by_client(
+    item: Dict[str, Any],
+    client_texts: List[str],
+) -> bool:
+    """
+    Check whether the extracted evidence has some support in the
+    client's actual statements.
+
+    This is deliberately conservative.
+
+    We do not require exact sentence matching because the LLM may
+    summarise client evidence.
+
+    We do, however, reject evidence when the supporting text clearly
+    exists only in therapist questions.
+    """
+
+    if not client_texts:
+        return False
+
+    evidence_text = _normalise_text(
+        item.get(
+            "evidence_text",
+            ""
+        )
+    )
+
+    value = _normalise_text(
+        item.get(
+            "value",
+            ""
+        )
+    )
+
+    if not evidence_text and not value:
+        return False
+
+    client_combined = " ".join(
+        _normalise_text(text)
+        for text in client_texts
+    )
+
+    # --------------------------------------------------------
+    # Direct evidence-text support
+    # --------------------------------------------------------
+
+    if evidence_text:
+
+        if evidence_text in client_combined:
+            return True
+
+    # --------------------------------------------------------
+    # Value support
+    # --------------------------------------------------------
+
+    if value:
+
+        if value in client_combined:
+            return True
+
+    # --------------------------------------------------------
+    # Safety-specific deterministic support
+    #
+    # Safety evidence must have actual client wording containing
+    # the relevant safety concept.
+    # --------------------------------------------------------
+
+    domain = item.get(
+        "domain"
+    )
+
+    if domain == "risk":
+
+        return any(
+            _contains_self_harm_information(
+                text
+            )
+            for text in client_texts
+        )
+
+    if domain == "safeguarding":
+
+        return any(
+            _contains_safeguarding_information(
+                text
+            )
+            for text in client_texts
+        )
+
+    # --------------------------------------------------------
+    # For non-safety semantic evidence:
+    #
+    # If the model supplied a non-empty supporting statement,
+    # it is accepted here and the extraction prompt remains the
+    # primary semantic filter.
+    # --------------------------------------------------------
+
+    return bool(
+        evidence_text or value
+    )
+
+
+# ============================================================
+# SAFETY DOMAIN CORRECTION
 # ============================================================
 
 def _correct_safety_domain(
     item: Dict[str, Any]
 ) -> Dict[str, Any]:
+    """
+    Correct obvious safety-domain routing.
+
+    Self-harm/suicide -> risk.
+
+    Safeguarding language -> safeguarding.
+
+    This does not create evidence by itself.
+    """
 
     value = item.get(
         "value"
@@ -651,51 +891,41 @@ def _correct_safety_domain(
         "evidence_text"
     )
 
-    combined_text = (
+    combined = (
         f"{value or ''} "
         f"{evidence_text or ''}"
     ).strip()
 
     # --------------------------------------------------------
-    # Self-harm / suicide always belongs to risk.
+    # Risk has priority over safeguarding.
     # --------------------------------------------------------
 
     if _contains_self_harm_information(
-        combined_text
+        combined
     ):
 
         item["domain"] = "risk"
 
-        # Explicit negative risk information must not
-        # contain positive risk flags.
-        if _is_negative_text(
-            combined_text
-        ):
-
-            item["flags"] = []
-
         return item
 
     # --------------------------------------------------------
-    # Genuine safeguarding remains safeguarding.
+    # Genuine safeguarding.
     # --------------------------------------------------------
 
     if _contains_safeguarding_information(
-        combined_text
+        combined
     ):
 
         item["domain"] = "safeguarding"
-
-        return item
 
     return item
 
 
 # ============================================================
-# REMOVE POSITIVE FLAGS FROM NEGATIVE SAFETY EVIDENCE
+# REMOVE POSITIVE FLAGS FROM EXPLICIT NEGATIVE EVIDENCE
 # ============================================================
 
-def _remove_positive_safety_flags(
+def _clean_negative_flags(
     item: Dict[str, Any]
 ) -> Dict[str, Any]:
 
@@ -703,6 +933,17 @@ def _remove_positive_safety_flags(
         "domain"
     )
 
+    if domain not in {
+        "risk",
+        "safeguarding",
+        "contraindications",
+        "medication",
+        "psychological_care",
+        "psychiatric_care",
+    }:
+
+        return item
+
     value = item.get(
         "value"
     )
@@ -711,21 +952,13 @@ def _remove_positive_safety_flags(
         "evidence_text"
     )
 
-    combined_text = (
+    combined = (
         f"{value or ''} "
         f"{evidence_text or ''}"
-    ).strip()
-
-    if domain not in {
-        "risk",
-        "safeguarding",
-        "contraindications",
-    }:
-
-        return item
+    )
 
     if not _is_negative_text(
-        combined_text
+        combined
     ):
 
         return item
@@ -745,44 +978,175 @@ def _remove_positive_safety_flags(
     blocked_flags = {
 
         "risk",
-        "safety_concern",
-        "safeguarding",
-        "contraindication",
         "risk_positive",
-        "safeguarding_positive",
         "safety_risk",
+        "safety_concern",
+
+        "safeguarding",
+        "safeguarding_positive",
+
+        "contraindication",
+        "contraindications",
+
     }
 
-    cleaned_flags = []
-
-    for flag in flags:
-
-        flag_text = str(
-            flag
-        ).strip().lower()
-
-        if flag_text in blocked_flags:
-            continue
-
-        if flag not in cleaned_flags:
-            cleaned_flags.append(flag)
-
-    item["flags"] = cleaned_flags
+    item["flags"] = [
+        flag
+        for flag in flags
+        if str(flag).strip().lower()
+        not in blocked_flags
+    ]
 
     return item
 
 
 # ============================================================
-# DETERMINISTIC CONFIDENCE FOR EXPLICIT SAFETY INFORMATION
+# SAFETY CONFIDENCE
 # ============================================================
 
-def _ensure_safety_confidence(
+def _apply_safety_confidence(
     item: Dict[str, Any]
 ) -> Dict[str, Any]:
+    """
+    Increase confidence only when there is explicit relevant
+    client evidence.
+
+    This does not manufacture evidence.
+    """
 
     domain = item.get(
         "domain"
     )
+
+    combined = (
+        f"{item.get('value') or ''} "
+        f"{item.get('evidence_text') or ''}"
+    )
+
+    # --------------------------------------------------------
+    # Uncertainty should never receive artificial high confidence.
+    # --------------------------------------------------------
+
+    if _is_uncertain_text(
+        combined
+    ):
+        return item
+
+    try:
+        confidence = float(
+            item.get(
+                "confidence",
+                0.0
+            )
+        )
+    except (
+        TypeError,
+        ValueError
+    ):
+        confidence = 0.0
+
+    # --------------------------------------------------------
+    # Explicit risk evidence.
+    # --------------------------------------------------------
+
+    if (
+        domain == "risk"
+        and _contains_self_harm_information(
+            combined
+        )
+    ):
+
+        confidence = max(
+            confidence,
+            0.95
+        )
+
+    # --------------------------------------------------------
+    # Explicit safeguarding evidence.
+    # --------------------------------------------------------
+
+    elif (
+        domain == "safeguarding"
+        and _contains_safeguarding_information(
+            combined
+        )
+    ):
+
+        confidence = max(
+            confidence,
+            0.90
+        )
+
+    # --------------------------------------------------------
+    # Explicit contraindication statement.
+    # --------------------------------------------------------
+
+    elif (
+        domain == "contraindications"
+        and _is_negative_text(
+            combined
+        )
+    ):
+
+        confidence = max(
+            confidence,
+            0.90
+        )
+
+    item["confidence"] = max(
+        0.0,
+        min(
+            confidence,
+            1.0
+        )
+    )
+
+    return item
+
+
+# ============================================================
+# VALIDATE ONE ITEM
+# ============================================================
+
+def _validate_item(
+    item: Dict[str, Any],
+    client_texts: List[str],
+) -> Dict[str, Any] | None:
+    """
+    Validate and normalise one extracted evidence item.
+    """
+
+    if not isinstance(
+        item,
+        dict
+    ):
+        return None
+
+    domain = item.get(
+        "domain"
+    )
+
+    if domain not in EVIDENCE_DOMAINS:
+        return None
+
+    # --------------------------------------------------------
+    # Correct safety routing.
+    # --------------------------------------------------------
+
+    item = _correct_safety_domain(
+        item
+    )
+
+    domain = item.get(
+        "domain"
+    )
+
+    if domain not in EVIDENCE_DOMAINS:
+        return None
+
+    # --------------------------------------------------------
+    # Basic fields.
+    # --------------------------------------------------------
 
     value = item.get(
         "value"
@@ -792,256 +1156,175 @@ def _ensure_safety_confidence(
         "evidence_text"
     )
 
-    combined_text = (
+    if value is None and not evidence_text:
+        return None
+
+    # --------------------------------------------------------
+    # Reject uncertainty-only safety evidence.
+    # --------------------------------------------------------
+
+    combined = (
         f"{value or ''} "
         f"{evidence_text or ''}"
     ).strip()
 
-    # --------------------------------------------------------
-    # Never manufacture confidence for uncertainty.
-    # --------------------------------------------------------
-
-    if _is_uncertain_text(
-        combined_text
+    if (
+        _is_uncertain_text(combined)
+        and domain in {
+            "risk",
+            "safeguarding",
+            "contraindications",
+            "medical_history",
+            "medication",
+            "psychological_care",
+            "psychiatric_care",
+            "healthcare_professionals",
+            "referral_permission",
+        }
+        and not _is_negative_text(combined)
     ):
-
-        return item
+        return None
 
     # --------------------------------------------------------
-    # Explicit safety statements are deterministic facts.
-    # Give them enough confidence to reach the safety engine.
+    # Verify client support.
     # --------------------------------------------------------
 
-    if domain == "risk":
+    if not _evidence_is_supported_by_client(
+        item,
+        client_texts,
+    ):
+        return None
 
-        if _contains_self_harm_information(
-            combined_text
-        ):
+    # --------------------------------------------------------
+    # Status.
+    # --------------------------------------------------------
 
-            item["confidence"] = max(
-                float(
-                    item.get(
-                        "confidence",
-                        0.0
-                    ) or 0.0
-                ),
-                0.95
+    status = item.get(
+        "status",
+        "mentioned"
+    )
+
+    if status not in ALLOWED_STATUSES:
+        status = "mentioned"
+
+    item["status"] = status
+
+    # --------------------------------------------------------
+    # Confidence.
+    # --------------------------------------------------------
+
+    try:
+        confidence = float(
+            item.get(
+                "confidence",
+                0.5
             )
+        )
+    except (
+        TypeError,
+        ValueError
+    ):
+        confidence = 0.5
 
-    elif domain == "safeguarding":
+    item["confidence"] = max(
+        0.0,
+        min(
+            confidence,
+            1.0
+        )
+    )
 
-        if _contains_safeguarding_information(
-            combined_text
-        ):
+    # --------------------------------------------------------
+    # Flags.
+    # --------------------------------------------------------
 
-            item["confidence"] = max(
-                float(
-                    item.get(
-                        "confidence",
-                        0.0
-                    ) or 0.0
-                ),
-                0.90
-            )
+    flags = item.get(
+        "flags",
+        []
+    )
 
-    elif domain == "contraindications":
+    if not isinstance(
+        flags,
+        list
+    ):
+        flags = []
 
-        if _is_negative_text(
-            combined_text
-        ):
+    item["flags"] = flags
 
-            item["confidence"] = max(
-                float(
-                    item.get(
-                        "confidence",
-                        0.0
-                    ) or 0.0
-                ),
-                0.90
-            )
+    # --------------------------------------------------------
+    # Applied-to-reasoning.
+    #
+    # The extractor should be conservative here.
+    # It should not claim that the student applied evidence
+    # merely because the client mentioned something.
+    # --------------------------------------------------------
+
+    item["applied_to_reasoning"] = bool(
+        item.get(
+            "applied_to_reasoning",
+            False
+        )
+    )
+
+    # --------------------------------------------------------
+    # Clean negative safety flags.
+    # --------------------------------------------------------
+
+    item = _clean_negative_flags(
+        item
+    )
+
+    # --------------------------------------------------------
+    # Safety confidence.
+    # --------------------------------------------------------
+
+    item = _apply_safety_confidence(
+        item
+    )
 
     return item
 
 
 # ============================================================
-# LOCAL SAFETY VALIDATION
+# DEDUPLICATE EVIDENCE
 # ============================================================
 
-def _validate_extracted_evidence(
+def _deduplicate_evidence(
     evidence: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
+    """
+    Prevent duplicate evidence records from being returned
+    for the same domain/value/supporting statement.
+    """
 
-    validated = []
+    result = []
+
+    seen = set()
 
     for item in evidence:
 
-        if not isinstance(
-            item,
-            dict
-        ):
+        key = (
+            item.get("domain"),
+            _normalise_text(
+                item.get("value", "")
+            ),
+            _normalise_text(
+                item.get("evidence_text", "")
+            ),
+        )
 
+        if key in seen:
             continue
 
-        domain = item.get(
-            "domain"
-        )
+        seen.add(key)
 
-        if domain not in EVIDENCE_DOMAINS:
+        result.append(item)
 
-            continue
-
-        # ----------------------------------------------------
-        # FIRST:
-        # Correct safety domain.
-        # ----------------------------------------------------
-
-        item = _correct_safety_domain(
-            item
-        )
-
-        domain = item.get(
-            "domain"
-        )
-
-        if domain not in EVIDENCE_DOMAINS:
-            continue
-
-        value = item.get(
-            "value"
-        )
-
-        evidence_text = str(
-            item.get(
-                "evidence_text",
-                ""
-            )
-        )
-
-        combined_text = (
-            f"{value or ''} "
-            f"{evidence_text}"
-        ).strip()
-
-        # ----------------------------------------------------
-        # UNKNOWN / UNCERTAIN SAFETY ANSWERS
-        # ----------------------------------------------------
-
-        if _is_uncertain_text(
-            combined_text
-        ):
-
-            if domain in {
-
-                "risk",
-                "safeguarding",
-                "contraindications",
-                "medical_history",
-                "medication",
-                "psychological_care",
-                "psychiatric_care",
-                "healthcare_professionals",
-                "referral_permission",
-
-            }:
-
-                continue
-
-        # ----------------------------------------------------
-        # REMOVE POSITIVE FLAGS FROM NEGATIVE EVIDENCE
-        # ----------------------------------------------------
-
-        item = _remove_positive_safety_flags(
-            item
-        )
-
-        # ----------------------------------------------------
-        # CONFIDENCE
-        # ----------------------------------------------------
-
-        try:
-
-            confidence = float(
-                item.get(
-                    "confidence",
-                    0.5
-                )
-            )
-
-        except (
-            TypeError,
-            ValueError
-        ):
-
-            confidence = 0.5
-
-        confidence = max(
-            0.0,
-            min(
-                confidence,
-                1.0
-            )
-        )
-
-        item["confidence"] = confidence
-
-        # ----------------------------------------------------
-        # Deterministic safety confidence correction.
-        # ----------------------------------------------------
-
-        item = _ensure_safety_confidence(
-            item
-        )
-
-        # ----------------------------------------------------
-        # Status
-        # ----------------------------------------------------
-
-        status = item.get(
-            "status",
-            "mentioned"
-        )
-
-        if status not in {
-
-            "mentioned",
-            "clarified",
-            "understood",
-            "applied",
-            "integrated",
-
-        }:
-
-            status = "mentioned"
-
-        item["status"] = status
-
-        # ----------------------------------------------------
-        # Flags
-        # ----------------------------------------------------
-
-        flags = item.get(
-            "flags",
-            []
-        )
-
-        if not isinstance(
-            flags,
-            list
-        ):
-
-            flags = []
-
-        item["flags"] = flags
-
-        validated.append(
-            item
-        )
-
-    return validated
+    return result
 
 
 # ============================================================
-# MAIN EXTRACTION
+# EXTRACT CLINICAL EVIDENCE
 # ============================================================
 
 def extract_clinical_evidence(
@@ -1051,67 +1334,110 @@ def extract_clinical_evidence(
     latest_client_reply: str,
 ) -> List[Dict[str, Any]]:
     """
-    Extract clinical evidence from the conversation.
+    Extract clinical evidence from a therapist/client conversation.
 
-    The LLM performs semantic extraction.
+    Only client-established information should become evidence.
 
-    Deterministic validation then protects safety-critical
-    classification and polarity.
+    Extraction failure returns [] and never breaks the consultation.
     """
+
+    # ========================================================
+    # NORMALISE EXISTING HISTORY
+    # ========================================================
 
     conversation = _normalise_history(
         history
     )
 
+    # ========================================================
+    # AVOID DUPLICATING CURRENT EXCHANGE
+    # ========================================================
+
+    latest_student_text = str(
+        latest_student_text or ""
+    ).strip()
+
+    latest_client_reply = str(
+        latest_client_reply or ""
+    ).strip()
+
     # --------------------------------------------------------
-    # Add current therapist question
+    # Add latest therapist message only if it is not already
+    # the final matching therapist message.
     # --------------------------------------------------------
 
     if latest_student_text:
 
-        conversation.append({
+        already_present = (
+            bool(conversation)
+            and conversation[-1].get(
+                "speaker"
+            ) == "therapist"
+            and conversation[-1].get(
+                "text"
+            ) == latest_student_text
+        )
 
-            "speaker":
-                "therapist",
+        if not already_present:
 
-            "text":
-                latest_student_text.strip()
-
-        })
+            conversation.append({
+                "speaker": "therapist",
+                "text": latest_student_text,
+            })
 
     # --------------------------------------------------------
-    # Add current client response
+    # Add latest client message only if it is not already
+    # present.
     # --------------------------------------------------------
 
     if latest_client_reply:
 
-        conversation.append({
+        already_present = (
+            bool(conversation)
+            and conversation[-1].get(
+                "speaker"
+            ) == "client"
+            and conversation[-1].get(
+                "text"
+            ) == latest_client_reply
+        )
 
-            "speaker":
-                "client",
+        if not already_present:
 
-            "text":
-                latest_client_reply.strip()
+            conversation.append({
+                "speaker": "client",
+                "text": latest_client_reply,
+            })
 
-        })
+    # ========================================================
+    # NO CLIENT RESPONSE
+    # ========================================================
 
-    # --------------------------------------------------------
-    # Nothing to analyse
-    # --------------------------------------------------------
+    client_texts = _get_client_texts(
+        conversation
+    )
 
-    if not conversation:
-
+    if not client_texts:
         return []
 
+    # ========================================================
+    # EXTRACTION PAYLOAD
+    # ========================================================
+
     payload = {
+        "conversation": conversation,
 
-        "conversation":
-            conversation
-
+        # Explicitly identify the latest exchange separately.
+        # This helps the model focus on the new evidence while
+        # retaining the previous context.
+        "latest_exchange": {
+            "therapist": latest_student_text,
+            "client": latest_client_reply,
+        },
     }
 
     # ========================================================
-    # OPENAI EXTRACTION
+    # OPENAI REQUEST
     # ========================================================
 
     try:
@@ -1123,39 +1449,44 @@ def extract_clinical_evidence(
             messages=[
 
                 {
-
-                    "role":
-                        "system",
-
-                    "content":
-                        EXTRACTION_SYSTEM_PROMPT
-
+                    "role": "system",
+                    "content": EXTRACTION_SYSTEM_PROMPT,
                 },
 
                 {
-
-                    "role":
-                        "user",
-
-                    "content":
-                        json.dumps(
-                            payload,
-                            ensure_ascii=False
-                        )
-
-                }
+                    "role": "user",
+                    "content": json.dumps(
+                        payload,
+                        ensure_ascii=False,
+                    ),
+                },
 
             ],
 
             response_format={
-                "type":
-                    "json_object"
+                "type": "json_object"
             },
 
             temperature=0,
 
-            timeout=15
+            timeout=15,
         )
+
+    except Exception as exc:
+
+        print(
+            "[Clinical Evidence Extraction Error]",
+            type(exc).__name__,
+            str(exc),
+        )
+
+        return []
+
+    # ========================================================
+    # RESPONSE CONTENT
+    # ========================================================
+
+    try:
 
         content = (
             response
@@ -1164,191 +1495,113 @@ def extract_clinical_evidence(
             .content
         )
 
-        if not content:
+    except Exception as exc:
 
-            return []
+        print(
+            "[Clinical Evidence Extraction Response Error]",
+            type(exc).__name__,
+            str(exc),
+        )
+
+        return []
+
+    if not content:
+        return []
+
+    # ========================================================
+    # PARSE JSON
+    # ========================================================
+
+    try:
 
         parsed = json.loads(
             content
         )
 
-
-        extracted = parsed.get(
-            "evidence",
-            []
-        )
-
-        if not isinstance(
-            extracted,
-            list
-        ):
-
-            return []
-
-        valid_evidence = []
-
-        # ====================================================
-        # NORMALISE LLM OUTPUT
-        # ====================================================
-
-        for item in extracted:
-
-            if not isinstance(
-                item,
-                dict
-            ):
-
-                continue
-
-            domain = item.get(
-                "domain"
-            )
-
-            if domain not in EVIDENCE_DOMAINS:
-
-                continue
-
-            status = item.get(
-                "status",
-                "mentioned"
-            )
-
-            if status not in {
-
-                "mentioned",
-                "clarified",
-                "understood",
-                "applied",
-                "integrated",
-
-            }:
-
-                status = "mentioned"
-
-            try:
-
-                confidence = float(
-                    item.get(
-                        "confidence",
-                        0.5
-                    )
-                )
-
-            except (
-                TypeError,
-                ValueError
-            ):
-
-                confidence = 0.5
-
-            confidence = max(
-                0.0,
-                min(
-                    confidence,
-                    1.0
-                )
-            )
-
-            flags = item.get(
-                "flags",
-                []
-            )
-
-            if not isinstance(
-                flags,
-                list
-            ):
-
-                flags = []
-
-            valid_evidence.append({
-
-                "domain":
-                    domain,
-
-                "value":
-                    item.get(
-                        "value"
-                    ),
-
-                "status":
-                    status,
-
-                "confidence":
-                    confidence,
-
-                "evidence_text":
-                    item.get(
-                        "evidence_text"
-                    ),
-
-                "clinical_significance":
-                    item.get(
-                        "clinical_significance"
-                    ),
-
-                "applied_to_reasoning":
-                    bool(
-                        item.get(
-                            "applied_to_reasoning",
-                            False
-                        )
-                    ),
-
-                "flags":
-                    flags
-
-            })
-
-        # ====================================================
-        # FINAL DETERMINISTIC VALIDATION
-        # ====================================================
-
-        valid_evidence = (
-            _validate_extracted_evidence(
-                valid_evidence
-            )
-        )
-
-        # ====================================================
-        # DEBUG
-        # ====================================================
+    except (
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
 
         print(
-            "\n========== EVIDENCE VALIDATION =========="
-        )
-
-        print(
-            "RAW EXTRACTED:"
-        )
-
-        print(
-            extracted
-        )
-
-        print(
-            "VALIDATED:"
-        )
-
-        print(
-            valid_evidence
-        )
-
-        print(
-            "==========================================\n"
-        )
-
-        return valid_evidence
-
-    except Exception as exc:
-
-        print(
-            "[Clinical Evidence Extraction Error]",
+            "[Clinical Evidence JSON Parse Error]",
             type(exc).__name__,
-            str(exc)
+            str(exc),
         )
-
-        # Evidence extraction must NEVER break
-        # the actual client conversation.
 
         return []
+
+    # ========================================================
+    # EXTRACT LIST
+    # ========================================================
+
+    extracted = parsed.get(
+        "evidence",
+        []
+    )
+
+    if not isinstance(
+        extracted,
+        list
+    ):
+        return []
+
+    # ========================================================
+    # VALIDATE
+    # ========================================================
+
+    validated = []
+
+    for item in extracted:
+
+        validated_item = _validate_item(
+            item,
+            client_texts,
+        )
+
+        if validated_item is not None:
+
+            validated.append(
+                validated_item
+            )
+
+    # ========================================================
+    # DEDUPLICATE
+    # ========================================================
+
+    validated = _deduplicate_evidence(
+        validated
+    )
+
+    # ========================================================
+    # DEBUG OUTPUT
+    # ========================================================
+
+    print(
+        "\n========== CLINICAL EVIDENCE =========="
+    )
+
+    print(
+        "Extracted items:",
+        len(extracted)
+    )
+
+    print(
+        "Validated items:",
+        len(validated)
+    )
+
+    for item in validated:
+
+        print(
+            f"- {item.get('domain')}: "
+            f"{item.get('value')} "
+            f"(confidence={item.get('confidence')})"
+        )
+
+    print(
+        "========================================\n"
+    )
+
+    return validated

@@ -5,6 +5,7 @@ from openai import OpenAI
 
 import os
 import json
+from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
@@ -68,8 +69,10 @@ load_dotenv()
 # APP
 # ============================================================
 
-app = FastAPI()
-
+app = FastAPI(
+    title="Level 2 Clinical Hypnotherapy Simulator",
+    version="2.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -80,30 +83,48 @@ app.add_middleware(
 )
 
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
-)
+    api_key=OPENAI_API_KEY
+) if OPENAI_API_KEY else None
 
 
 # ============================================================
 # SESSION EVIDENCE
 # ============================================================
 
-session_evidence = {}
+session_evidence: Dict[str, Dict[str, Any]] = {}
+
+
+def get_session_key(
+    session_id: str,
+    client_name: str
+) -> str:
+    """
+    Prevent evidence from different clients accidentally sharing
+    the same session state.
+    """
+
+    return f"{session_id}:{client_name}"
 
 
 def get_session_evidence(
-    session_id,
-    client_name
+    session_id: str,
+    client_name: str
 ):
+    key = get_session_key(
+        session_id,
+        client_name
+    )
 
-    if session_id not in session_evidence:
+    if key not in session_evidence:
 
-        session_evidence[session_id] = create_evidence_state(
+        session_evidence[key] = create_evidence_state(
             client_name=client_name
         )
 
-    return session_evidence[session_id]
+    return session_evidence[key]
 
 
 # ============================================================
@@ -120,9 +141,9 @@ class Message(BaseModel):
         default_factory=list
     )
 
-    sessionId: str | None = None
+    sessionId: Optional[str] = None
 
-    treatmentApproach: str = "cbh"
+    treatmentApproach: Optional[str] = None
 
 
 class TutorRequest(BaseModel):
@@ -135,40 +156,163 @@ class TutorRequest(BaseModel):
 
 
 # ============================================================
+# CASE HELPERS
+# ============================================================
+
+def get_client_case(
+    client_name: str
+) -> Dict[str, Any]:
+
+    case = case_histories.get(
+        client_name
+    )
+
+    if isinstance(case, dict):
+        return case
+
+    return {}
+
+
+def normalise_approach(
+    value: Any
+) -> Optional[str]:
+
+    if value is None:
+        return None
+
+    text = str(value).strip().lower()
+
+    if not text:
+        return None
+
+    aliases = {
+
+        "cbh":
+            "cbh",
+
+        "cognitive behavioural":
+            "cbh",
+
+        "cognitive behavioral":
+            "cbh",
+
+        "cognitive behavioural hypnotherapy":
+            "cbh",
+
+        "cognitive behavioral hypnotherapy":
+            "cbh",
+
+        "solution-focused":
+            "solution_focused",
+
+        "solution focused":
+            "solution_focused",
+
+        "solution-focused hypnotherapy":
+            "solution_focused",
+
+        "solution focused hypnotherapy":
+            "solution_focused",
+
+        "sh":
+            "solution_focused",
+
+        "regression":
+            "regression",
+
+        "regression hypnotherapy":
+            "regression",
+
+        "ericksonian":
+            "ericksonian",
+
+        "ericksonian hypnotherapy":
+            "ericksonian",
+
+        "indirect":
+            "ericksonian",
+    }
+
+    return aliases.get(
+        text,
+        text
+    )
+
+
+def get_authoritative_treatment_approach(
+    client_name: str,
+    requested_approach: Optional[str],
+    case_data: Dict[str, Any]
+) -> str:
+    """
+    Determine the treatment approach used by the simulation.
+
+    Priority:
+
+    1. Explicit authored case assignment.
+    2. Explicit frontend assignment if the case does not contain
+       an assignment.
+
+    This prevents the frontend/default value from silently
+    overriding an authoritative case assignment.
+    """
+
+    identity = case_data.get(
+        "identity",
+        {}
+    )
+
+    treatment_reasoning = case_data.get(
+        "treatment_reasoning",
+        {}
+    )
+
+    authored_values = [
+
+        identity.get(
+            "therapeutic_profile"
+        ),
+
+        treatment_reasoning.get(
+            "preferred_approach"
+        ),
+    ]
+
+    for value in authored_values:
+
+        approach = normalise_approach(
+            value
+        )
+
+        if approach:
+            return approach
+
+    requested = normalise_approach(
+        requested_approach
+    )
+
+    if requested:
+        return requested
+
+    # No treatment assignment exists in the case.
+    # Keep the system deterministic without silently selecting
+    # CBH as a clinical conclusion.
+    return "cbh"
+
+
+# ============================================================
 # BEHAVIOURAL QUESTION DETECTION
 # ============================================================
 
 def detect_behavioural_question(
     question: str
 ) -> bool:
-    """
-    Detect clear questions about:
-
-    - relaxation
-    - hobbies
-    - enjoyment
-    - free time
-    - downtime
-    - spare time
-    - activities outside work
-    - switching off
-
-    These are clear questions even when the authored case contains
-    no answer.
-
-    The client should answer the topic rather than pretending not
-    to understand the question.
-    """
 
     text = (
         question or ""
     ).lower().strip()
 
     behavioural_patterns = [
-
-        # ----------------------------------------------------
-        # RELAXATION
-        # ----------------------------------------------------
 
         "what do you do to relax",
         "what do you usually do to relax",
@@ -178,10 +322,6 @@ def detect_behavioural_question(
         "what helps you unwind",
         "what do you do to unwind",
 
-        # ----------------------------------------------------
-        # HOBBIES / ENJOYMENT
-        # ----------------------------------------------------
-
         "what are your hobbies",
         "what do you enjoy",
         "what do you enjoy doing",
@@ -190,36 +330,21 @@ def detect_behavioural_question(
         "what do you do for enjoyment",
         "what activities do you enjoy",
 
-        # ----------------------------------------------------
-        # FREE TIME
-        # ----------------------------------------------------
-
         "what do you do in your free time",
         "what do you usually do in your free time",
         "how do you spend your free time",
+
         "what do you do outside work",
         "what do you usually do outside work",
         "what do you do when you're not working",
         "what do you usually do when you're not working",
 
-        # ----------------------------------------------------
-        # DOWNTIME
-        # ----------------------------------------------------
-
         "what do you do during your downtime",
         "how do you spend your downtime",
         "what do you do in your downtime",
 
-        # ----------------------------------------------------
-        # SPARE TIME
-        # ----------------------------------------------------
-
         "what do you do in your spare time",
         "what do you usually do in your spare time",
-
-        # ----------------------------------------------------
-        # SWITCHING OFF
-        # ----------------------------------------------------
 
         "how do you switch off",
         "what helps you switch off",
@@ -237,71 +362,48 @@ def detect_behavioural_question(
 # ============================================================
 
 def has_behavioural_information(
-    case_data: dict
+    case_data: Dict[str, Any]
 ) -> bool:
-    """
-    Determine whether the authored case actually contains
-    behavioural information relevant to the student's question.
-
-    Empty values are treated as undefined.
-
-    This function deliberately checks several possible locations
-    because different case structures may store behavioural data
-    in different sections.
-    """
 
     possible_fields = [
 
         "coping_strategies",
-
         "relaxation_activities",
-
         "relaxation_activity",
-
         "hobbies",
-
         "hobby",
-
         "enjoyable_activities",
-
         "enjoyable_activity",
-
         "leisure_activities",
-
         "leisure_activity",
-
         "free_time_activities",
-
         "free_time_activity",
-
         "downtime_activities",
-
         "downtime_activity",
-
     ]
 
-    # --------------------------------------------------------
-    # ROOT LEVEL
-    # --------------------------------------------------------
+    def meaningful(value: Any) -> bool:
+
+        if value is None:
+            return False
+
+        if isinstance(value, str):
+            return bool(value.strip())
+
+        if isinstance(
+            value,
+            (list, tuple, set, dict)
+        ):
+            return len(value) > 0
+
+        return True
 
     for field in possible_fields:
 
-        value = case_data.get(
-            field
-        )
-
-        if value not in (
-            None,
-            "",
-            [],
-            {}
+        if meaningful(
+            case_data.get(field)
         ):
-
             return True
-
-    # --------------------------------------------------------
-    # COMMON NESTED SECTIONS
-    # --------------------------------------------------------
 
     sections = [
 
@@ -326,102 +428,16 @@ def has_behavioural_information(
             section,
             dict
         ):
-
             continue
 
         for field in possible_fields:
 
-            value = section.get(
-                field
-            )
-
-            if value not in (
-                None,
-                "",
-                [],
-                {}
+            if meaningful(
+                section.get(field)
             ):
-
                 return True
 
     return False
-
-
-# ============================================================
-# UNDEFINED BEHAVIOURAL RESPONSE
-# ============================================================
-
-def get_undefined_behaviour_response(
-    question: str,
-    recent_client_messages=None
-) -> str:
-    """
-    Deterministic response when the student asks a clear
-    behavioural question but the authored case contains no
-    corresponding behavioural information.
-
-    IMPORTANT:
-
-    This function:
-
-    - understands the question
-    - does not ask for rephrasing
-    - does not invent a hobby
-    - does not invent a coping strategy
-    - does not invent a relaxation activity
-    - varies wording
-    """
-
-    recent_client_messages = (
-        recent_client_messages or []
-    )
-
-    previous_text = " ".join(
-        str(message).lower()
-        for message in recent_client_messages[-8:]
-        if message
-    )
-
-    responses = [
-
-        "I haven't really thought about what I do to relax lately.",
-
-        "These days, I can't really think of anything specific that I do just to relax.",
-
-        "I haven't been doing much specifically for relaxation recently.",
-
-        "It's difficult to think of anything particular that I do in my free time lately.",
-
-        "I don't really have a specific activity that I use to unwind these days.",
-
-        "Lately, I haven't really focused on doing things just for enjoyment.",
-
-        "I suppose I haven't really been making much time for relaxation lately.",
-
-        "I can't think of anything specific that I regularly do when I'm not working.",
-
-        "There isn't really anything specific that comes to mind when I think about relaxing.",
-
-        "Recently, most of my attention has been taken up by managing the anxiety, rather than doing things for myself.",
-    ]
-
-    # --------------------------------------------------------
-    # Prefer wording not recently used
-    # --------------------------------------------------------
-
-    for response in responses:
-
-        if response.lower() not in previous_text:
-
-            return response
-
-    # --------------------------------------------------------
-    # Final fallback
-    # --------------------------------------------------------
-
-    return (
-        "I haven't really been doing much for relaxation lately."
-    )
 
 
 # ============================================================
@@ -456,6 +472,134 @@ def get_unestablished_safety_state():
 
 
 # ============================================================
+# EVIDENCE MERGING
+# ============================================================
+
+def _evidence_identity(
+    item: Dict[str, Any]
+):
+    return (
+        item.get("domain"),
+        str(
+            item.get("value")
+        ).strip().lower(),
+        str(
+            item.get("evidence_text")
+        ).strip().lower()
+    )
+
+
+def merge_evidence_for_safety(
+    evidence_state
+) -> List[Dict[str, Any]]:
+    """
+    Convert the accumulated tutor evidence into a list suitable
+    for safety evaluation.
+
+    The complete session evidence is used rather than only the
+    latest extracted message.
+    """
+
+    evidence = []
+
+    if not isinstance(
+        evidence_state,
+        dict
+    ):
+        return evidence
+
+    domains = evidence_state.get(
+        "domains",
+        {}
+    )
+
+    if isinstance(
+        domains,
+        dict
+    ):
+
+        for domain, item in domains.items():
+
+            if not isinstance(
+                item,
+                dict
+            ):
+                continue
+
+            if not item.get(
+                "value"
+            ):
+                continue
+
+            evidence.append({
+
+                "domain":
+                    domain,
+
+                "value":
+                    item.get("value"),
+
+                "status":
+                    item.get(
+                        "status",
+                        "mentioned"
+                    ),
+
+                "confidence":
+                    item.get(
+                        "confidence",
+                        0
+                    ),
+
+                "evidence_text":
+                    item.get(
+                        "evidence_text"
+                    ),
+
+                "clinical_significance":
+                    item.get(
+                        "clinical_significance"
+                    ),
+
+                "applied_to_reasoning":
+                    item.get(
+                        "applied_to_reasoning",
+                        False
+                    ),
+
+                "flags":
+                    item.get(
+                        "flags",
+                        []
+                    )
+            })
+
+    return evidence
+
+
+# ============================================================
+# PROTECTED QUESTION HANDLER
+# ============================================================
+
+def build_protected_response(
+    protected: Dict[str, Any]
+):
+    return {
+
+        "reply":
+            protected.get(
+                "response",
+                "I'm not sure how to answer that."
+            ),
+
+        "domain":
+            protected.get(
+                "domain"
+            )
+    }
+
+
+# ============================================================
 # CHAT
 # ============================================================
 
@@ -476,6 +620,26 @@ async def chat(
     session_id = (
         msg.sessionId
         or f"{client_type}_session"
+    )
+
+    # ========================================================
+    # AUTHORITATIVE CASE
+    # ========================================================
+
+    case_data = get_client_case(
+        client_type
+    )
+
+    # ========================================================
+    # AUTHORITATIVE TREATMENT APPROACH
+    # ========================================================
+
+    treatment_approach = (
+        get_authoritative_treatment_approach(
+            client_name=client_type,
+            requested_approach=msg.treatmentApproach,
+            case_data=case_data
+        )
     )
 
     # ========================================================
@@ -512,20 +676,16 @@ async def chat(
             msg.text
         )
 
-    except Exception:
+    except Exception as exc:
+
+        print(
+            "Conversation state update error:",
+            exc
+        )
 
         state = get_state(
             session_id
         )
-
-    # ========================================================
-    # AUTHORITATIVE CASE
-    # ========================================================
-
-    case_data = case_histories.get(
-        client_type,
-        {}
-    )
 
     # ========================================================
     # DYNAMIC BEHAVIOUR
@@ -535,15 +695,27 @@ async def chat(
 
         client_name=client_type,
 
-        trust=state["trust"],
+        trust=state.get(
+            "trust",
+            50
+        ),
 
-        distress=state["distress"],
+        distress=state.get(
+            "distress",
+            30
+        ),
 
-        resistance=state["resistance"],
+        resistance=state.get(
+            "resistance",
+            20
+        ),
 
-        risk=state["risk_flag"],
+        risk=state.get(
+            "risk_flag",
+            "none"
+        ),
 
-        treatment_approach=msg.treatmentApproach
+        treatment_approach=treatment_approach
     )
 
     # ========================================================
@@ -585,51 +757,16 @@ async def chat(
         "==============================================\n"
     )
 
-    # ========================================================
-    # PROTECTED QUESTION HANDLED
-    #
-    # NEVER SEND THESE QUESTIONS THROUGH THE LLM.
-    #
-    # This prevents:
-    #
-    # "Could you rephrase that?"
-    #
-    # from replacing a deterministic clinical answer.
-    # ========================================================
-
     if protected.get("handled"):
 
-        reply = protected.get(
-            "response"
-        )
-
-        print(
-            "\n========== PROTECTED RESPONSE =========="
-        )
-
-        print(
-            "CLIENT:",
-            client_type
-        )
-
-        print(
-            "DOMAIN:",
-            protected.get("domain")
-        )
-
-        print(
-            "REPLY:",
-            reply
-        )
-
-        print(
-            "========================================\n"
+        protected_response = build_protected_response(
+            protected
         )
 
         return {
 
             "reply":
-                reply,
+                protected_response["reply"],
 
             "stage":
                 stage,
@@ -638,15 +775,22 @@ async def chat(
                 state,
 
             "clinicalEvidence":
-                [],
+                get_evidence_for_tutor(
+                    get_session_evidence(
+                        session_id,
+                        client_type
+                    )
+                ),
 
             "safetyState":
-                get_unestablished_safety_state()
+                get_unestablished_safety_state(),
+
+            "treatmentApproach":
+                treatment_approach
         }
 
-    
     # ========================================================
-    # NORMAL PERSONA GENERATION
+    # PERSONA
     # ========================================================
 
     persona_style = get_persona_response(
@@ -657,10 +801,14 @@ async def chat(
 
         state,
 
-        msg.treatmentApproach,
+        treatment_approach,
 
         behaviour
     )
+
+    # ========================================================
+    # PROMPT
+    # ========================================================
 
     system_prompt = build_prompt(
 
@@ -668,7 +816,7 @@ async def chat(
 
         persona_style,
 
-        msg.treatmentApproach,
+        treatment_approach,
 
         behaviour
     )
@@ -676,143 +824,67 @@ async def chat(
     system_prompt += "\n\n"
 
     system_prompt += get_treatment_prompt(
-
-        msg.treatmentApproach
+        treatment_approach
     )
 
     # ========================================================
     # BEHAVIOURAL QUESTION GUIDANCE
+    #
+    # Added ONCE only.
     # ========================================================
 
-    if detect_behavioural_question(msg.text):
+    if detect_behavioural_question(
+        msg.text
+    ):
 
-        system_prompt += """
+        behavioural_information_exists = (
+            has_behavioural_information(
+                case_data
+            )
+        )
 
-BEHAVIOURAL QUESTION GUIDANCE
+        system_prompt += f"""
 
-The therapist has asked a clear question about relaxation,
-hobbies, enjoyment, free time, downtime, spare time,
-switching off, or activities outside work.
+BEHAVIOURAL QUESTION STATE
 
-Understand the question directly.
+The therapist has asked a clear behavioural question.
 
-DO NOT ask the therapist to rephrase the question.
+Examples include questions about:
 
-If the authoritative client case contains a relevant
-behavioural fact, use that fact naturally.
+- relaxation
+- hobbies
+- enjoyment
+- free time
+- downtime
+- spare time
+- switching off
+- activities outside work
 
-If the authoritative client case does NOT contain a relevant
-behavioural fact, DO NOT invent one.
+The question itself is understandable.
 
-Instead, respond naturally as the client would when they do
-not have a specific established answer.
+Relevant authored behavioural information exists:
+{str(behavioural_information_exists).lower()}
 
-The response must be generated naturally by the client persona.
-It must NOT sound like a predefined response or template.
+If relevant information exists:
+- answer using that information
+- do not invent additional activities
 
-RESPONSE STYLE:
+If relevant information does not exist:
+- understand the question
+- answer naturally as a client who does not have a specific
+  established answer
+- preserve uncertainty
+- do not invent a hobby, coping strategy, relaxation activity,
+  interest, or leisure activity
+- do not ask the therapist to rephrase the question
+- do not pretend not to understand
 
-- Answer the therapist's question directly.
-- Keep the answer short and conversational unless the question
-  genuinely invites more detail.
-- Sound spontaneous, not scripted.
-- Vary sentence structure and wording naturally.
-- Do not repeat the same explanation across consecutive behavioural
-  questions.
-- Do not automatically explain WHY the client has no answer.
-- Do not automatically mention anxiety, motivation, time, work,
-  enjoyment, stress, or difficulty unless that information is
-  actually established in the authoritative case.
-- Do not invent hobbies.
-- Do not invent relaxation activities.
-- Do not invent coping strategies.
-- Do not invent interests or leisure activities.
-- Do not turn missing information into a definite Yes or No.
-- If the information is undefined, simply acknowledge that the
-  client does not have a specific answer.
-- A brief answer such as "Nothing specific comes to mind" is valid.
-- Do not use the same semantic structure repeatedly.
-- Do not produce multiple sentences merely to make the answer
-  sound complete.
-- Never say "Could you rephrase that?" because the information is
-  undefined.
-- Never pretend not to understand a clear behavioural question.
-- Do not mention the case, simulation, prompts, or system instructions.
+Keep the answer natural and appropriately concise.
 
-NATURAL VARIATION
+The fact that the information is undefined does NOT mean the
+client has explicitly said "no".
 
-When several consecutive behavioural questions are asked, do not
-repeat the same pattern.
-
-For example, avoid producing:
-
-"I can't think of anything specific..."
-"I can't think of anything specific..."
-"I can't think of anything specific..."
-
-Instead, naturally vary between:
-
-- a short direct answer
-- a brief admission of uncertainty
-- a simple statement that nothing particular comes to mind
-- a concise statement that the client does not currently have
-  a specific activity to mention
-
-Do not mechanically cycle through example phrases.
-
-Generate each answer from the client's personality and the current
-question.
-
-Keep undefined behavioural answers generally to one short sentence
-unless the conversation genuinely calls for elaboration.
-
-The question is understandable. The only uncertainty is whether
-the client has an established answer to it.
-"""
-
-    system_prompt += """
-
-BEHAVIOURAL QUESTION GUIDANCE
-
-The therapist has asked a clear question about relaxation,
-hobbies, enjoyment, free time, downtime, spare time,
-switching off, or activities outside work.
-
-Understand the question directly.
-
-DO NOT ask the therapist to rephrase the question.
-
-If the authoritative client case contains a relevant
-behavioural fact, use that fact naturally.
-
-If the authoritative client case does NOT contain a relevant
-behavioural fact, DO NOT invent one.
-
-Instead, respond naturally as the client would when they do
-not have a specific established answer.
-
-The response must be generated naturally by the client persona.
-It must NOT sound like a predefined response or template.
-
-RESPONSE STYLE:
-
-- Answer the therapist's question directly.
-- Sound spontaneous and conversational.
-- Vary the wording naturally between questions.
-- Do not repeat a fixed sentence.
-- Do not invent hobbies.
-- Do not invent relaxation activities.
-- Do not invent coping strategies.
-- Do not invent interests or leisure activities.
-- Do not turn missing information into a definite Yes or No.
-- Preserve uncertainty when the case does not establish the answer.
-- Never say "Could you rephrase that?" merely because the case
-  does not contain the requested information.
-- Never pretend not to understand a clear behavioural question.
-- Do not mention the case, simulation, prompts, or system instructions.
-
-The question is understandable. The only uncertainty is whether
-the client has an established answer to it.
+Do not manufacture a definite yes/no answer.
 """
 
     # ========================================================
@@ -822,7 +894,6 @@ the client has an established answer to it.
     messages = [
 
         {
-
             "role":
                 "system",
 
@@ -839,27 +910,27 @@ the client has an established answer to it.
     grounding = f"""
 AUTHORITATIVE CLIENT CASE — COMPLETE SOURCE OF TRUTH
 
-The following is the complete authored case for this client.
+The following is the complete authored case for {client_type}.
 
-Every field in this case is authoritative.
+Every populated field is authoritative.
 
-If a field contains a definite value, preserve it.
+If a field contains a definite value:
+- preserve it
+- answer consistently with it
+- do not replace it with a different fact
 
-If a field is null, empty, or an empty list, that means the case
-does NOT establish that information.
+If a field is null or an empty list:
+- the case does not establish that information
+- do not turn the absence of information into a definite yes/no
+- do not invent a clinical history
 
-IMPORTANT:
-
-Do NOT convert missing or empty information into a definite
-Yes or No.
-
-Do NOT invent:
+Do not invent:
 
 - hobbies
 - relaxation activities
 - coping strategies
 - modality
-- previous experiences
+- previous hypnosis experiences
 - treatment history
 - medical history
 - medication
@@ -868,21 +939,17 @@ Do NOT invent:
 - safeguarding information
 - risk information
 - traumatic experiences
-- personality traits
+- new personality traits
 
-In particular, if:
+IMPORTANT:
 
-- coping_strategies is []
-- modality is null
-- communication_style is null
-- disclosure_style is null
+The treatment approach controls communication style only.
 
-you MUST NOT invent information for those fields.
+It does NOT change the authoritative clinical facts.
 
-The student may ask about these areas.
+The client's personality controls communication style only.
 
-Respond naturally as a real client, but preserve uncertainty
-rather than creating new facts.
+Conversation state controls openness and emotional expression only.
 
 COMPLETE CASE:
 
@@ -892,9 +959,11 @@ COMPLETE CASE:
     indent=2
 )}
 
-The case above is authoritative.
+AUTHORITATIVE TREATMENT APPROACH:
 
-Never introduce facts that are not supported by it.
+{treatment_approach}
+
+Never introduce unsupported facts.
 """
 
     messages.append({
@@ -910,16 +979,27 @@ Never introduce facts that are not supported by it.
     # CONVERSATION HISTORY
     # ========================================================
 
-    for m in msg.history:
+    for item in msg.history:
 
-        role = m.get(
+        if not isinstance(
+            item,
+            dict
+        ):
+            continue
+
+        role = item.get(
             "role"
         )
 
-        text = m.get(
-            "text",
-            ""
-        )
+        text = str(
+            item.get(
+                "text",
+                ""
+            )
+        ).strip()
+
+        if not text:
+            continue
 
         if role == "therapist":
 
@@ -960,6 +1040,29 @@ Never introduce facts that are not supported by it.
     # OPENAI
     # ========================================================
 
+    if client is None:
+
+        return {
+
+            "reply":
+                "The OpenAI API key is not configured.",
+
+            "stage":
+                stage,
+
+            "state":
+                state,
+
+            "clinicalEvidence":
+                [],
+
+            "safetyState":
+                get_unestablished_safety_state(),
+
+            "treatmentApproach":
+                treatment_approach
+        }
+
     try:
 
         response = client.chat.completions.create(
@@ -967,6 +1070,8 @@ Never introduce facts that are not supported by it.
             model="gpt-4o-mini",
 
             messages=messages,
+
+            temperature=0.7,
 
             timeout=25
         )
@@ -984,18 +1089,18 @@ Never introduce facts that are not supported by it.
                 "I'm not sure how to answer that."
             )
 
-    except Exception as e:
+    except Exception as exc:
 
         print(
             "========== OPENAI ERROR =========="
         )
 
         print(
-            type(e).__name__
+            type(exc).__name__
         )
 
         print(
-            str(e)
+            str(exc)
         )
 
         print(
@@ -1007,7 +1112,7 @@ Never introduce facts that are not supported by it.
         )
 
     # ========================================================
-    # PHASE 2B — EVIDENCE EXTRACTION
+    # PHASE 2B — ACCUMULATED EVIDENCE
     # ========================================================
 
     evidence_state = get_session_evidence(
@@ -1017,16 +1122,27 @@ Never introduce facts that are not supported by it.
         client_type
     )
 
-    extracted_evidence = extract_clinical_evidence(
+    try:
 
-        client=client,
+        extracted_evidence = extract_clinical_evidence(
 
-        history=msg.history,
+            client=client,
 
-        latest_student_text=msg.text,
+            history=msg.history,
 
-        latest_client_reply=reply
-    )
+            latest_student_text=msg.text,
+
+            latest_client_reply=reply
+        )
+
+    except Exception as exc:
+
+        print(
+            "Evidence extraction error:",
+            exc
+        )
+
+        extracted_evidence = []
 
     print(
         "\n========== PHASE 2B EVIDENCE DEBUG =========="
@@ -1043,10 +1159,12 @@ Never introduce facts that are not supported by it.
     )
 
     print(
-        "EXTRACTED EVIDENCE:"
+        "TREATMENT APPROACH:",
+        treatment_approach
     )
 
     print(
+        "EXTRACTED EVIDENCE:",
         extracted_evidence
     )
 
@@ -1055,49 +1173,98 @@ Never introduce facts that are not supported by it.
     )
 
     # ========================================================
-    # UPDATE EVIDENCE
+    # UPDATE ACCUMULATED EVIDENCE
     # ========================================================
 
     for item in extracted_evidence:
 
-        update_evidence(
+        if not isinstance(
+            item,
+            dict
+        ):
+            continue
 
-            evidence_state=evidence_state,
-
-            domain=item["domain"],
-
-            value=item["value"],
-
-            status=item["status"],
-
-            confidence=item["confidence"],
-
-            evidence_text=item.get(
-                "evidence_text"
-            ),
-
-            clinical_significance=item.get(
-                "clinical_significance"
-            ),
-
-            applied_to_reasoning=item.get(
-                "applied_to_reasoning",
-                False
-            ),
-
-            flags=item.get(
-                "flags",
-                []
-            )
+        domain = item.get(
+            "domain"
         )
 
+        if not domain:
+            continue
+
+        try:
+
+            update_evidence(
+
+                evidence_state=evidence_state,
+
+                domain=domain,
+
+                value=item.get(
+                    "value"
+                ),
+
+                status=item.get(
+                    "status",
+                    "mentioned"
+                ),
+
+                confidence=item.get(
+                    "confidence",
+                    0
+                ),
+
+                evidence_text=item.get(
+                    "evidence_text"
+                ),
+
+                clinical_significance=item.get(
+                    "clinical_significance"
+                ),
+
+                applied_to_reasoning=item.get(
+                    "applied_to_reasoning",
+                    False
+                ),
+
+                flags=item.get(
+                    "flags",
+                    []
+                )
+            )
+
+        except Exception as exc:
+
+            print(
+                f"Evidence update error for {domain}:",
+                exc
+            )
+
     # ========================================================
-    # RISK & SAFETY
+    # SAFETY — USE ACCUMULATED SESSION EVIDENCE
     # ========================================================
 
-    safety_state = evaluate_safety(
-        extracted_evidence
+    accumulated_evidence = (
+        merge_evidence_for_safety(
+            evidence_state
+        )
     )
+
+    try:
+
+        safety_state = evaluate_safety(
+            accumulated_evidence
+        )
+
+    except Exception as exc:
+
+        print(
+            "Safety evaluation error:",
+            exc
+        )
+
+        safety_state = (
+            get_unestablished_safety_state()
+        )
 
     print(
         "\n========== PHASE 2B SAFETY DEBUG =========="
@@ -1114,10 +1281,7 @@ Never introduce facts that are not supported by it.
     )
 
     print(
-        "SAFETY STATE:"
-    )
-
-    print(
+        "SAFETY STATE:",
         safety_state
     )
 
@@ -1146,28 +1310,164 @@ Never introduce facts that are not supported by it.
             ),
 
         "safetyState":
-            safety_state
+            safety_state,
+
+        "treatmentApproach":
+            treatment_approach
     }
 
 
 # ============================================================
-# TUTOR Q4
+# TUTOR HELPERS
 # ============================================================
 
+def _normalise_text(
+    value: Any
+) -> str:
+
+    if value is None:
+        return ""
+
+    return str(
+        value
+    ).strip().lower()
+
+
+def _contains_any(
+    text: str,
+    terms: List[str]
+) -> bool:
+
+    return any(
+        term in text
+        for term in terms
+    )
+
+
+def get_expected_approach_for_client(
+    client_name: str
+) -> Optional[str]:
+
+    case_data = get_client_case(
+        client_name
+    )
+
+    return get_authoritative_treatment_approach(
+        client_name=client_name,
+        requested_approach=None,
+        case_data=case_data
+    )
+
+
+def detect_modality_from_text(
+    text: str
+) -> Optional[str]:
+
+    t = _normalise_text(
+        text
+    )
+
+    visual_terms = [
+        "see",
+        "seeing",
+        "picture",
+        "image",
+        "visual",
+        "look",
+        "looks",
+        "colour",
+        "color",
+        "scene",
+        "picture in my mind",
+    ]
+
+    auditory_terms = [
+        "hear",
+        "hearing",
+        "sound",
+        "sounds",
+        "voice",
+        "voices",
+        "noise",
+        "auditory",
+        "listen",
+    ]
+
+    kinaesthetic_terms = [
+        "feel",
+        "feeling",
+        "felt",
+        "sensation",
+        "body",
+        "chest",
+        "hands",
+        "heart",
+        "tight",
+        "heavy",
+        "restless",
+        "physical",
+        "kinaesthetic",
+        "kinesthetic",
+    ]
+
+    scores = {
+
+        "Visual":
+            sum(
+                1
+                for term in visual_terms
+                if term in t
+            ),
+
+        "Auditory":
+            sum(
+                1
+                for term in auditory_terms
+                if term in t
+            ),
+
+        "Kinaesthetic":
+            sum(
+                1
+                for term in kinaesthetic_terms
+                if term in t
+            )
+    }
+
+    best = max(
+        scores,
+        key=scores.get
+    )
+
+    if scores[best] == 0:
+        return None
+
+    # Do not manufacture a modality from a weak tie.
+    highest = scores[best]
+
+    tied = [
+        modality
+        for modality, score in scores.items()
+        if score == highest
+    ]
+
+    if len(tied) > 1:
+        return None
+
+    return best
+
+
 def evaluate_q4(
-    text
-):
+    text: str
+) -> Dict[str, bool]:
 
-    t = (
-        text or ""
-    ).lower()
+    t = _normalise_text(
+        text
+    )
 
-    safety = any(
-
-        x in t
-
-        for x in [
-
+    safety = _contains_any(
+        t,
+        [
             "risk",
             "medical",
             "history",
@@ -1175,17 +1475,18 @@ def evaluate_q4(
             "contraindication",
             "safe",
             "safety",
-            "no risk",
-            "not at risk"
+            "health",
+            "medication",
+            "self-harm",
+            "self harm",
+            "safeguarding",
+            "referral",
         ]
     )
 
-    reassurance = any(
-
-        x in t
-
-        for x in [
-
+    reassurance = _contains_any(
+        t,
+        [
             "reassure",
             "safe",
             "comfortable",
@@ -1193,16 +1494,14 @@ def evaluate_q4(
             "supported",
             "ease",
             "okay",
-            "you're safe"
+            "you're safe",
+            "you are safe",
         ]
     )
 
-    readiness = any(
-
-        x in t
-
-        for x in [
-
+    readiness = _contains_any(
+        t,
+        [
             "ready",
             "ready to proceed",
             "comfortable to proceed",
@@ -1210,7 +1509,7 @@ def evaluate_q4(
             "continue",
             "begin",
             "move forward",
-            "we can start"
+            "we can start",
         ]
     )
 
@@ -1236,161 +1535,210 @@ async def tutor_review(
     req: TutorRequest
 ):
 
-    s = req.submission
+    submission = (
+        req.submission
+        if isinstance(
+            req.submission,
+            dict
+        )
+        else {}
+    )
 
-    chat = req.chatHistory
+    chat = (
+        req.chatHistory
+        if isinstance(
+            req.chatHistory,
+            list
+        )
+        else []
+    )
 
-    q1_text = (
-        s.get(
+    # ========================================================
+    # SUBMISSION TEXT
+    # ========================================================
+
+    q1_text = _normalise_text(
+        submission.get(
             "chosenApproach",
             ""
         )
-        .lower()
     )
 
-    q2_text = (
-        s.get(
+    q2_text = _normalise_text(
+        submission.get(
             "clientModality",
             ""
         )
-        .lower()
     )
 
-    q3_text = (
-        s.get(
+    q3_text = _normalise_text(
+        submission.get(
             "clientObjective",
             ""
         )
-        .lower()
     )
 
-    q4_text = (
-        s.get(
+    q4_text = _normalise_text(
+        submission.get(
             "clientReassurance",
             ""
         )
-        .lower()
     )
 
     # ========================================================
-    # TREATMENT APPROACH
+    # AUTHORITATIVE APPROACH
     # ========================================================
 
-    if req.clientName == "Claire":
+    expected_approach = (
+        get_expected_approach_for_client(
+            req.clientName
+        )
+    )
 
-        q1 = any(
+    selected_approach = normalise_approach(
+        q1_text
+    )
 
-            x in q1_text
+    q1 = (
+        expected_approach is not None
+        and selected_approach == expected_approach
+    )
 
-            for x in [
+    # ========================================================
+    # CHAT TEXT
+    # ========================================================
 
-                "cbh",
-                "cognitive",
-                "cognitive behavioural",
-                "cognitive behavioral"
-            ]
+    therapist_messages = [
+
+        str(
+            item.get(
+                "text",
+                ""
+            )
         )
 
-    elif req.clientName == "Daniel":
+        for item in chat
 
-        q1 = any(
+        if isinstance(
+            item,
+            dict
+        )
+        and item.get(
+            "role"
+        ) == "therapist"
+    ]
 
-            x in q1_text
+    client_messages = [
 
-            for x in [
-
-                "solution",
-                "solution-focused",
-                "solution focused"
-            ]
+        str(
+            item.get(
+                "text",
+                ""
+            )
         )
 
-    elif req.clientName == "Sophie":
+        for item in chat
 
-        q1 = any(
-
-            x in q1_text
-
-            for x in [
-
-                "ericksonian",
-                "indirect"
-            ]
+        if isinstance(
+            item,
+            dict
         )
+        and item.get(
+            "role"
+        ) == "client"
+    ]
 
-    elif req.clientName == "Mark":
+    therapist_text = " ".join(
+        therapist_messages
+    )
 
-        q1 = (
-            "regression"
-            in q1_text
-        )
-
-    else:
-
-        q1 = False
+    client_text = " ".join(
+        client_messages
+    )
 
     # ========================================================
     # MODALITY
     # ========================================================
 
-    asked_behaviour = any(
-
-        any(
-
-            x in m.get(
-                "text",
-                ""
-            ).lower()
-
-            for x in [
-
-                "relax",
-                "hobbies",
-                "fun",
-                "downtime",
-                "what do you enjoy",
-                "what do you like to do",
-                "how do you switch off",
-                "what helps you relax",
-                "what do you do in your free time",
-                "what do you do when you're not working"
-            ]
-        )
-
-        for m in chat
-
-        if m.get(
-            "role"
-        ) == "therapist"
+    asked_behaviour = detect_behavioural_question(
+        therapist_text
     )
 
-    q2 = (
+    detected_modalities = []
 
-        asked_behaviour
+    for message in client_messages:
 
-        and any(
-
-            x in q2_text
-
-            for x in [
-
-                "visual",
-                "auditory",
-                "kinaesthetic"
-            ]
+        modality = detect_modality_from_text(
+            message
         )
+
+        if modality:
+            detected_modalities.append(
+                modality
+            )
+
+    submitted_modality = None
+
+    modality_text = _normalise_text(
+        q2_text
+    )
+
+    if "visual" in modality_text:
+        submitted_modality = "Visual"
+
+    elif "auditory" in modality_text:
+        submitted_modality = "Auditory"
+
+    elif (
+        "kinaesthetic" in modality_text
+        or "kinesthetic" in modality_text
+    ):
+        submitted_modality = "Kinaesthetic"
+
+    actual_modality = None
+
+    if detected_modalities:
+
+        counts = {}
+
+        for modality in detected_modalities:
+
+            counts[modality] = (
+                counts.get(
+                    modality,
+                    0
+                )
+                + 1
+            )
+
+        highest = max(
+            counts.values()
+        )
+
+        winners = [
+            modality
+            for modality, count in counts.items()
+            if count == highest
+        ]
+
+        if len(winners) == 1:
+            actual_modality = winners[0]
+
+    # A behavioural question alone does not establish a modality.
+    q2 = (
+        asked_behaviour
+        and submitted_modality is not None
+        and actual_modality is not None
+        and submitted_modality == actual_modality
     )
 
     # ========================================================
     # OBJECTIVE
     # ========================================================
 
-    q3 = any(
-
-        x in q3_text
-
-        for x in [
-
+    q3 = _contains_any(
+        q3_text,
+        [
             "goal",
             "reduce",
             "manage",
@@ -1398,51 +1746,48 @@ async def tutor_review(
             "confidence",
             "calm",
             "sleep",
-            "relax"
+            "relax",
+            "feel safe",
+            "feel calmer",
+            "switch off",
         ]
     )
 
     # ========================================================
-    # STRESS
+    # SAFETY / REASSURANCE / READINESS
     # ========================================================
 
-    stress_present = any(
+    q4_data = evaluate_q4(
+        q4_text
+    )
 
-        any(
+    q4 = all(
+        q4_data.values()
+    )
 
-            x in m.get(
-                "text",
-                ""
-            ).lower()
+    # ========================================================
+    # STRESS INDICATOR
+    # ========================================================
 
-            for x in [
-
-                "i used to",
-                "used to enjoy",
-                "don't do that anymore",
-                "haven't done that in a long time",
-                "don't really make time",
-                "don't make time anymore",
-                "not doing it anymore",
-                "used to but"
-            ]
-        )
-
-        for m in chat
-
-        if m.get(
-            "role"
-        ) == "client"
+    stress_present = _contains_any(
+        client_text.lower(),
+        [
+            "i used to",
+            "used to enjoy",
+            "don't do that anymore",
+            "haven't done that in a long time",
+            "don't really make time",
+            "don't make time anymore",
+            "not doing it anymore",
+            "used to but",
+        ]
     )
 
     handled_stress = (
 
-        any(
-
-            x in q4_text
-
-            for x in [
-
+        _contains_any(
+            q4_text,
+            [
                 "used to",
                 "not doing",
                 "stopped",
@@ -1450,126 +1795,88 @@ async def tutor_review(
                 "activities",
                 "hobbies",
                 "pleasurable",
-                "enjoyable"
+                "enjoyable",
             ]
         )
 
         and
 
-        any(
-
-            x in q4_text
-
-            for x in [
-
+        _contains_any(
+            q4_text,
+            [
                 "stress",
                 "overwhelm",
                 "sign",
                 "affect",
                 "impact",
-                "difficult"
-            ]
-        )
-
-        and
-
-        any(
-
-            x in q4_text
-
-            for x in [
-
-                "will",
-                "again",
-                "you'll",
-                "you will",
-                "begin",
-                "return",
-                "able",
-                "start"
+                "difficult",
             ]
         )
     )
 
     stress_score = (
-
-        True
-
-        if (
-            not stress_present
-            or handled_stress
-        )
-
-        else False
-    )
-
-    # ========================================================
-    # SAFETY
-    # ========================================================
-
-    q4_data = evaluate_q4(
-        q4_text
-    )
-
-    q4 = (
-
-        all(
-            q4_data.values()
-        )
-
-        and stress_score
+        not stress_present
+        or handled_stress
     )
 
     # ========================================================
     # FEEDBACK
     # ========================================================
 
-    stress_feedback = ""
+    expected_name = (
+        expected_approach
+        or "not established"
+    )
+
+    feedback = f"""
+QUESTION 1 — Treatment Approach
+{"✔ Appropriate model selected." if q1 else f"✘ The selected approach does not match the authored client assignment. Expected: {expected_name}."}
+
+QUESTION 2 — Client Modality
+{"✔ Modality selection is supported by the conversation." if q2 else "✘ The selected modality is not sufficiently supported by the conversation."}
+
+QUESTION 3 — Client Objective
+{"✔ Objective is clear." if q3 else "✘ Objective needs clearer connection to the client's stated goal."}
+
+QUESTION 4 — Safety & Reassurance
+{"✔ Safety, reassurance and readiness were addressed." if q4 else "✘ Safety, reassurance and/or readiness needs further attention."}
+"""
 
     if stress_present:
 
         if handled_stress:
 
-            stress_feedback = (
-                "✔ You correctly identified the reduction in "
-                "pleasurable activity as a stress indicator."
+            feedback += (
+                "\nSTRESS INDICATOR\n"
+                "✔ The client's change in pleasurable/activity behaviour was addressed."
             )
 
         else:
 
-            stress_feedback = (
-                "✘ You missed the client's "
-                "‘I used to…’ stress indicator."
+            feedback += (
+                "\nSTRESS INDICATOR\n"
+                "✘ The client's change in pleasurable/activity behaviour was not clearly addressed."
             )
 
-    feedback = f"""
-QUESTION 1 — Treatment Approach
-{"✔ Appropriate model selected." if q1 else "✘ Approach unclear."}
-
-QUESTION 2 — Client Modality
-{"✔ Correct (behaviour explored)." if q2 else "✘ Modality must be based on behavioural questioning."}
-
-QUESTION 3 — Client Objective
-{"✔ Objective clear." if q3 else "✘ Objective unclear."}
-
-QUESTION 4 — Safety & Reassurance
-{"✔ Appropriate." if q4 else "✘ Needs improvement."}
-
-STRESS INDICATOR
-{stress_feedback}
-"""
+    # ========================================================
+    # SCORE
+    # ========================================================
 
     total = sum([
-        q1,
-        q2,
-        q3,
-        q4
+        bool(q1),
+        bool(q2),
+        bool(q3),
+        bool(q4)
     ])
 
     save_session(
         req.clientName,
         total
     )
+
+    # ========================================================
+    # RESPONSE
+    # ========================================================
 
     return {
 
@@ -1583,7 +1890,28 @@ STRESS INDICATOR
         },
 
         "detected_modality":
-            "Kinaesthetic"
+            actual_modality,
+
+        "expectedTreatmentApproach":
+            expected_approach,
+
+        "treatmentApproachCorrect":
+            q1,
+
+        "modalitySupported":
+            q2,
+
+        "objectiveClear":
+            q3,
+
+        "safetyReassuranceReadiness":
+            q4,
+
+        "stressIndicatorPresent":
+            stress_present,
+
+        "stressIndicatorHandled":
+            handled_stress
     }
 
 
@@ -1614,20 +1942,47 @@ def progress():
         sessions
     )
 
-    avg_score = (
+    valid_scores = [
 
-        sum(
-            s["score"]
-            for s in sessions
+        s.get(
+            "score",
+            0
         )
 
-        / total_sessions
+        for s in sessions
+
+        if isinstance(
+            s,
+            dict
+        )
+    ]
+
+    avg_score = (
+
+        sum(valid_scores)
+        / len(valid_scores)
+
+        if valid_scores
+
+        else 0
     )
 
     personas = list(
-        set(
-            s["client"]
+        dict.fromkeys(
+
+            s.get(
+                "client"
+            )
+
             for s in sessions
+
+            if isinstance(
+                s,
+                dict
+            )
+            and s.get(
+                "client"
+            )
         )
     )
 

@@ -5,31 +5,36 @@ from typing import Any, Dict, List
 # PHASE 2B — CLINICAL RISK & SAFETY ENGINE
 # ============================================================
 #
-# This engine:
+# This engine evaluates ONLY evidence that has already been
+# extracted from the client conversation.
 #
-# - DOES NOT diagnose.
-# - DOES NOT infer risk from therapist questions.
-# - DOES NOT treat uncertainty as a positive finding.
-# - DOES NOT treat negative findings as positive findings.
-# - Evaluates only evidence already extracted from the
-#   therapist/client conversation.
+# It does NOT:
 #
-# IMPORTANT:
+# - diagnose
+# - infer risk from therapist questions
+# - treat uncertainty as a positive finding
+# - treat missing information as a negative finding
+# - treat negative findings as positive findings
+# - invent safeguarding concerns
+# - invent contraindications
 #
-# The following are different states:
+# The three important states remain separate:
 #
-#   "No history of self-harm"
-#       -> explicit negative finding
+#   Explicit negative:
+#       "No history of self-harm."
 #
-#   "I'm not sure whether I've had thoughts like that"
-#       -> unknown / unestablished
+#   Unknown:
+#       "I'm not sure whether I've had thoughts like that."
 #
-#   "Yes, I have had thoughts of harming myself"
-#       -> positive risk evidence
+#   Positive:
+#       "I have had thoughts of harming myself."
 #
-# These MUST NOT be collapsed into the same state.
 # ============================================================
 
+
+# ============================================================
+# SAFETY DOMAINS
+# ============================================================
 
 SAFETY_DOMAINS = {
     "risk",
@@ -45,115 +50,239 @@ SAFETY_DOMAINS = {
 
 
 # ============================================================
-# NEGATIVE / UNKNOWN LANGUAGE
+# SAFETY LEVELS
+# ============================================================
+
+SAFETY_LEVEL_UNESTABLISHED = "unestablished"
+
+SAFETY_LEVEL_INFORMATION = "information_established"
+
+SAFETY_LEVEL_REVIEW = "review_required"
+
+
+# ============================================================
+# NEGATIVE LANGUAGE
 # ============================================================
 
 NEGATIVE_PATTERNS = [
 
-    # Self-harm history
+    # --------------------------------------------------------
+    # Self-harm
+    # --------------------------------------------------------
+
     "no history of self-harm",
     "no history of self harm",
     "no self-harm history",
     "no self harm history",
+
     "never harmed myself",
     "never harmed themselves",
     "never harmed yourself",
+
     "have not harmed myself",
     "haven't harmed myself",
-    "do not harm myself",
-    "don't harm myself",
 
+    # --------------------------------------------------------
     # Suicide
+    # --------------------------------------------------------
+
     "no history of suicide",
     "no suicide history",
+
     "never attempted suicide",
     "never attempted anything like that",
+
     "no suicide attempts",
     "no history of suicide attempts",
 
-    # General negative safety
+    "no suicidal thoughts",
+    "no history of suicidal thoughts",
+
+    "no thoughts of harming myself",
+    "no thoughts of harming themselves",
+
+    # --------------------------------------------------------
+    # General safety
+    # --------------------------------------------------------
+
     "no safeguarding concerns",
     "no safeguarding issues",
+
     "no safety concerns",
+
     "no risk factors",
     "no known risk factors",
 
-    # Medical / contraindication negatives
+    # --------------------------------------------------------
+    # Medical
+    # --------------------------------------------------------
+
     "no medical conditions",
     "no relevant medical conditions",
+
     "no contraindications",
     "no known contraindications",
 
-    # Psychological / psychiatric negatives
+    # --------------------------------------------------------
+    # Psychological care
+    # --------------------------------------------------------
+
     "no psychological treatment",
     "no psychological care",
+
+    "never had psychological treatment",
+    "never had counselling",
+    "never had counseling",
+
+    # --------------------------------------------------------
+    # Psychiatric care
+    # --------------------------------------------------------
+
     "no psychiatric treatment",
     "no psychiatric care",
 
+    "never had psychiatric treatment",
+    "never seen a psychiatrist",
+
+    # --------------------------------------------------------
     # Medication
+    # --------------------------------------------------------
+
     "not taking any medication",
     "not taking medication",
     "no medication",
 ]
 
 
+# ============================================================
+# UNCERTAINTY LANGUAGE
+# ============================================================
+
 UNCERTAINTY_PATTERNS = [
 
     "i'm not sure",
     "im not sure",
     "i am not sure",
+
     "i'm uncertain",
     "im uncertain",
     "i am uncertain",
+
     "i don't know",
     "i dont know",
+    "i do not know",
+
     "i can't remember",
     "i cant remember",
+    "i cannot remember",
+
     "i don't remember",
     "i dont remember",
+    "i do not remember",
+
     "i'd need to think",
     "id need to think",
+    "i would need to think",
+
     "i need to think",
+
     "i'd need to check",
     "id need to check",
+    "i would need to check",
+
     "i need to check",
+
     "not certain",
     "not sure whether",
     "not sure if",
+
     "can't say for certain",
     "cannot say for certain",
+
     "can't say",
     "cannot say",
+
     "unclear",
     "uncertain",
 ]
 
 
+# ============================================================
+# POSITIVE RISK LANGUAGE
+# ============================================================
+
 POSITIVE_RISK_PATTERNS = [
 
+    # --------------------------------------------------------
+    # Self-harm thoughts
+    # --------------------------------------------------------
+
     "i have thoughts of harming myself",
-    "i have thoughts of harming yourself",
     "i have thoughts of hurting myself",
-    "i have thoughts of hurting yourself",
+
+    "i am having thoughts of harming myself",
+    "i am having thoughts of hurting myself",
+
+    "i think about harming myself",
+    "i think about hurting myself",
+
+    "i've thought about harming myself",
+    "ive thought about harming myself",
+
+    "i've thought about hurting myself",
+    "ive thought about hurting myself",
+
+    # --------------------------------------------------------
+    # Self-harm behaviour
+    # --------------------------------------------------------
 
     "i have harmed myself",
-    "i have harmed themselves",
-
     "i have hurt myself",
-    "i have hurt themselves",
+
+    "i've harmed myself",
+    "ive harmed myself",
+
+    "i've hurt myself",
+    "ive hurt myself",
+
+    # --------------------------------------------------------
+    # Suicide attempts
+    # --------------------------------------------------------
 
     "i have attempted suicide",
     "i attempted suicide",
+
+    "i've attempted suicide",
+    "ive attempted suicide",
+
     "i have attempted to kill myself",
+
+    # --------------------------------------------------------
+    # Suicidal thoughts
+    # --------------------------------------------------------
 
     "i have thoughts of suicide",
     "i have suicidal thoughts",
+
+    "i'm having suicidal thoughts",
+    "im having suicidal thoughts",
+
+    "i've had suicidal thoughts",
+    "ive had suicidal thoughts",
+
+    # --------------------------------------------------------
+    # Intent
+    # --------------------------------------------------------
 
     "i want to harm myself",
     "i want to hurt myself",
 
     "i want to kill myself",
     "i want to end my life",
+
+    # --------------------------------------------------------
+    # Harm to others
+    # --------------------------------------------------------
 
     "i have thoughts of harming someone else",
     "i have thoughts of hurting someone else",
@@ -163,6 +292,12 @@ POSITIVE_RISK_PATTERNS = [
 
     "i have harmed someone else",
     "i have hurt someone else",
+
+    "i've harmed someone else",
+    "ive harmed someone else",
+
+    "i've hurt someone else",
+    "ive hurt someone else",
 ]
 
 
@@ -170,7 +305,12 @@ POSITIVE_RISK_PATTERNS = [
 # TEXT NORMALISATION
 # ============================================================
 
-def _normalise_text(value: Any) -> str:
+def _normalise_text(
+    value: Any
+) -> str:
+    """
+    Normalise text for deterministic safety checks.
+    """
 
     if value is None:
         return ""
@@ -186,9 +326,17 @@ def _normalise_text(value: Any) -> str:
 # NEGATIVE STATEMENT DETECTION
 # ============================================================
 
-def _is_explicit_negative(value: Any) -> bool:
+def _is_explicit_negative(
+    value: Any
+) -> bool:
+    """
+    Return True only when the supplied value contains an
+    explicit negative safety statement.
+    """
 
-    text = _normalise_text(value)
+    text = _normalise_text(
+        value
+    )
 
     if not text:
         return False
@@ -203,9 +351,18 @@ def _is_explicit_negative(value: Any) -> bool:
 # UNCERTAINTY DETECTION
 # ============================================================
 
-def _is_uncertain(value: Any) -> bool:
+def _is_uncertain(
+    value: Any
+) -> bool:
+    """
+    Determine whether the supplied value is explicitly uncertain.
 
-    text = _normalise_text(value)
+    Empty values are treated as unknown.
+    """
+
+    text = _normalise_text(
+        value
+    )
 
     if not text:
         return True
@@ -220,27 +377,48 @@ def _is_uncertain(value: Any) -> bool:
 # POSITIVE RISK DETECTION
 # ============================================================
 
-def _is_positive_risk(value: Any) -> bool:
+def _is_positive_risk(
+    value: Any
+) -> bool:
+    """
+    Detect explicit positive risk language.
 
-    text = _normalise_text(value)
+    Ordering is intentional:
+
+    1. Empty/unknown -> False
+    2. Uncertain -> False
+    3. Explicit negative -> False
+    4. Explicit positive -> True
+    """
+
+    text = _normalise_text(
+        value
+    )
 
     if not text:
         return False
 
     # --------------------------------------------------------
-    # Never classify an explicitly uncertain statement as
-    # positive merely because it contains a risk word.
+    # Uncertainty does not become positive risk.
     # --------------------------------------------------------
 
-    if _is_uncertain(text):
+    if _is_uncertain(
+        text
+    ):
         return False
 
     # --------------------------------------------------------
-    # Explicit negative statement always wins.
+    # Explicit negative always wins.
     # --------------------------------------------------------
 
-    if _is_explicit_negative(text):
+    if _is_explicit_negative(
+        text
+    ):
         return False
+
+    # --------------------------------------------------------
+    # Explicit positive risk.
+    # --------------------------------------------------------
 
     return any(
         pattern in text
@@ -252,17 +430,23 @@ def _is_positive_risk(value: Any) -> bool:
 # MEANINGFUL VALUE
 # ============================================================
 
-def _is_meaningful_value(value: Any) -> bool:
+def _is_meaningful_value(
+    value: Any
+) -> bool:
     """
-    Determine whether an evidence value contains actual content.
+    Determine whether an evidence value contains actual
+    established information.
 
-    Unknown / empty values must not become safety findings.
+    Unknown/missing values must not become safety findings.
     """
 
     if value is None:
         return False
 
-    if isinstance(value, str):
+    if isinstance(
+        value,
+        str
+    ):
 
         text = value.strip().lower()
 
@@ -278,6 +462,7 @@ def _is_meaningful_value(value: Any) -> bool:
             "not discussed",
             "not known",
             "none established",
+            "__undefined__",
         }
 
         if text in unknown_values:
@@ -289,21 +474,25 @@ def _is_meaningful_value(value: Any) -> bool:
             list,
             dict,
             tuple,
-            set
+            set,
         )
     ):
+
         return len(value) > 0
 
     return True
 
 
 # ============================================================
-# FLAGS
+# NORMALISE FLAGS
 # ============================================================
 
 def _normalise_flags(
     flags: Any
 ) -> List[str]:
+    """
+    Return clean unique flags.
+    """
 
     if not isinstance(
         flags,
@@ -322,10 +511,8 @@ def _normalise_flags(
             flag
         ).strip()
 
-        if (
-            value
-            and value not in cleaned
-        ):
+        if value and value not in cleaned:
+
             cleaned.append(
                 value
             )
@@ -338,11 +525,14 @@ def _normalise_flags(
 # ============================================================
 
 def create_safety_state() -> Dict[str, Any]:
+    """
+    Create a clean session safety state.
+    """
 
     return {
 
         "level":
-            "unestablished",
+            SAFETY_LEVEL_UNESTABLISHED,
 
         "requires_attention":
             False,
@@ -365,28 +555,47 @@ def create_safety_state() -> Dict[str, Any]:
 
 
 # ============================================================
-# EVALUATE SAFETY
+# BUILD EVIDENCE TEXT
 # ============================================================
 
-def evaluate_safety(
+def _combined_evidence_text(
+    item: Dict[str, Any]
+) -> str:
+    """
+    Combine structured value and supporting evidence text
+    for deterministic checks.
+    """
+
+    value = item.get(
+        "value"
+    )
+
+    evidence_text = item.get(
+        "evidence_text"
+    )
+
+    return (
+        f"{value or ''} "
+        f"{evidence_text or ''}"
+    ).strip()
+
+
+# ============================================================
+# VALIDATE SAFETY EVIDENCE
+# ============================================================
+
+def _normalise_safety_evidence(
     clinical_evidence: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+) -> List[Dict[str, Any]]:
+    """
+    Filter evidence down to safety-relevant domains and
+    normalise its structure.
 
-    state = create_safety_state()
-
-    if not isinstance(
-        clinical_evidence,
-        list
-    ):
-        return state
-
+    Weak evidence below 0.5 confidence does not drive safety
+    decisions.
+    """
 
     safety_evidence = []
-
-
-    # ========================================================
-    # FILTER AND NORMALISE EVIDENCE
-    # ========================================================
 
     for item in clinical_evidence:
 
@@ -396,26 +605,25 @@ def evaluate_safety(
         ):
             continue
 
-
         domain = item.get(
             "domain"
         )
 
-
         if domain not in SAFETY_DOMAINS:
             continue
-
 
         value = item.get(
             "value"
         )
-
 
         if not _is_meaningful_value(
             value
         ):
             continue
 
+        # ----------------------------------------------------
+        # Confidence
+        # ----------------------------------------------------
 
         try:
 
@@ -433,7 +641,6 @@ def evaluate_safety(
 
             confidence = 0.0
 
-
         confidence = max(
             0.0,
             min(
@@ -442,14 +649,12 @@ def evaluate_safety(
             )
         )
 
-
-        # ----------------------------------------------------
-        # Weak extraction does not drive safety state.
-        # ----------------------------------------------------
-
         if confidence < 0.5:
             continue
 
+        # ----------------------------------------------------
+        # Evidence record
+        # ----------------------------------------------------
 
         evidence_item = {
 
@@ -488,16 +693,161 @@ def evaluate_safety(
 
         }
 
-
         safety_evidence.append(
             evidence_item
         )
 
+    return safety_evidence
+
+
+# ============================================================
+# COLLECT FLAGS
+# ============================================================
+
+def _collect_flags(
+    safety_evidence: List[Dict[str, Any]]
+) -> List[str]:
+    """
+    Collect unique flags from safety evidence.
+    """
+
+    flags = []
+
+    for item in safety_evidence:
+
+        for flag in item.get(
+            "flags",
+            []
+        ):
+
+            if flag not in flags:
+
+                flags.append(
+                    flag
+                )
+
+    return flags
+
+
+# ============================================================
+# REFERRAL REQUIREMENT CHECK
+# ============================================================
+
+def _requires_referral_review(
+    value: Any
+) -> bool:
+    """
+    Determine whether established referral/permission evidence
+    indicates review may be required.
+
+    Uncertainty and explicit negative information do not trigger
+    review.
+    """
+
+    text = _normalise_text(
+        value
+    )
+
+    if not text:
+        return False
+
+    if _is_uncertain(
+        text
+    ):
+        return False
+
+    if _is_explicit_negative(
+        text
+    ):
+        return False
+
+    referral_terms = {
+
+        "required",
+        "needed",
+
+        "need permission",
+        "requires permission",
+
+        "professional advice",
+        "medical advice",
+
+        "refer",
+        "referral",
+
+    }
+
+    return any(
+        term in text
+        for term in referral_terms
+    )
+
+
+# ============================================================
+# EXPLICIT FLAG REQUIRES ATTENTION
+# ============================================================
+
+def _valid_attention_flag(
+    item: Dict[str, Any],
+    flag: str,
+) -> bool:
+    """
+    Determine whether an explicit flag is supported by
+    non-uncertain, non-negative evidence.
+    """
+
+    value = item.get(
+        "value"
+    )
+
+    if _is_uncertain(
+        value
+    ):
+        return False
+
+    if _is_explicit_negative(
+        value
+    ):
+        return False
+
+    return True
+
+
+# ============================================================
+# EVALUATE SAFETY
+# ============================================================
+
+def evaluate_safety(
+    clinical_evidence: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Evaluate safety information already extracted from the
+    therapist/client conversation.
+
+    This function does NOT create new clinical evidence.
+    """
+
+    state = create_safety_state()
+
+    if not isinstance(
+        clinical_evidence,
+        list
+    ):
+        return state
+
+    # ========================================================
+    # FILTER SAFETY EVIDENCE
+    # ========================================================
+
+    safety_evidence = (
+        _normalise_safety_evidence(
+            clinical_evidence
+        )
+    )
 
     state["evidence"] = (
         safety_evidence
     )
-
 
     # ========================================================
     # ESTABLISHED DOMAINS
@@ -505,70 +855,48 @@ def evaluate_safety(
 
     state["established_domains"] = list(
         dict.fromkeys(
-
             item["domain"]
-
             for item in safety_evidence
         )
     )
 
+    # ========================================================
+    # FLAGS
+    # ========================================================
+
+    state["flags"] = _collect_flags(
+        safety_evidence
+    )
 
     # ========================================================
-    # COLLECT FLAGS
-    # ========================================================
-
-    all_flags = []
-
-
-    for item in safety_evidence:
-
-        for flag in item["flags"]:
-
-            if flag not in all_flags:
-
-                all_flags.append(
-                    flag
-                )
-
-
-    state["flags"] = all_flags
-
-
-    # ========================================================
-    # NO EVIDENCE
+    # NO SAFETY EVIDENCE
     # ========================================================
 
     if not safety_evidence:
 
         state["level"] = (
-            "unestablished"
+            SAFETY_LEVEL_UNESTABLISHED
         )
 
         return state
-
 
     # ========================================================
     # INFORMATION EXISTS
     # ========================================================
 
     state["level"] = (
-        "information_established"
+        SAFETY_LEVEL_INFORMATION
     )
-
 
     # ========================================================
     # DIRECT RISK
     # ========================================================
 
     risk_items = [
-
         item
-
         for item in safety_evidence
-
         if item["domain"] == "risk"
     ]
-
 
     for item in risk_items:
 
@@ -576,35 +904,26 @@ def evaluate_safety(
             "value"
         )
 
-
         # ----------------------------------------------------
-        # Unknown risk answer:
-        #
-        # Do NOT mark as positive risk.
+        # Unknown / uncertain
         # ----------------------------------------------------
 
         if _is_uncertain(
             value
         ):
-
             continue
 
-
         # ----------------------------------------------------
-        # Explicit negative risk:
-        #
-        # Information established, but no attention required.
+        # Explicit negative
         # ----------------------------------------------------
 
         if _is_explicit_negative(
             value
         ):
-
             continue
 
-
         # ----------------------------------------------------
-        # Explicit positive risk:
+        # Explicit positive risk
         # ----------------------------------------------------
 
         if _is_positive_risk(
@@ -614,24 +933,18 @@ def evaluate_safety(
             state["requires_attention"] = True
 
             state["level"] = (
-                "review_required"
+                SAFETY_LEVEL_REVIEW
             )
-
 
     # ========================================================
     # CONTRAINDICATIONS
     # ========================================================
 
     contraindication_items = [
-
         item
-
         for item in safety_evidence
-
-        if item["domain"]
-        == "contraindications"
+        if item["domain"] == "contraindications"
     ]
-
 
     for item in contraindication_items:
 
@@ -639,44 +952,45 @@ def evaluate_safety(
             "value"
         )
 
+        # ----------------------------------------------------
+        # Explicit negative
+        # ----------------------------------------------------
 
-        # "No contraindications" is NOT a concern.
         if _is_explicit_negative(
             value
         ):
             continue
 
+        # ----------------------------------------------------
+        # Unknown
+        # ----------------------------------------------------
 
-        # Uncertainty does not equal contraindication.
         if _is_uncertain(
             value
         ):
             continue
 
+        # ----------------------------------------------------
+        # Established contraindication
+        # ----------------------------------------------------
 
         state["requires_attention"] = True
 
         state["requires_referral_review"] = True
 
         state["level"] = (
-            "review_required"
+            SAFETY_LEVEL_REVIEW
         )
-
 
     # ========================================================
     # SAFEGUARDING
     # ========================================================
 
     safeguarding_items = [
-
         item
-
         for item in safety_evidence
-
-        if item["domain"]
-        == "safeguarding"
+        if item["domain"] == "safeguarding"
     ]
-
 
     for item in safeguarding_items:
 
@@ -684,216 +998,140 @@ def evaluate_safety(
             "value"
         )
 
-
         # ----------------------------------------------------
-        # CRITICAL:
-        #
-        # Negative safeguarding information does NOT require
-        # safeguarding review.
-        #
-        # Example:
-        #
-        # "No history of self-harm."
-        #
-        # must NOT become:
-        #
-        # requires_safeguarding_review = True
+        # Explicit negative
         # ----------------------------------------------------
 
         if _is_explicit_negative(
             value
         ):
-
             continue
 
-
         # ----------------------------------------------------
-        # Unknown does not equal safeguarding concern.
+        # Unknown
         # ----------------------------------------------------
 
         if _is_uncertain(
             value
         ):
-
             continue
 
-
         # ----------------------------------------------------
-        # Actual positive safeguarding information.
+        # Established safeguarding information
         # ----------------------------------------------------
 
         state["requires_attention"] = True
 
-        state["requires_safeguarding_review"] = True
+        state[
+            "requires_safeguarding_review"
+        ] = True
 
         state["level"] = (
-            "review_required"
+            SAFETY_LEVEL_REVIEW
         )
-
 
     # ========================================================
     # REFERRAL / PERMISSION
     # ========================================================
 
     referral_items = [
-
         item
-
         for item in safety_evidence
-
-        if item["domain"]
-        == "referral_permission"
+        if item["domain"] == "referral_permission"
     ]
-
 
     for item in referral_items:
 
-        value_text = _normalise_text(
-            item.get("value")
+        value = item.get(
+            "value"
         )
 
-
-        if _is_uncertain(
-            value_text
-        ):
-            continue
-
-
-        if _is_explicit_negative(
-            value_text
-        ):
-            continue
-
-
-        referral_terms = [
-
-            "required",
-            "needed",
-            "need permission",
-            "requires permission",
-            "professional advice",
-            "medical advice",
-            "refer",
-            "referral",
-        ]
-
-
-        if any(
-            term in value_text
-            for term in referral_terms
+        if _requires_referral_review(
+            value
         ):
 
             state["requires_attention"] = True
 
-            state["requires_referral_review"] = True
+            state[
+                "requires_referral_review"
+            ] = True
 
             state["level"] = (
-                "review_required"
+                SAFETY_LEVEL_REVIEW
             )
-
 
     # ========================================================
     # EXPLICIT FLAGS
     # ========================================================
 
     attention_flags = {
-
         "risk",
+        "risk_positive",
 
         "safety_concern",
+        "safety_risk",
 
         "contraindication",
+        "contraindications",
 
         "safeguarding",
+        "safeguarding_positive",
 
         "referral_required",
-
         "professional_review_required",
     }
 
+    for item in safety_evidence:
 
-    for flag in all_flags:
+        item_flags = {
+            str(flag).strip().lower()
+            for flag in item.get(
+                "flags",
+                []
+            )
+        }
 
-        flag_normalised = (
-            str(flag)
-            .strip()
-            .lower()
+        matching_flags = (
+            item_flags
+            & attention_flags
         )
 
+        for flag in matching_flags:
 
-        if flag_normalised not in attention_flags:
-            continue
+            if not _valid_attention_flag(
+                item,
+                flag,
+            ):
+                continue
 
+            state["requires_attention"] = True
 
-        # ----------------------------------------------------
-        # Do not allow an explicit flag attached to an
-        # uncertain/negative item to create a false concern.
-        # ----------------------------------------------------
-
-        matching_items = [
-
-            item
-
-            for item in safety_evidence
-
-            if flag in item["flags"]
-        ]
-
-
-        valid_positive_item = False
-
-
-        for item in matching_items:
-
-            value = item.get(
-                "value"
+            state["level"] = (
+                SAFETY_LEVEL_REVIEW
             )
 
+            if flag in {
+                "safeguarding",
+                "safeguarding_positive",
+            }:
 
-            if _is_uncertain(
-                value
-            ):
-                continue
+                state[
+                    "requires_safeguarding_review"
+                ] = True
 
+            if flag in {
+                "contraindication",
+                "contraindications",
+                "referral_required",
+                "professional_review_required",
+            }:
 
-            if _is_explicit_negative(
-                value
-            ):
-                continue
+                state[
+                    "requires_referral_review"
+                ] = True
 
-
-            valid_positive_item = True
-
-            break
-
-
-        if not valid_positive_item:
-            continue
-
-
-        state["requires_attention"] = True
-
-        state["level"] = (
-            "review_required"
-        )
-
-
-        if flag_normalised == "safeguarding":
-
-            state[
-                "requires_safeguarding_review"
-            ] = True
-
-
-        if flag_normalised in {
-            "contraindication",
-            "referral_required",
-            "professional_review_required",
-        }:
-
-            state[
-                "requires_referral_review"
-            ] = True
-
+    # ========================================================
+    # RETURN
+    # ========================================================
 
     return state
