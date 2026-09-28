@@ -83,11 +83,15 @@ app.add_middleware(
 )
 
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv(
+    "OPENAI_API_KEY"
+)
 
-client = OpenAI(
-    api_key=OPENAI_API_KEY
-) if OPENAI_API_KEY else None
+client = (
+    OpenAI(api_key=OPENAI_API_KEY)
+    if OPENAI_API_KEY
+    else None
+)
 
 
 # ============================================================
@@ -167,7 +171,10 @@ def get_client_case(
         client_name
     )
 
-    if isinstance(case, dict):
+    if isinstance(
+        case,
+        dict
+    ):
         return case
 
     return {}
@@ -180,7 +187,9 @@ def normalise_approach(
     if value is None:
         return None
 
-    text = str(value).strip().lower()
+    text = str(
+        value
+    ).strip().lower()
 
     if not text:
         return None
@@ -252,9 +261,6 @@ def get_authoritative_treatment_approach(
     1. Explicit authored case assignment.
     2. Explicit frontend assignment if the case does not contain
        an assignment.
-
-    This prevents the frontend/default value from silently
-    overriding an authoritative case assignment.
     """
 
     identity = case_data.get(
@@ -294,9 +300,6 @@ def get_authoritative_treatment_approach(
     if requested:
         return requested
 
-    # No treatment assignment exists in the case.
-    # Keep the system deterministic without silently selecting
-    # CBH as a clinical conclusion.
     return "cbh"
 
 
@@ -382,13 +385,20 @@ def has_behavioural_information(
         "downtime_activity",
     ]
 
-    def meaningful(value: Any) -> bool:
+    def meaningful(
+        value: Any
+    ) -> bool:
 
         if value is None:
             return False
 
-        if isinstance(value, str):
-            return bool(value.strip())
+        if isinstance(
+            value,
+            str
+        ):
+            return bool(
+                value.strip()
+            )
 
         if isinstance(
             value,
@@ -438,6 +448,286 @@ def has_behavioural_information(
                 return True
 
     return False
+
+
+# ============================================================
+# SAFETY QUESTION DETECTION
+# ============================================================
+
+def detect_safety_question(
+    question: str
+) -> Optional[str]:
+    """
+    Identify the exact type of safety question.
+
+    Returns:
+
+        self_harm_history
+        current_safety
+        risk
+        None
+    """
+
+    text = (
+        question or ""
+    ).strip().lower()
+
+    # --------------------------------------------------------
+    # Historical self-harm
+    # --------------------------------------------------------
+
+    if (
+        "thoughts of harming yourself"
+        in text
+        or
+        "thoughts of hurting yourself"
+        in text
+        or
+        "self-harm"
+        in text
+        or
+        "self harm"
+        in text
+        or
+        "suicidal thoughts"
+        in text
+    ):
+        return "self_harm_history"
+
+    # --------------------------------------------------------
+    # Current safety
+    # --------------------------------------------------------
+
+    if (
+        "current" in text
+        and "safety" in text
+    ):
+        return "current_safety"
+
+    if (
+        "currently" in text
+        and (
+            "safe" in text
+            or
+            "safety" in text
+        )
+    ):
+        return "current_safety"
+
+    # --------------------------------------------------------
+    # General safety / risk
+    # --------------------------------------------------------
+
+    if (
+        "safety" in text
+        or
+        "risk" in text
+        or
+        "safeguarding" in text
+    ):
+        return "risk"
+
+    return None
+
+
+# ============================================================
+# EXPLICIT SELF-HARM CASE INFORMATION
+# ============================================================
+
+def get_explicit_self_harm_history(
+    case_data: Dict[str, Any]
+) -> Optional[bool]:
+    """
+    Read an explicit self-harm history from the authored case.
+
+    Returns:
+
+        False = explicit negative
+        True  = explicit positive
+        None  = not established
+    """
+
+    safety = case_data.get(
+        "safety",
+        {}
+    )
+
+    risk_factors = safety.get(
+        "risk_factors",
+        []
+    )
+
+    if not isinstance(
+        risk_factors,
+        list
+    ):
+        risk_factors = [
+            risk_factors
+        ]
+
+    for item in risk_factors:
+
+        text = str(
+            item
+        ).strip().lower()
+
+        # Explicit negative
+        if (
+            "no self-harm history"
+            in text
+            or
+            "no self harm history"
+            in text
+            or
+            "no history of self-harm"
+            in text
+            or
+            "no history of self harm"
+            in text
+        ):
+            return False
+
+        # Explicit positive
+        if (
+            "self-harm history"
+            in text
+            or
+            "self harm history"
+            in text
+            or
+            "history of self-harm"
+            in text
+            or
+            "history of self harm"
+            in text
+        ):
+            return True
+
+    return None
+
+
+# ============================================================
+# DIRECT SAFETY RESPONSE
+# ============================================================
+
+def build_direct_safety_response(
+    question: str,
+    case_data: Dict[str, Any]
+) -> Optional[str]:
+    """
+    Handle safety questions where the authored case provides
+    an explicit answer.
+
+    IMPORTANT:
+    Never invent positive or negative safety information.
+    """
+
+    domain = detect_safety_question(
+        question
+    )
+
+    # --------------------------------------------------------
+    # HISTORICAL SELF-HARM
+    # --------------------------------------------------------
+
+    if domain == "self_harm_history":
+
+        self_harm_history = (
+            get_explicit_self_harm_history(
+                case_data
+            )
+        )
+
+        if self_harm_history is False:
+
+            return (
+                "No, I've never had thoughts "
+                "of harming myself."
+            )
+
+        if self_harm_history is True:
+
+            return (
+                "Yes, I have had thoughts "
+                "like that before."
+            )
+
+        # Not established.
+        # Let the normal protected engine handle it.
+        return None
+
+    # --------------------------------------------------------
+    # CURRENT SAFETY
+    # --------------------------------------------------------
+
+    if domain == "current_safety":
+
+        safety = case_data.get(
+            "safety",
+            {}
+        )
+
+        risk_factors = safety.get(
+            "risk_factors",
+            []
+        )
+
+        # We only provide a direct response when the case explicitly
+        # establishes a current safety concern or an explicit negative.
+
+        if isinstance(
+            risk_factors,
+            list
+        ):
+
+            for item in risk_factors:
+
+                text = str(
+                    item
+                ).strip().lower()
+
+                # Explicit current negative
+                if (
+                    "no current safety concern"
+                    in text
+                    or
+                    "no current safety concerns"
+                    in text
+                    or
+                    "currently safe"
+                    in text
+                ):
+                    return (
+                        "No, I don't have any "
+                        "current safety concerns."
+                    )
+
+                # Explicit current positive
+                if (
+                    "current safety concern"
+                    in text
+                    or
+                    "current safety concerns"
+                    in text
+                    or
+                    "current risk"
+                    in text
+                ):
+                    return (
+                        "Yes, I do have some concerns "
+                        "about my safety at the moment."
+                    )
+
+        # Current safety is not established.
+        # Give a direct uncertainty response instead of confusing
+        # it with the historical self-harm question.
+        return (
+            "I'm not aware of any particular safety "
+            "concern at the moment, although I'm not "
+            "sure how to describe it."
+        )
+
+    return None
 
 
 # ============================================================
@@ -493,11 +783,8 @@ def merge_evidence_for_safety(
     evidence_state
 ) -> List[Dict[str, Any]]:
     """
-    Convert the accumulated tutor evidence into a list suitable
+    Convert accumulated tutor evidence into a list suitable
     for safety evaluation.
-
-    The complete session evidence is used rather than only the
-    latest extracted message.
     """
 
     evidence = []
@@ -537,7 +824,9 @@ def merge_evidence_for_safety(
                     domain,
 
                 "value":
-                    item.get("value"),
+                    item.get(
+                        "value"
+                    ),
 
                 "status":
                     item.get(
@@ -719,14 +1008,18 @@ async def chat(
     )
 
     # ========================================================
-    # PROTECTED CLINICAL QUESTION
+    # PROTECTED / SAFETY QUESTION
     # ========================================================
 
-    protected = process_protected_question(
+    safety_domain = detect_safety_question(
+        msg.text
+    )
 
-        question=msg.text,
-
-        persona=case_data
+    direct_safety_response = (
+        build_direct_safety_response(
+            question=msg.text,
+            case_data=case_data
+        )
     )
 
     print(
@@ -745,6 +1038,67 @@ async def chat(
 
     print(
         "DOMAIN:",
+        safety_domain
+    )
+
+    print(
+        "DIRECT SAFETY RESPONSE:",
+        bool(direct_safety_response)
+    )
+
+    print(
+        "==============================================\n"
+    )
+
+    # --------------------------------------------------------
+    # Direct authored safety response
+    # --------------------------------------------------------
+
+    if direct_safety_response:
+
+        return {
+
+            "reply":
+                direct_safety_response,
+
+            "stage":
+                stage,
+
+            "state":
+                state,
+
+            "clinicalEvidence":
+                get_evidence_for_tutor(
+                    get_session_evidence(
+                        session_id,
+                        client_type
+                    )
+                ),
+
+            "safetyState":
+                get_unestablished_safety_state(),
+
+            "treatmentApproach":
+                treatment_approach
+        }
+
+    # ========================================================
+    # EXISTING PROTECTED DOMAIN ENGINE
+    # ========================================================
+
+    protected = process_protected_question(
+
+        question=msg.text,
+
+        persona=case_data
+    )
+
+    print(
+        "\n========== EXISTING PROTECTED DOMAIN =========="
+    )
+
+    print(
+        "DOMAIN:",
         protected.get("domain")
     )
 
@@ -754,13 +1108,17 @@ async def chat(
     )
 
     print(
-        "==============================================\n"
+        "===============================================\n"
     )
 
-    if protected.get("handled"):
+    if protected.get(
+        "handled"
+    ):
 
-        protected_response = build_protected_response(
-            protected
+        protected_response = (
+            build_protected_response(
+                protected
+            )
         )
 
         return {
@@ -829,8 +1187,6 @@ async def chat(
 
     # ========================================================
     # BEHAVIOURAL QUESTION GUIDANCE
-    #
-    # Added ONCE only.
     # ========================================================
 
     if detect_behavioural_question(
@@ -1442,7 +1798,6 @@ def detect_modality_from_text(
     if scores[best] == 0:
         return None
 
-    # Do not manufacture a modality from a weak tie.
     highest = scores[best]
 
     tied = [
@@ -1724,7 +2079,6 @@ async def tutor_review(
         if len(winners) == 1:
             actual_modality = winners[0]
 
-    # A behavioural question alone does not establish a modality.
     q2 = (
         asked_behaviour
         and submitted_modality is not None
