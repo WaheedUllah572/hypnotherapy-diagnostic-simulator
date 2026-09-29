@@ -64,6 +64,16 @@ from services.evidence_extractor import (
 
 load_dotenv()
 
+OPENAI_API_KEY = os.getenv(
+    "OPENAI_API_KEY"
+)
+
+client = (
+    OpenAI(api_key=OPENAI_API_KEY)
+    if OPENAI_API_KEY
+    else None
+)
+
 
 # ============================================================
 # APP
@@ -83,19 +93,8 @@ app.add_middleware(
 )
 
 
-OPENAI_API_KEY = os.getenv(
-    "OPENAI_API_KEY"
-)
-
-client = (
-    OpenAI(api_key=OPENAI_API_KEY)
-    if OPENAI_API_KEY
-    else None
-)
-
-
 # ============================================================
-# SESSION EVIDENCE
+# PHASE 2B — SESSION EVIDENCE
 # ============================================================
 
 session_evidence: Dict[str, Dict[str, Any]] = {}
@@ -105,11 +104,6 @@ def get_session_key(
     session_id: str,
     client_name: str
 ) -> str:
-    """
-    Prevent evidence from different clients accidentally sharing
-    the same session state.
-    """
-
     return f"{session_id}:{client_name}"
 
 
@@ -117,6 +111,7 @@ def get_session_evidence(
     session_id: str,
     client_name: str
 ):
+
     key = get_session_key(
         session_id,
         client_name
@@ -179,6 +174,10 @@ def get_client_case(
 
     return {}
 
+
+# ============================================================
+# TREATMENT APPROACH
+# ============================================================
 
 def normalise_approach(
     value: Any
@@ -253,15 +252,6 @@ def get_authoritative_treatment_approach(
     requested_approach: Optional[str],
     case_data: Dict[str, Any]
 ) -> str:
-    """
-    Determine the treatment approach used by the simulation.
-
-    Priority:
-
-    1. Explicit authored case assignment.
-    2. Explicit frontend assignment if the case does not contain
-       an assignment.
-    """
 
     identity = case_data.get(
         "identity",
@@ -361,7 +351,7 @@ def detect_behavioural_question(
 
 
 # ============================================================
-# CHECK BEHAVIOURAL INFORMATION IN CASE
+# BEHAVIOURAL INFORMATION
 # ============================================================
 
 def has_behavioural_information(
@@ -457,25 +447,12 @@ def has_behavioural_information(
 def detect_safety_question(
     question: str
 ) -> Optional[str]:
-    """
-    Identify the exact type of safety question.
-
-    Returns:
-
-        self_harm_history
-        current_safety
-        risk
-        None
-    """
 
     text = (
         question or ""
     ).strip().lower()
 
-    # --------------------------------------------------------
     # Historical self-harm
-    # --------------------------------------------------------
-
     if (
         "thoughts of harming yourself"
         in text
@@ -494,10 +471,7 @@ def detect_safety_question(
     ):
         return "self_harm_history"
 
-    # --------------------------------------------------------
     # Current safety
-    # --------------------------------------------------------
-
     if (
         "current" in text
         and "safety" in text
@@ -514,10 +488,7 @@ def detect_safety_question(
     ):
         return "current_safety"
 
-    # --------------------------------------------------------
-    # General safety / risk
-    # --------------------------------------------------------
-
+    # General risk
     if (
         "safety" in text
         or
@@ -531,21 +502,12 @@ def detect_safety_question(
 
 
 # ============================================================
-# EXPLICIT SELF-HARM CASE INFORMATION
+# EXPLICIT SELF-HARM HISTORY
 # ============================================================
 
 def get_explicit_self_harm_history(
     case_data: Dict[str, Any]
 ) -> Optional[bool]:
-    """
-    Read an explicit self-harm history from the authored case.
-
-    Returns:
-
-        False = explicit negative
-        True  = explicit positive
-        None  = not established
-    """
 
     safety = case_data.get(
         "safety",
@@ -571,7 +533,7 @@ def get_explicit_self_harm_history(
             item
         ).strip().lower()
 
-        # Explicit negative
+        # Negative MUST be checked first.
         if (
             "no self-harm history"
             in text
@@ -587,7 +549,7 @@ def get_explicit_self_harm_history(
         ):
             return False
 
-        # Explicit positive
+        # Positive
         if (
             "self-harm history"
             in text
@@ -614,20 +576,13 @@ def build_direct_safety_response(
     question: str,
     case_data: Dict[str, Any]
 ) -> Optional[str]:
-    """
-    Handle safety questions where the authored case provides
-    an explicit answer.
-
-    IMPORTANT:
-    Never invent positive or negative safety information.
-    """
 
     domain = detect_safety_question(
         question
     )
 
     # --------------------------------------------------------
-    # HISTORICAL SELF-HARM
+    # SELF-HARM HISTORY
     # --------------------------------------------------------
 
     if domain == "self_harm_history":
@@ -652,8 +607,6 @@ def build_direct_safety_response(
                 "like that before."
             )
 
-        # Not established.
-        # Let the normal protected engine handle it.
         return None
 
     # --------------------------------------------------------
@@ -672,9 +625,6 @@ def build_direct_safety_response(
             []
         )
 
-        # We only provide a direct response when the case explicitly
-        # establishes a current safety concern or an explicit negative.
-
         if isinstance(
             risk_factors,
             list
@@ -686,7 +636,6 @@ def build_direct_safety_response(
                     item
                 ).strip().lower()
 
-                # Explicit current negative
                 if (
                     "no current safety concern"
                     in text
@@ -697,12 +646,12 @@ def build_direct_safety_response(
                     "currently safe"
                     in text
                 ):
+
                     return (
                         "No, I don't have any "
                         "current safety concerns."
                     )
 
-                # Explicit current positive
                 if (
                     "current safety concern"
                     in text
@@ -713,14 +662,13 @@ def build_direct_safety_response(
                     "current risk"
                     in text
                 ):
+
                     return (
                         "Yes, I do have some concerns "
                         "about my safety at the moment."
                     )
 
-        # Current safety is not established.
-        # Give a direct uncertainty response instead of confusing
-        # it with the historical self-harm question.
+        # Current safety is not explicitly established.
         return (
             "I'm not aware of any particular safety "
             "concern at the moment, although I'm not "
@@ -731,7 +679,7 @@ def build_direct_safety_response(
 
 
 # ============================================================
-# STANDARD EMPTY SAFETY STATE
+# EMPTY SAFETY STATE
 # ============================================================
 
 def get_unestablished_safety_state():
@@ -762,30 +710,12 @@ def get_unestablished_safety_state():
 
 
 # ============================================================
-# EVIDENCE MERGING
+# MERGE EVIDENCE FOR SAFETY
 # ============================================================
-
-def _evidence_identity(
-    item: Dict[str, Any]
-):
-    return (
-        item.get("domain"),
-        str(
-            item.get("value")
-        ).strip().lower(),
-        str(
-            item.get("evidence_text")
-        ).strip().lower()
-    )
-
 
 def merge_evidence_for_safety(
     evidence_state
 ) -> List[Dict[str, Any]]:
-    """
-    Convert accumulated tutor evidence into a list suitable
-    for safety evaluation.
-    """
 
     evidence = []
 
@@ -867,25 +797,215 @@ def merge_evidence_for_safety(
 
 
 # ============================================================
-# PROTECTED QUESTION HANDLER
+# PROCESS EVIDENCE + SAFETY
+#
+# IMPORTANT:
+# This helper is also used for deterministic protected/safety
+# responses.
 # ============================================================
 
-def build_protected_response(
-    protected: Dict[str, Any]
+def process_evidence_and_safety(
+    session_id: str,
+    client_name: str,
+    history: list,
+    therapist_question: str,
+    client_reply: str
 ):
-    return {
 
-        "reply":
-            protected.get(
-                "response",
-                "I'm not sure how to answer that."
-            ),
+    evidence_state = get_session_evidence(
+        session_id,
+        client_name
+    )
 
-        "domain":
-            protected.get(
-                "domain"
+    # --------------------------------------------------------
+    # Extract evidence
+    # --------------------------------------------------------
+
+    try:
+
+        extracted_evidence = extract_clinical_evidence(
+
+            client=client,
+
+            history=history,
+
+            latest_student_text=therapist_question,
+
+            latest_client_reply=client_reply
+        )
+
+    except Exception as exc:
+
+        print(
+            "Evidence extraction error:",
+            exc
+        )
+
+        extracted_evidence = []
+
+    print(
+        "\n========== PHASE 2B EVIDENCE DEBUG =========="
+    )
+
+    print(
+        "SESSION:",
+        session_id
+    )
+
+    print(
+        "CLIENT:",
+        client_name
+    )
+
+    print(
+        "QUESTION:",
+        therapist_question
+    )
+
+    print(
+        "CLIENT REPLY:",
+        client_reply
+    )
+
+    print(
+        "EXTRACTED EVIDENCE:",
+        extracted_evidence
+    )
+
+    print(
+        "==============================================\n"
+    )
+
+    # --------------------------------------------------------
+    # Store evidence
+    # --------------------------------------------------------
+
+    for item in extracted_evidence:
+
+        if not isinstance(
+            item,
+            dict
+        ):
+            continue
+
+        domain = item.get(
+            "domain"
+        )
+
+        if not domain:
+            continue
+
+        try:
+
+            update_evidence(
+
+                evidence_state=evidence_state,
+
+                domain=domain,
+
+                value=item.get(
+                    "value"
+                ),
+
+                status=item.get(
+                    "status",
+                    "mentioned"
+                ),
+
+                confidence=item.get(
+                    "confidence",
+                    0
+                ),
+
+                evidence_text=item.get(
+                    "evidence_text"
+                ),
+
+                clinical_significance=item.get(
+                    "clinical_significance"
+                ),
+
+                applied_to_reasoning=item.get(
+                    "applied_to_reasoning",
+                    False
+                ),
+
+                flags=item.get(
+                    "flags",
+                    []
+                )
             )
-    }
+
+        except Exception as exc:
+
+            print(
+                f"Evidence update error for {domain}:",
+                exc
+            )
+
+    # --------------------------------------------------------
+    # Accumulated evidence
+    # --------------------------------------------------------
+
+    accumulated_evidence = (
+        merge_evidence_for_safety(
+            evidence_state
+        )
+    )
+
+    # --------------------------------------------------------
+    # Safety evaluation
+    # --------------------------------------------------------
+
+    try:
+
+        safety_state = evaluate_safety(
+            accumulated_evidence
+        )
+
+    except Exception as exc:
+
+        print(
+            "Safety evaluation error:",
+            exc
+        )
+
+        safety_state = (
+            get_unestablished_safety_state()
+        )
+
+    print(
+        "\n========== PHASE 2B SAFETY DEBUG =========="
+    )
+
+    print(
+        "SESSION:",
+        session_id
+    )
+
+    print(
+        "CLIENT:",
+        client_name
+    )
+
+    print(
+        "ACCUMULATED EVIDENCE:",
+        accumulated_evidence
+    )
+
+    print(
+        "SAFETY STATE:",
+        safety_state
+    )
+
+    print(
+        "============================================\n"
+    )
+
+    return (
+        evidence_state,
+        safety_state
+    )
 
 
 # ============================================================
@@ -912,7 +1032,7 @@ async def chat(
     )
 
     # ========================================================
-    # AUTHORITATIVE CASE
+    # CASE
     # ========================================================
 
     case_data = get_client_case(
@@ -920,13 +1040,18 @@ async def chat(
     )
 
     # ========================================================
-    # AUTHORITATIVE TREATMENT APPROACH
+    # TREATMENT APPROACH
     # ========================================================
 
     treatment_approach = (
         get_authoritative_treatment_approach(
+
             client_name=client_type,
-            requested_approach=msg.treatmentApproach,
+
+            requested_approach=(
+                msg.treatmentApproach
+            ),
+
             case_data=case_data
         )
     )
@@ -955,7 +1080,7 @@ async def chat(
         )
 
     # ========================================================
-    # CONVERSATION STATE
+    # STATE
     # ========================================================
 
     try:
@@ -1008,7 +1133,7 @@ async def chat(
     )
 
     # ========================================================
-    # PROTECTED / SAFETY QUESTION
+    # SAFETY DETECTION
     # ========================================================
 
     safety_domain = detect_safety_question(
@@ -1017,7 +1142,9 @@ async def chat(
 
     direct_safety_response = (
         build_direct_safety_response(
+
             question=msg.text,
+
             case_data=case_data
         )
     )
@@ -1043,18 +1170,40 @@ async def chat(
 
     print(
         "DIRECT SAFETY RESPONSE:",
-        bool(direct_safety_response)
+        bool(
+            direct_safety_response
+        )
     )
 
     print(
         "==============================================\n"
     )
 
-    # --------------------------------------------------------
-    # Direct authored safety response
-    # --------------------------------------------------------
+    # ========================================================
+    # IMPORTANT:
+    #
+    # DO NOT RETURN HERE WITH EMPTY SAFETY STATE.
+    #
+    # Instead process the deterministic response through
+    # Phase 2B evidence + safety.
+    # ========================================================
 
     if direct_safety_response:
+
+        evidence_state, safety_state = (
+            process_evidence_and_safety(
+
+                session_id=session_id,
+
+                client_name=client_type,
+
+                history=msg.history,
+
+                therapist_question=msg.text,
+
+                client_reply=direct_safety_response
+            )
+        )
 
         return {
 
@@ -1069,14 +1218,11 @@ async def chat(
 
             "clinicalEvidence":
                 get_evidence_for_tutor(
-                    get_session_evidence(
-                        session_id,
-                        client_type
-                    )
+                    evidence_state
                 ),
 
             "safetyState":
-                get_unestablished_safety_state(),
+                safety_state,
 
             "treatmentApproach":
                 treatment_approach
@@ -1099,12 +1245,16 @@ async def chat(
 
     print(
         "DOMAIN:",
-        protected.get("domain")
+        protected.get(
+            "domain"
+        )
     )
 
     print(
         "HANDLED:",
-        protected.get("handled")
+        protected.get(
+            "handled"
+        )
     )
 
     print(
@@ -1115,16 +1265,30 @@ async def chat(
         "handled"
     ):
 
-        protected_response = (
-            build_protected_response(
-                protected
+        protected_reply = protected.get(
+            "response",
+            "I'm not sure how to answer that."
+        )
+
+        evidence_state, safety_state = (
+            process_evidence_and_safety(
+
+                session_id=session_id,
+
+                client_name=client_type,
+
+                history=msg.history,
+
+                therapist_question=msg.text,
+
+                client_reply=protected_reply
             )
         )
 
         return {
 
             "reply":
-                protected_response["reply"],
+                protected_reply,
 
             "stage":
                 stage,
@@ -1134,14 +1298,11 @@ async def chat(
 
             "clinicalEvidence":
                 get_evidence_for_tutor(
-                    get_session_evidence(
-                        session_id,
-                        client_type
-                    )
+                    evidence_state
                 ),
 
             "safetyState":
-                get_unestablished_safety_state(),
+                safety_state,
 
             "treatmentApproach":
                 treatment_approach
@@ -1244,7 +1405,7 @@ Do not manufacture a definite yes/no answer.
 """
 
     # ========================================================
-    # SYSTEM MESSAGE
+    # SYSTEM MESSAGES
     # ========================================================
 
     messages = [
@@ -1332,7 +1493,7 @@ Never introduce unsupported facts.
     })
 
     # ========================================================
-    # CONVERSATION HISTORY
+    # HISTORY
     # ========================================================
 
     for item in msg.history:
@@ -1468,181 +1629,22 @@ Never introduce unsupported facts.
         )
 
     # ========================================================
-    # PHASE 2B — ACCUMULATED EVIDENCE
+    # NORMAL RESPONSE — PHASE 2B
     # ========================================================
 
-    evidence_state = get_session_evidence(
+    evidence_state, safety_state = (
+        process_evidence_and_safety(
 
-        session_id,
+            session_id=session_id,
 
-        client_type
-    )
-
-    try:
-
-        extracted_evidence = extract_clinical_evidence(
-
-            client=client,
+            client_name=client_type,
 
             history=msg.history,
 
-            latest_student_text=msg.text,
+            therapist_question=msg.text,
 
-            latest_client_reply=reply
+            client_reply=reply
         )
-
-    except Exception as exc:
-
-        print(
-            "Evidence extraction error:",
-            exc
-        )
-
-        extracted_evidence = []
-
-    print(
-        "\n========== PHASE 2B EVIDENCE DEBUG =========="
-    )
-
-    print(
-        "SESSION:",
-        session_id
-    )
-
-    print(
-        "CLIENT:",
-        client_type
-    )
-
-    print(
-        "TREATMENT APPROACH:",
-        treatment_approach
-    )
-
-    print(
-        "EXTRACTED EVIDENCE:",
-        extracted_evidence
-    )
-
-    print(
-        "==============================================\n"
-    )
-
-    # ========================================================
-    # UPDATE ACCUMULATED EVIDENCE
-    # ========================================================
-
-    for item in extracted_evidence:
-
-        if not isinstance(
-            item,
-            dict
-        ):
-            continue
-
-        domain = item.get(
-            "domain"
-        )
-
-        if not domain:
-            continue
-
-        try:
-
-            update_evidence(
-
-                evidence_state=evidence_state,
-
-                domain=domain,
-
-                value=item.get(
-                    "value"
-                ),
-
-                status=item.get(
-                    "status",
-                    "mentioned"
-                ),
-
-                confidence=item.get(
-                    "confidence",
-                    0
-                ),
-
-                evidence_text=item.get(
-                    "evidence_text"
-                ),
-
-                clinical_significance=item.get(
-                    "clinical_significance"
-                ),
-
-                applied_to_reasoning=item.get(
-                    "applied_to_reasoning",
-                    False
-                ),
-
-                flags=item.get(
-                    "flags",
-                    []
-                )
-            )
-
-        except Exception as exc:
-
-            print(
-                f"Evidence update error for {domain}:",
-                exc
-            )
-
-    # ========================================================
-    # SAFETY — USE ACCUMULATED SESSION EVIDENCE
-    # ========================================================
-
-    accumulated_evidence = (
-        merge_evidence_for_safety(
-            evidence_state
-        )
-    )
-
-    try:
-
-        safety_state = evaluate_safety(
-            accumulated_evidence
-        )
-
-    except Exception as exc:
-
-        print(
-            "Safety evaluation error:",
-            exc
-        )
-
-        safety_state = (
-            get_unestablished_safety_state()
-        )
-
-    print(
-        "\n========== PHASE 2B SAFETY DEBUG =========="
-    )
-
-    print(
-        "SESSION:",
-        session_id
-    )
-
-    print(
-        "CLIENT:",
-        client_type
-    )
-
-    print(
-        "SAFETY STATE:",
-        safety_state
-    )
-
-    print(
-        "============================================\n"
     )
 
     # ========================================================
@@ -1674,7 +1676,7 @@ Never introduce unsupported facts.
 
 
 # ============================================================
-# TUTOR HELPERS
+# TUTOR REVIEW
 # ============================================================
 
 def _normalise_text(
@@ -1709,8 +1711,11 @@ def get_expected_approach_for_client(
     )
 
     return get_authoritative_treatment_approach(
+
         client_name=client_name,
+
         requested_approach=None,
+
         case_data=case_data
     )
 
@@ -1801,8 +1806,12 @@ def detect_modality_from_text(
     highest = scores[best]
 
     tied = [
+
         modality
-        for modality, score in scores.items()
+
+        for modality, score
+        in scores.items()
+
         if score == highest
     ]
 
@@ -1881,10 +1890,6 @@ def evaluate_q4(
     }
 
 
-# ============================================================
-# TUTOR REVIEW
-# ============================================================
-
 @app.post("/tutor-review")
 async def tutor_review(
     req: TutorRequest
@@ -1907,10 +1912,6 @@ async def tutor_review(
         )
         else []
     )
-
-    # ========================================================
-    # SUBMISSION TEXT
-    # ========================================================
 
     q1_text = _normalise_text(
         submission.get(
@@ -1940,10 +1941,6 @@ async def tutor_review(
         )
     )
 
-    # ========================================================
-    # AUTHORITATIVE APPROACH
-    # ========================================================
-
     expected_approach = (
         get_expected_approach_for_client(
             req.clientName
@@ -1958,10 +1955,6 @@ async def tutor_review(
         expected_approach is not None
         and selected_approach == expected_approach
     )
-
-    # ========================================================
-    # CHAT TEXT
-    # ========================================================
 
     therapist_messages = [
 
@@ -1978,6 +1971,7 @@ async def tutor_review(
             item,
             dict
         )
+
         and item.get(
             "role"
         ) == "therapist"
@@ -1998,6 +1992,7 @@ async def tutor_review(
             item,
             dict
         )
+
         and item.get(
             "role"
         ) == "client"
@@ -2010,10 +2005,6 @@ async def tutor_review(
     client_text = " ".join(
         client_messages
     )
-
-    # ========================================================
-    # MODALITY
-    # ========================================================
 
     asked_behaviour = detect_behavioural_question(
         therapist_text
@@ -2034,19 +2025,16 @@ async def tutor_review(
 
     submitted_modality = None
 
-    modality_text = _normalise_text(
-        q2_text
-    )
-
-    if "visual" in modality_text:
+    if "visual" in q2_text:
         submitted_modality = "Visual"
 
-    elif "auditory" in modality_text:
+    elif "auditory" in q2_text:
         submitted_modality = "Auditory"
 
     elif (
-        "kinaesthetic" in modality_text
-        or "kinesthetic" in modality_text
+        "kinaesthetic" in q2_text
+        or
+        "kinesthetic" in q2_text
     ):
         submitted_modality = "Kinaesthetic"
 
@@ -2071,12 +2059,17 @@ async def tutor_review(
         )
 
         winners = [
+
             modality
-            for modality, count in counts.items()
+
+            for modality, count
+            in counts.items()
+
             if count == highest
         ]
 
         if len(winners) == 1:
+
             actual_modality = winners[0]
 
     q2 = (
@@ -2085,10 +2078,6 @@ async def tutor_review(
         and actual_modality is not None
         and submitted_modality == actual_modality
     )
-
-    # ========================================================
-    # OBJECTIVE
-    # ========================================================
 
     q3 = _contains_any(
         q3_text,
@@ -2107,10 +2096,6 @@ async def tutor_review(
         ]
     )
 
-    # ========================================================
-    # SAFETY / REASSURANCE / READINESS
-    # ========================================================
-
     q4_data = evaluate_q4(
         q4_text
     )
@@ -2118,10 +2103,6 @@ async def tutor_review(
     q4 = all(
         q4_data.values()
     )
-
-    # ========================================================
-    # STRESS INDICATOR
-    # ========================================================
 
     stress_present = _contains_any(
         client_text.lower(),
@@ -2168,23 +2149,9 @@ async def tutor_review(
         )
     )
 
-    stress_score = (
-        not stress_present
-        or handled_stress
-    )
-
-    # ========================================================
-    # FEEDBACK
-    # ========================================================
-
-    expected_name = (
-        expected_approach
-        or "not established"
-    )
-
     feedback = f"""
 QUESTION 1 — Treatment Approach
-{"✔ Appropriate model selected." if q1 else f"✘ The selected approach does not match the authored client assignment. Expected: {expected_name}."}
+{"✔ Appropriate model selected." if q1 else f"✘ The selected approach does not match the authored client assignment. Expected: {expected_approach}."}
 
 QUESTION 2 — Client Modality
 {"✔ Modality selection is supported by the conversation." if q2 else "✘ The selected modality is not sufficiently supported by the conversation."}
@@ -2212,10 +2179,6 @@ QUESTION 4 — Safety & Reassurance
                 "✘ The client's change in pleasurable/activity behaviour was not clearly addressed."
             )
 
-    # ========================================================
-    # SCORE
-    # ========================================================
-
     total = sum([
         bool(q1),
         bool(q2),
@@ -2227,10 +2190,6 @@ QUESTION 4 — Safety & Reassurance
         req.clientName,
         total
     )
-
-    # ========================================================
-    # RESPONSE
-    # ========================================================
 
     return {
 
@@ -2334,6 +2293,7 @@ def progress():
                 s,
                 dict
             )
+
             and s.get(
                 "client"
             )
