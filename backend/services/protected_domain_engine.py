@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 # ============================================================
 
 PROTECTED_DOMAINS = {
+
     "medication": [
         "medication",
         "medications",
@@ -165,12 +166,116 @@ PROTECTED_DOMAINS = {
 
 
 # ============================================================
+# HYPNOSIS CONTROL CONCERN PATTERNS
+# ============================================================
+#
+# These questions are specifically about the client's concern
+# regarding control, awareness, or autonomy during hypnosis.
+#
+# IMPORTANT:
+# Generic "hypnosis" must NOT be treated as protected.
+#
+# Only hypnosis-related CONTROL concerns are protected here.
+# ============================================================
+
+HYPNOSIS_CONTROL_PATTERNS = [
+
+    "losing control during hypnosis",
+    "lose control during hypnosis",
+    "control during hypnosis",
+
+    "losing control while hypnotized",
+    "lose control while hypnotized",
+    "control while hypnotized",
+
+    "losing control while in hypnosis",
+    "lose control while in hypnosis",
+    "control while in hypnosis",
+
+    "remain in control during hypnosis",
+    "remain in control while hypnotized",
+    "remain in control while in hypnosis",
+
+    "stay in control during hypnosis",
+    "stay in control while hypnotized",
+    "stay in control while in hypnosis",
+
+    "still be in control during hypnosis",
+    "still be in control while hypnotized",
+    "still be in control while in hypnosis",
+
+    "still have control during hypnosis",
+    "still have control while hypnotized",
+
+    "aware during hypnosis",
+    "aware while hypnotized",
+    "aware while in hypnosis",
+
+    "aware of everything during hypnosis",
+    "aware of what is happening during hypnosis",
+
+    "remain aware during hypnosis",
+    "remain aware while hypnotized",
+
+    "stay aware during hypnosis",
+    "stay aware while hypnotized",
+
+    "guide myself through hypnosis",
+    "guide myself during hypnosis",
+    "guide myself through the process",
+
+    "manage my thoughts during hypnosis",
+    "manage my feelings during hypnosis",
+
+    "manage my thoughts and feelings during hypnosis",
+
+    "losing control during hypnotherapy",
+    "lose control during hypnotherapy",
+    "control during hypnotherapy",
+
+    "remain in control during hypnotherapy",
+    "stay in control during hypnotherapy",
+
+    "still be in control during hypnotherapy",
+    "aware during hypnotherapy",
+    "remain aware during hypnotherapy",
+]
+
+
+# ============================================================
 # DOMAIN DETECTION
 # ============================================================
 
 def detect_domain(question: str) -> Optional[str]:
 
     text = (question or "").lower().strip()
+
+    # ========================================================
+    # HYPNOSIS CONTROL CONCERN
+    #
+    # This must be detected before generic protected domains.
+    #
+    # Example:
+    #
+    # "Are you worried about losing control during hypnosis?"
+    #
+    # -> risk
+    #
+    # But:
+    #
+    # "What are you expecting from hypnosis?"
+    #
+    # -> None
+    #
+    # "Have you had hypnosis before?"
+    #
+    # -> previous_hypnosis
+    # ========================================================
+
+    for pattern in HYPNOSIS_CONTROL_PATTERNS:
+
+        if pattern in text:
+            return "risk"
 
     # ========================================================
     # RISK FIRST
@@ -185,25 +290,26 @@ def detect_domain(question: str) -> Optional[str]:
     # PREVIOUS HYPNOSIS EXPERIENCE
     #
     # IMPORTANT:
-    # We must detect the QUESTION INTENT here.
+    # We detect the QUESTION INTENT here.
     #
     # "Have you ever had hypnosis before?"
-    #      -> previous_hypnosis
+    #     -> previous_hypnosis
     #
     # "Do you have any concerns about hypnosis?"
-    #      -> NOT previous_hypnosis
+    #     -> NOT previous_hypnosis
     #
     # "Are you worried about losing control during hypnosis?"
-    #      -> NOT previous_hypnosis
+    #     -> risk
     #
     # "What are you expecting from hypnosis?"
-    #      -> NOT previous_hypnosis
+    #     -> NOT previous_hypnosis
     #
     # "Are you ready to go into hypnosis?"
-    #      -> NOT previous_hypnosis
+    #     -> NOT previous_hypnosis
     # ========================================================
 
     hypnosis_history_patterns = [
+
         # Direct previous-experience questions
         "have you ever had hypnosis",
         "have you had hypnosis",
@@ -253,9 +359,12 @@ def detect_domain(question: str) -> Optional[str]:
     #
     # NOTE:
     # "hypnosis" itself is intentionally NOT included here.
+    #
     # General hypnosis questions should be handled naturally
-    # by the persona/LLM unless they are specifically about
-    # previous hypnosis experience.
+    # by the persona/LLM unless they are specifically about:
+    #
+    # - previous hypnosis experience
+    # - hypnosis control concern
     # ========================================================
 
     domain_order = [
@@ -388,10 +497,17 @@ def is_defined(
     # "No self-harm history"
     #
     # does NOT automatically answer:
+    #
     # "Have you ever had thoughts of harming yourself?"
+    #
+    # The same principle applies to hypnosis-control concern.
+    # The presence of another risk factor does NOT establish
+    # that the client has a defined answer about control during
+    # hypnosis.
     # --------------------------------------------------------
 
     if domain == "risk":
+
         return False
 
     return not _is_empty(value)
@@ -432,6 +548,22 @@ def detect_risk_question_type(
     ).lower().strip()
 
     # --------------------------------------------------------
+    # HYPNOSIS CONTROL CONCERN
+    #
+    # This MUST be checked before general risk.
+    #
+    # It is intentionally separate from self-harm,
+    # suicide, and harm-to-others questions.
+    # --------------------------------------------------------
+
+    if any(
+        x in text
+        for x in HYPNOSIS_CONTROL_PATTERNS
+    ):
+
+        return "hypnosis_control_concern"
+
+    # --------------------------------------------------------
     # SELF-HARM / SUICIDAL THOUGHTS
     # --------------------------------------------------------
 
@@ -457,6 +589,16 @@ def detect_risk_question_type(
 
             "have you had thoughts of harming yourself",
             "have you had thoughts of hurting yourself",
+
+            "thought about harming yourself",
+            "thought about harming myself",
+
+            "thought about hurting yourself",
+            "thought about hurting myself",
+
+            "thinking about suicide",
+            "wanted to die",
+            "wanting to die",
 
         ]
     ):
@@ -528,6 +670,7 @@ def detect_risk_question_type(
 
             "thoughts of harming someone else",
             "thoughts of harming anyone else",
+
             "thoughts of hurting someone else",
             "thoughts of hurting anyone else",
 
@@ -571,6 +714,29 @@ def get_uncertain_response(
         risk_type = detect_risk_question_type(
             question
         )
+
+        # ----------------------------------------------------
+        # HYPNOSIS CONTROL CONCERN
+        # ----------------------------------------------------
+        #
+        # IMPORTANT:
+        #
+        # This response addresses the specific concern.
+        # It does NOT invent a clinical fact such as:
+        #
+        # "I have lost control during hypnosis before."
+        #
+        # It simply preserves the client's uncertainty/
+        # concern around control during hypnosis.
+        # ----------------------------------------------------
+
+        if risk_type == "hypnosis_control_concern":
+
+            return (
+                "I'm concerned about losing control during hypnosis. "
+                "I want to make sure I'm aware of what's happening "
+                "and can still guide myself through the process."
+            )
 
         # ----------------------------------------------------
         # THOUGHTS OF SELF-HARM
@@ -797,6 +963,15 @@ def process_protected_question(
 
     # --------------------------------------------------------
     # RISK IS ALWAYS INTERPRETED BY EXACT QUESTION TYPE
+    #
+    # This includes:
+    #
+    # - self_harm_thoughts
+    # - suicide_attempt
+    # - self_harm_history
+    # - harm_to_others
+    # - hypnosis_control_concern
+    # - general_risk
     # --------------------------------------------------------
 
     response = get_uncertain_response(
