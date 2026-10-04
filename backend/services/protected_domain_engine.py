@@ -40,70 +40,70 @@ PROTECTED_DOMAINS = {
         "psychiatric support",
     ],
 
-    "previous_hypnosis": [
-        "hypnotherapy",
-        "hypnosis",
-        "hypnotherapist",
-    ],
+    # IMPORTANT:
+    # Do NOT use generic "hypnosis" or "hypnotherapy" keywords
+    # here. Previous hypnosis experience is detected separately
+    # based on the actual intent of the question.
+    "previous_hypnosis": [],
 
     "risk": [
-    "harm yourself",
-    "harmed yourself",
-    "harming yourself",
+        "harm yourself",
+        "harmed yourself",
+        "harming yourself",
 
-    "harm myself",
-    "harmed myself",
-    "harming myself",
+        "harm myself",
+        "harmed myself",
+        "harming myself",
 
-    "hurt yourself",
-    "hurt myself",
-    "hurt someone else",
-    "hurt anyone else",
+        "hurt yourself",
+        "hurt myself",
+        "hurt someone else",
+        "hurt anyone else",
 
-    "harming someone else",
-    "harming anyone else",
-    "harmed someone else",
-    "harmed anyone else",
+        "harming someone else",
+        "harming anyone else",
+        "harmed someone else",
+        "harmed anyone else",
 
-    "harm someone else",
-    "harm anyone else",
+        "harm someone else",
+        "harm anyone else",
 
-    "thoughts of harming yourself",
-    "thoughts of harming myself",
+        "thoughts of harming yourself",
+        "thoughts of harming myself",
 
-    "thoughts of hurting yourself",
-    "thoughts of hurting myself",
+        "thoughts of hurting yourself",
+        "thoughts of hurting myself",
 
-    "thoughts of harming someone else",
-    "thoughts of harming anyone else",
+        "thoughts of harming someone else",
+        "thoughts of harming anyone else",
 
-    "thoughts of hurting someone else",
-    "thoughts of hurting anyone else",
+        "thoughts of hurting someone else",
+        "thoughts of hurting anyone else",
 
-    "thoughts about harming someone",
-    "thoughts about hurting someone",
+        "thoughts about harming someone",
+        "thoughts about hurting someone",
 
-    "thoughts of self harm",
-    "thoughts of self-harm",
+        "thoughts of self harm",
+        "thoughts of self-harm",
 
-    "self harm",
-    "self-harm",
+        "self harm",
+        "self-harm",
 
-    "suicidal",
-    "suicide",
-    "suicidal thoughts",
-    "thoughts about suicide",
-    "thoughts of suicide",
+        "suicidal",
+        "suicide",
+        "suicidal thoughts",
+        "thoughts about suicide",
+        "thoughts of suicide",
 
-    "attempted suicide",
-    "suicide attempt",
-    "attempted to kill yourself",
-    "attempted to kill myself",
-    "tried to kill yourself",
-    "tried to kill myself",
-    "tried to end your life",
-    "tried to end my life",
-],
+        "attempted suicide",
+        "suicide attempt",
+        "attempted to kill yourself",
+        "attempted to kill myself",
+        "tried to kill yourself",
+        "tried to kill myself",
+        "tried to end your life",
+        "tried to end my life",
+    ],
 
     "healthcare_professionals": [
         "healthcare professional",
@@ -182,14 +182,86 @@ def detect_domain(question: str) -> Optional[str]:
             return "risk"
 
     # ========================================================
+    # PREVIOUS HYPNOSIS EXPERIENCE
+    #
+    # IMPORTANT:
+    # We must detect the QUESTION INTENT here.
+    #
+    # "Have you ever had hypnosis before?"
+    #      -> previous_hypnosis
+    #
+    # "Do you have any concerns about hypnosis?"
+    #      -> NOT previous_hypnosis
+    #
+    # "Are you worried about losing control during hypnosis?"
+    #      -> NOT previous_hypnosis
+    #
+    # "What are you expecting from hypnosis?"
+    #      -> NOT previous_hypnosis
+    #
+    # "Are you ready to go into hypnosis?"
+    #      -> NOT previous_hypnosis
+    # ========================================================
+
+    hypnosis_history_patterns = [
+        # Direct previous-experience questions
+        "have you ever had hypnosis",
+        "have you had hypnosis",
+        "have you ever experienced hypnosis",
+        "have you experienced hypnosis",
+
+        "have you ever had hypnotherapy",
+        "have you had hypnotherapy",
+        "have you ever experienced hypnotherapy",
+        "have you experienced hypnotherapy",
+
+        # Hypnotherapist experience
+        "have you ever seen a hypnotherapist",
+        "have you seen a hypnotherapist",
+        "have you ever worked with a hypnotherapist",
+        "have you worked with a hypnotherapist",
+
+        # Received treatment
+        "have you received hypnotherapy",
+        "have you ever received hypnotherapy",
+
+        "have you received hypnosis",
+        "have you ever received hypnosis",
+
+        # Explicit history / previous experience
+        "previous experience with hypnosis",
+        "previous experience of hypnosis",
+        "previous experience with hypnotherapy",
+        "previous experience of hypnotherapy",
+
+        "history of hypnosis",
+        "history of hypnotherapy",
+
+        "past experience with hypnosis",
+        "past experience of hypnosis",
+        "past experience with hypnotherapy",
+        "past experience of hypnotherapy",
+    ]
+
+    for pattern in hypnosis_history_patterns:
+
+        if pattern in text:
+            return "previous_hypnosis"
+
+    # ========================================================
     # OTHER PROTECTED DOMAINS
+    #
+    # NOTE:
+    # "hypnosis" itself is intentionally NOT included here.
+    # General hypnosis questions should be handled naturally
+    # by the persona/LLM unless they are specifically about
+    # previous hypnosis experience.
     # ========================================================
 
     domain_order = [
         "safeguarding",
         "contraindications",
         "medication",
-        "previous_hypnosis",
         "psychiatric_care",
         "psychological_care",
         "healthcare_professionals",
@@ -208,7 +280,7 @@ def detect_domain(question: str) -> Optional[str]:
 
 
 # ============================================================
-# VALUE NORMALISISATION
+# VALUE NORMALISATION
 # ============================================================
 
 def _is_empty(value: Any) -> bool:
