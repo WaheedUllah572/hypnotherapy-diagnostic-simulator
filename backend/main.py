@@ -1396,7 +1396,14 @@ If relevant information does not exist:
 - do not ask the therapist to rephrase the question
 - do not pretend not to understand
 
-Keep the answer natural and appropriately concise.
+IMPORTANT RESPONSE STYLE:
+
+- Keep the answer short and conversational.
+- Usually use 1–2 sentences.
+- Avoid repeatedly saying "I haven't really thought about that."
+- Vary the wording naturally.
+- Do not produce a polished explanation.
+- Do not summarize the client's anxiety unless directly relevant.
 
 The fact that the information is undefined does NOT mean the
 client has explicitly said "no".
@@ -1467,6 +1474,20 @@ It does NOT change the authoritative clinical facts.
 The client's personality controls communication style only.
 
 Conversation state controls openness and emotional expression only.
+
+RESPONSE STYLE:
+
+The client should sound like a real person speaking to a therapist.
+
+Prefer short, natural answers over polished clinical explanations.
+
+Normally answer in 1–3 sentences and roughly 10–45 words unless
+the question genuinely requires more explanation.
+
+Do not automatically summarize the complete case.
+
+Do not repeat previously established information unless it is
+relevant to the latest question.
 
 COMPLETE CASE:
 
@@ -1588,7 +1609,9 @@ Never introduce unsupported facts.
 
             messages=messages,
 
-            temperature=0.7,
+            # Slightly higher variation for more natural,
+            # conversational client responses.
+            temperature=0.8,
 
             timeout=25
         )
