@@ -100,6 +100,12 @@ app.add_middleware(
 
 session_evidence: Dict[str, Dict[str, Any]] = {}
 
+# Keep each extracted evidence item separately for safety evaluation.
+# The clinical evidence model stores one current value per domain, so
+# this session-level list prevents a later item in the same domain from
+# replacing an earlier item before safety evaluation.
+session_safety_evidence: Dict[str, List[Dict[str, Any]]] = {}
+
 
 def get_session_key(
     session_id: str,
@@ -125,6 +131,21 @@ def get_session_evidence(
         )
 
     return session_evidence[key]
+
+
+def get_session_safety_evidence(
+    session_id: str,
+    client_name: str
+) -> List[Dict[str, Any]]:
+    key = get_session_key(
+        session_id,
+        client_name
+    )
+
+    if key not in session_safety_evidence:
+        session_safety_evidence[key] = []
+
+    return session_safety_evidence[key]
 
 
 # ============================================================
@@ -717,84 +738,49 @@ def get_unestablished_safety_state():
 def merge_evidence_for_safety(
     evidence_state
 ) -> List[Dict[str, Any]]:
+    """
+    Convert the clinical evidence state into the shape expected by
+    evaluate_safety(). The evidence model stores source text in an
+    `evidence` list, not in a singular `evidence_text` field.
+    """
+    merged = []
 
-    evidence = []
+    if not isinstance(evidence_state, dict):
+        return merged
 
-    if not isinstance(
-        evidence_state,
-        dict
-    ):
-        return evidence
+    domains = evidence_state.get("domains", {})
 
-    domains = evidence_state.get(
-        "domains",
-        {}
-    )
+    if not isinstance(domains, dict):
+        return merged
 
-    if isinstance(
-        domains,
-        dict
-    ):
+    for domain, item in domains.items():
+        if not isinstance(item, dict) or not item.get("value"):
+            continue
 
-        for domain, item in domains.items():
+        source_texts = item.get("evidence", [])
+        if isinstance(source_texts, str):
+            source_texts = [source_texts]
+        if not isinstance(source_texts, list):
+            source_texts = []
 
-            if not isinstance(
-                item,
-                dict
-            ):
-                continue
+        evidence_text = " ".join(
+            str(source).strip()
+            for source in source_texts
+            if source and str(source).strip()
+        ) or None
 
-            if not item.get(
-                "value"
-            ):
-                continue
+        merged.append({
+            "domain": domain,
+            "value": item.get("value"),
+            "status": item.get("status", "mentioned"),
+            "confidence": item.get("confidence", 0),
+            "evidence_text": evidence_text,
+            "clinical_significance": item.get("clinical_significance"),
+            "applied_to_reasoning": item.get("applied_to_reasoning", False),
+            "flags": item.get("flags", []),
+        })
 
-            evidence.append({
-
-                "domain":
-                    domain,
-
-                "value":
-                    item.get(
-                        "value"
-                    ),
-
-                "status":
-                    item.get(
-                        "status",
-                        "mentioned"
-                    ),
-
-                "confidence":
-                    item.get(
-                        "confidence",
-                        0
-                    ),
-
-                "evidence_text":
-                    item.get(
-                        "evidence_text"
-                    ),
-
-                "clinical_significance":
-                    item.get(
-                        "clinical_significance"
-                    ),
-
-                "applied_to_reasoning":
-                    item.get(
-                        "applied_to_reasoning",
-                        False
-                    ),
-
-                "flags":
-                    item.get(
-                        "flags",
-                        []
-                    )
-            })
-
-    return evidence
+    return merged
 
 
 # ============================================================
@@ -945,14 +931,57 @@ def process_evidence_and_safety(
             )
 
     # --------------------------------------------------------
-    # Accumulated evidence
+    # Preserve each extracted item for safety evaluation
     # --------------------------------------------------------
 
-    accumulated_evidence = (
-        merge_evidence_for_safety(
-            evidence_state
-        )
+    accumulated_evidence = get_session_safety_evidence(
+        session_id,
+        client_name
     )
+
+    for item in extracted_evidence:
+        if not isinstance(item, dict):
+            continue
+
+        domain = item.get("domain")
+        value = item.get("value")
+
+        if not domain or value is None or value == "":
+            continue
+
+        record = {
+            "domain": domain,
+            "value": value,
+            "status": item.get("status", "mentioned"),
+            "confidence": item.get("confidence", 0),
+            "evidence_text": item.get("evidence_text"),
+            "clinical_significance": item.get("clinical_significance"),
+            "applied_to_reasoning": item.get("applied_to_reasoning", False),
+            "flags": item.get("flags", []) or [],
+        }
+
+        # Avoid duplicate records when the extractor returns the same
+        # conversation evidence on a later turn.
+        record_key = (
+            record["domain"],
+            str(record["value"]).strip(),
+            str(record["status"]).strip(),
+            str(record["evidence_text"] or "").strip(),
+        )
+
+        already_stored = any(
+            (
+                existing.get("domain"),
+                str(existing.get("value", "")).strip(),
+                str(existing.get("status", "")).strip(),
+                str(existing.get("evidence_text") or "").strip(),
+            ) == record_key
+            for existing in accumulated_evidence
+        )
+
+        if not already_stored:
+            accumulated_evidence.append(record)
+
 
     # --------------------------------------------------------
     # Safety evaluation
@@ -990,7 +1019,7 @@ def process_evidence_and_safety(
     )
 
     print(
-        "ACCUMULATED EVIDENCE:",
+        "ACCUMULATED EVIDENCE (DEDUPLICATED SESSION RECORDS):",
         accumulated_evidence
     )
 
