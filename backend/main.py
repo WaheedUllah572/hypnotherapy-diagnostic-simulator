@@ -5,6 +5,7 @@ from openai import OpenAI
 
 import os
 import json
+import inspect
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -1232,12 +1233,21 @@ async def chat(
     # EXISTING PROTECTED DOMAIN ENGINE
     # ========================================================
 
+    # Diagnostics: verify the exact module loaded at runtime and the
+    # exact question passed into the protected-domain engine.
+    print("\n========== PROTECTED DOMAIN DIAGNOSTICS ==========")
+    try:
+        print("PROTECTED ENGINE FILE:", inspect.getfile(process_protected_question))
+    except (TypeError, OSError) as exc:
+        print("PROTECTED ENGINE FILE: <unavailable>", repr(exc))
+    print("RAW PROTECTED QUESTION:", repr(msg.text))
+
     protected = process_protected_question(
-
         question=msg.text,
-
         persona=case_data
     )
+
+    print("PROTECTED ENGINE RESULT:", repr(protected))
 
     print(
         "\n========== EXISTING PROTECTED DOMAIN =========="
