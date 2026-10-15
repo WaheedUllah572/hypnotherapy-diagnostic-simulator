@@ -3,10 +3,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
-# ============================================================
-# PHASE 2B EVIDENCE DOMAINS
-# ============================================================
-
+# Phase 2B evidence domains.
+#
+# These are intentionally broader than the original Phase 2A scoring fields.
+# The engine records whether evidence has actually been established during
+# the consultation rather than assuming that missing information means "no".
 EVIDENCE_DOMAINS = {
     "presenting_problem": "Presenting Problem",
     "history": "History and Development",
@@ -17,6 +18,9 @@ EVIDENCE_DOMAINS = {
     "coping_strategies": "Coping Strategies",
 
     "previous_hypnosis": "Previous Hypnosis Experience",
+    # Informational concern about awareness/control during hypnosis.
+    # This is deliberately separate from the safety/risk domain.
+    "hypnosis_control_concern": "Hypnosis Control Concern",
 
     "medical_history": "Medical History",
     "psychological_care": "Psychological Care",
@@ -39,10 +43,9 @@ EVIDENCE_DOMAINS = {
 }
 
 
-# ============================================================
-# EVIDENCE MATURITY
-# ============================================================
-
+# Evidence maturity follows a progressive model.
+# A domain can move from being merely mentioned to being integrated
+# into clinical reasoning.
 EVIDENCE_LEVELS = {
     "not_explored": 0,
     "mentioned": 1,
@@ -53,164 +56,83 @@ EVIDENCE_LEVELS = {
 }
 
 
-# ============================================================
-# VALID VALUES
-# ============================================================
-
-ALLOWED_STATUSES = set(EVIDENCE_LEVELS.keys())
-
-ALLOWED_SAFETY_SEVERITIES = {
-    "review",
-    "moderate",
-    "high",
-    "critical",
-}
-
-
-# ============================================================
-# TIMESTAMP
-# ============================================================
-
 def _utc_timestamp() -> str:
-    """
-    Return a timezone-aware UTC timestamp.
-
-    Used for audit/history records.
-    """
-
+    """Return a timezone-aware timestamp for audit/history records."""
     return datetime.now(timezone.utc).isoformat()
 
 
-# ============================================================
-# EMPTY DOMAIN
-# ============================================================
-
 def _empty_domain(domain_key: str) -> Dict[str, Any]:
-    """
-    Create a clean evidence record for one domain.
-
-    IMPORTANT:
-
-    None means evidence has not been established.
-
-    It does NOT mean:
-    - no
-    - negative
-    - absent
-    - never
-    """
-
+    """Create a clean evidence record for one assessment domain."""
     return {
         "domain": domain_key,
         "label": EVIDENCE_DOMAINS[domain_key],
 
+        # Important:
+        # None means the evidence has not yet been established.
+        # It does NOT mean "no".
         "value": None,
 
         "status": "not_explored",
         "level": EVIDENCE_LEVELS["not_explored"],
         "confidence": 0.0,
 
-        # Individual pieces of conversational evidence.
+        # What in the conversation supports the evidence.
         "evidence": [],
 
-        # Educational/clinical explanation of why the evidence matters.
+        # Why this evidence matters clinically/educationally.
         "clinical_significance": None,
 
-        # Whether the student has used this evidence in reasoning.
+        # Whether the student has used the evidence in reasoning.
         "applied_to_reasoning": False,
 
-        # Domain-level review/safety markers.
+        # Potential safety/review markers.
         "flags": [],
 
         "last_updated": None,
     }
 
 
-# ============================================================
-# CREATE EVIDENCE STATE
-# ============================================================
-
 def create_evidence_state(
     client_name: Optional[str] = None,
     condition: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Create a fresh Phase 2B Clinical Evidence Model.
-
-    The state is designed to accumulate evidence throughout
-    the consultation.
+    Create a fresh Phase 2B Clinical Evidence Model for a session.
     """
-
-    now = _utc_timestamp()
 
     return {
         "client_name": client_name,
         "condition": condition,
-
-        "created_at": now,
-        "updated_at": now,
+        "created_at": _utc_timestamp(),
+        "updated_at": _utc_timestamp(),
 
         "domains": {
             key: _empty_domain(key)
             for key in EVIDENCE_DOMAINS
         },
 
-        # Complete chronological audit trail.
+        # Chronological record of evidence changes.
         "history": [],
 
-        # Session-level safety/review markers.
+        # Session-level safety markers.
         "safety_flags": [],
 
-        # Evidence that has been raised but requires clarification.
+        # Evidence that still needs clarification.
         "unresolved_evidence": [],
     }
 
-
-# ============================================================
-# GET DOMAIN
-# ============================================================
 
 def get_domain(
     evidence_state: Dict[str, Any],
     domain: str,
 ) -> Dict[str, Any]:
-    """
-    Return one evidence domain.
-    """
+    """Return one evidence domain."""
 
     if domain not in EVIDENCE_DOMAINS:
-        raise ValueError(
-            f"Unknown evidence domain: {domain}"
-        )
+        raise ValueError(f"Unknown evidence domain: {domain}")
 
     return evidence_state["domains"][domain]
 
-
-# ============================================================
-# NORMALISE CONFIDENCE
-# ============================================================
-
-def _normalise_confidence(
-    confidence: Any,
-) -> float:
-    """
-    Safely normalise confidence to the range 0.0–1.0.
-    """
-
-    try:
-        value = float(confidence)
-    except (TypeError, ValueError):
-        value = 0.0
-
-    return max(
-        0.0,
-        min(value, 1.0)
-    )
-
-
-# ============================================================
-# UPDATE EVIDENCE
-# ============================================================
 
 def update_evidence(
     evidence_state: Dict[str, Any],
@@ -224,200 +146,55 @@ def update_evidence(
     flags: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
-    Add or update evidence for a domain.
+    Add or update evidence for a clinical domain.
 
-    IMPORTANT:
-
-    Evidence is cumulative.
-
-    A later weaker extraction must not erase stronger evidence that
-    has already been established.
-
-    The function stores evidence but does not independently decide
-    whether that evidence is clinically correct.
+    This function does not decide whether the evidence is clinically
+    correct. It stores structured evidence established elsewhere by
+    the conversation/evidence extraction process.
     """
 
-    # --------------------------------------------------------
-    # Validate domain
-    # --------------------------------------------------------
-
     if domain not in EVIDENCE_DOMAINS:
-        raise ValueError(
-            f"Unknown evidence domain: {domain}"
-        )
+        raise ValueError(f"Unknown evidence domain: {domain}")
 
-    # --------------------------------------------------------
-    # Validate status
-    # --------------------------------------------------------
+    if status not in EVIDENCE_LEVELS:
+        raise ValueError(f"Unknown evidence status: {status}")
 
-    if status not in ALLOWED_STATUSES:
-        raise ValueError(
-            f"Unknown evidence status: {status}. "
-            f"Expected one of: {sorted(ALLOWED_STATUSES)}"
-        )
-
-    # --------------------------------------------------------
-    # Normalise confidence
-    # --------------------------------------------------------
-
-    confidence = _normalise_confidence(
-        confidence
-    )
+    confidence = max(0.0, min(float(confidence), 1.0))
 
     record = evidence_state["domains"][domain]
 
     previous_record = deepcopy(record)
 
-    previous_level = int(
-        record.get("level", 0)
-    )
-
-    incoming_level = EVIDENCE_LEVELS[status]
-
-    previous_confidence = float(
-        record.get("confidence", 0.0)
-    )
-
-    # ========================================================
-    # VALUE
-    # ========================================================
-
-    # Do not overwrite an established value with None.
-
-    if value is not None:
-        record["value"] = value
-
-    # ========================================================
-    # STATUS / MATURITY
-    # ========================================================
-
-    # Evidence maturity only moves forward.
-
-    if incoming_level >= previous_level:
-        record["status"] = status
-        record["level"] = incoming_level
-
-    # If incoming evidence is weaker, retain the stronger
-    # previously established maturity.
-
-    # ========================================================
-    # CONFIDENCE
-    # ========================================================
-
-    # Preserve the highest confidence established so far.
-
-    record["confidence"] = max(
-        previous_confidence,
-        confidence,
-    )
-
-    # ========================================================
-    # APPLIED TO REASONING
-    # ========================================================
-
-    # Once evidence has been used in reasoning, do not revert it.
-
-    record["applied_to_reasoning"] = bool(
-        record.get("applied_to_reasoning", False)
-        or applied_to_reasoning
-    )
-
-    # ========================================================
-    # EVIDENCE TEXT
-    # ========================================================
-
-    if evidence_text:
-        evidence_text = str(
-            evidence_text
-        ).strip()
-
-        if evidence_text:
-            if evidence_text not in record["evidence"]:
-                record["evidence"].append(
-                    evidence_text
-                )
-
-    # ========================================================
-    # CLINICAL SIGNIFICANCE
-    # ========================================================
-
-    if clinical_significance is not None:
-
-        significance = str(
-            clinical_significance
-        ).strip()
-
-        if significance:
-            record["clinical_significance"] = (
-                significance
-            )
-
-    # ========================================================
-    # FLAGS
-    # ========================================================
-
-    if flags:
-
-        for flag in flags:
-
-            if flag is None:
-                continue
-
-            flag = str(flag).strip()
-
-            if not flag:
-                continue
-
-            if flag not in record["flags"]:
-                record["flags"].append(
-                    flag
-                )
-
-    # ========================================================
-    # TIMESTAMP
-    # ========================================================
-
+    record["value"] = value
+    record["status"] = status
+    record["level"] = EVIDENCE_LEVELS[status]
+    record["confidence"] = confidence
+    record["applied_to_reasoning"] = applied_to_reasoning
     record["last_updated"] = _utc_timestamp()
 
-    # ========================================================
-    # AUDIT HISTORY
-    # ========================================================
+    if evidence_text:
+        if evidence_text not in record["evidence"]:
+            record["evidence"].append(evidence_text)
+
+    if clinical_significance is not None:
+        record["clinical_significance"] = clinical_significance
+
+    if flags:
+        for flag in flags:
+            if flag not in record["flags"]:
+                record["flags"].append(flag)
 
     evidence_state["history"].append({
         "timestamp": _utc_timestamp(),
-
         "domain": domain,
-
         "previous": previous_record,
-
         "current": deepcopy(record),
     })
 
     evidence_state["updated_at"] = _utc_timestamp()
 
-    # ========================================================
-    # AUTOMATIC UNRESOLVED CLEANUP
-    # ========================================================
-
-    # If meaningful evidence has now been established,
-    # remove unresolved markers for this domain.
-
-    if incoming_level >= EVIDENCE_LEVELS["clarified"]:
-
-        evidence_state["unresolved_evidence"] = [
-            item
-            for item in evidence_state[
-                "unresolved_evidence"
-            ]
-            if item["domain"] != domain
-        ]
-
     return record
 
-
-# ============================================================
-# ADD SAFETY FLAG
-# ============================================================
 
 def add_safety_flag(
     evidence_state: Dict[str, Any],
@@ -427,51 +204,19 @@ def add_safety_flag(
     reason: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Add a session-level safety/review flag.
+    Add a session-level safety flag.
 
-    This function records the flag.
-
-    It does NOT independently decide whether a safety concern
-    exists. That responsibility belongs to the dedicated
+    Actual safety decisions will later belong to the dedicated
     Risk & Safety Engine.
     """
 
-    # --------------------------------------------------------
-    # Validate severity
-    # --------------------------------------------------------
+    allowed_severity = {"review", "moderate", "high", "critical"}
 
-    if severity not in ALLOWED_SAFETY_SEVERITIES:
+    if severity not in allowed_severity:
         raise ValueError(
             f"Invalid severity '{severity}'. "
-            f"Expected one of: "
-            f"{sorted(ALLOWED_SAFETY_SEVERITIES)}"
+            f"Expected one of: {sorted(allowed_severity)}"
         )
-
-    # --------------------------------------------------------
-    # Validate domain
-    # --------------------------------------------------------
-
-    if domain is not None:
-
-        if domain not in EVIDENCE_DOMAINS:
-            raise ValueError(
-                f"Unknown evidence domain: {domain}"
-            )
-
-    # --------------------------------------------------------
-    # Validate flag
-    # --------------------------------------------------------
-
-    if not flag or not str(flag).strip():
-        raise ValueError(
-            "Safety flag cannot be empty."
-        )
-
-    flag = str(flag).strip()
-
-    # --------------------------------------------------------
-    # Create record
-    # --------------------------------------------------------
 
     safety_record = {
         "flag": flag,
@@ -481,49 +226,22 @@ def add_safety_flag(
         "timestamp": _utc_timestamp(),
     }
 
-    # --------------------------------------------------------
-    # Prevent duplicate logical flags
-    # --------------------------------------------------------
-
-    duplicate = any(
-        existing.get("flag") == flag
-        and existing.get("domain") == domain
-        and existing.get("severity") == severity
-        for existing in evidence_state["safety_flags"]
-    )
-
-    if not duplicate:
-        evidence_state["safety_flags"].append(
-            safety_record
-        )
-
-    # --------------------------------------------------------
-    # Add flag to domain
-    # --------------------------------------------------------
+    if safety_record not in evidence_state["safety_flags"]:
+        evidence_state["safety_flags"].append(safety_record)
 
     if domain:
+        if domain not in EVIDENCE_DOMAINS:
+            raise ValueError(f"Unknown evidence domain: {domain}")
 
-        domain_record = evidence_state[
-            "domains"
-        ][domain]
+        domain_record = evidence_state["domains"][domain]
 
         if flag not in domain_record["flags"]:
-            domain_record["flags"].append(
-                flag
-            )
-
-        domain_record["last_updated"] = (
-            _utc_timestamp()
-        )
+            domain_record["flags"].append(flag)
 
     evidence_state["updated_at"] = _utc_timestamp()
 
     return safety_record
 
-
-# ============================================================
-# MARK UNRESOLVED
-# ============================================================
 
 def mark_unresolved(
     evidence_state: Dict[str, Any],
@@ -531,249 +249,109 @@ def mark_unresolved(
     reason: str,
 ) -> None:
     """
-    Mark evidence that requires clarification.
-
-    Unresolved does not mean negative.
-
-    It means the issue has been raised but is not sufficiently
-    established yet.
+    Mark evidence that has been raised but still needs clarification.
     """
 
     if domain not in EVIDENCE_DOMAINS:
-        raise ValueError(
-            f"Unknown evidence domain: {domain}"
-        )
-
-    reason = str(reason).strip()
+        raise ValueError(f"Unknown evidence domain: {domain}")
 
     item = {
         "domain": domain,
         "reason": reason,
     }
 
-    if item not in evidence_state[
-        "unresolved_evidence"
-    ]:
-        evidence_state[
-            "unresolved_evidence"
-        ].append(item)
+    if item not in evidence_state["unresolved_evidence"]:
+        evidence_state["unresolved_evidence"].append(item)
 
     evidence_state["updated_at"] = _utc_timestamp()
 
-
-# ============================================================
-# RESOLVE UNRESOLVED
-# ============================================================
 
 def resolve_unresolved(
     evidence_state: Dict[str, Any],
     domain: str,
 ) -> None:
-    """
-    Remove unresolved markers for a domain.
-    """
+    """Remove unresolved markers for a domain."""
 
-    if domain not in EVIDENCE_DOMAINS:
-        raise ValueError(
-            f"Unknown evidence domain: {domain}"
-        )
-
-    evidence_state[
-        "unresolved_evidence"
-    ] = [
+    evidence_state["unresolved_evidence"] = [
         item
-        for item in evidence_state[
-            "unresolved_evidence"
-        ]
-        if item.get("domain") != domain
+        for item in evidence_state["unresolved_evidence"]
+        if item["domain"] != domain
     ]
 
     evidence_state["updated_at"] = _utc_timestamp()
 
 
-# ============================================================
-# EVIDENCE COMPLETION SUMMARY
-# ============================================================
-
 def evidence_completion_summary(
     evidence_state: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Produce a session evidence summary.
+    Produce a simple session evidence summary.
 
-    This is NOT a tutor score.
-
-    It only describes how much evidence has been established.
+    This is NOT the final Tutor Mode score.
+    Tutor Mode will later apply Ursula's assessment matrix,
+    weighting, safety overrides and educational judgement.
     """
 
     domains = evidence_state["domains"]
 
     total_domains = len(domains)
 
-    # --------------------------------------------------------
-    # Explored
-    # --------------------------------------------------------
-
     explored = [
         key
-        for key, record in domains.items()
-        if record["level"]
-        >= EVIDENCE_LEVELS["mentioned"]
+        for key, value in domains.items()
+        if value["status"] != "not_explored"
     ]
-
-    # --------------------------------------------------------
-    # Clarified
-    # --------------------------------------------------------
 
     clarified = [
         key
-        for key, record in domains.items()
-        if record["level"]
-        >= EVIDENCE_LEVELS["clarified"]
+        for key, value in domains.items()
+        if value["level"] >= EVIDENCE_LEVELS["clarified"]
     ]
-
-    # --------------------------------------------------------
-    # Understood
-    # --------------------------------------------------------
-
-    understood = [
-        key
-        for key, record in domains.items()
-        if record["level"]
-        >= EVIDENCE_LEVELS["understood"]
-    ]
-
-    # --------------------------------------------------------
-    # Applied
-    # --------------------------------------------------------
 
     applied = [
         key
-        for key, record in domains.items()
-        if (
-            record["level"]
-            >= EVIDENCE_LEVELS["applied"]
-        )
-        or record["applied_to_reasoning"]
+        for key, value in domains.items()
+        if value["level"] >= EVIDENCE_LEVELS["applied"]
+        or value["applied_to_reasoning"]
     ]
-
-    # --------------------------------------------------------
-    # Integrated
-    # --------------------------------------------------------
-
-    integrated = [
-        key
-        for key, record in domains.items()
-        if record["level"]
-        >= EVIDENCE_LEVELS["integrated"]
-    ]
-
-    # --------------------------------------------------------
-    # Not explored
-    # --------------------------------------------------------
-
-    not_explored = [
-        key
-        for key in domains
-        if key not in explored
-    ]
-
-    # ========================================================
-    # RESULT
-    # ========================================================
 
     return {
         "total_domains": total_domains,
-
         "explored_count": len(explored),
         "clarified_count": len(clarified),
-        "understood_count": len(understood),
         "applied_count": len(applied),
-        "integrated_count": len(integrated),
 
         "explored_domains": explored,
-
-        "not_explored_domains": not_explored,
-
-        "clarified_domains": clarified,
-
-        "understood_domains": understood,
-
-        "applied_domains": applied,
-
-        "integrated_domains": integrated,
+        "not_explored_domains": [
+            key
+            for key in domains
+            if key not in explored
+        ],
 
         "unresolved_evidence": deepcopy(
-            evidence_state[
-                "unresolved_evidence"
-            ]
-        ),
-
-        "safety_flags": deepcopy(
-            evidence_state[
-                "safety_flags"
-            ]
-        ),
-    }
-
-
-# ============================================================
-# TUTOR EVIDENCE
-# ============================================================
-
-def get_evidence_for_tutor(
-    evidence_state: Dict[str, Any],
-) -> Dict[str, Any]:
-    """
-    Return a clean immutable-style snapshot for Tutor Mode.
-
-    The tutor receives the evidence record but this function does
-    not calculate a final pass/fail/verified decision.
-    """
-
-    return {
-        "client_name": evidence_state.get(
-            "client_name"
-        ),
-
-        "condition": evidence_state.get(
-            "condition"
-        ),
-
-        "domains": deepcopy(
-            evidence_state["domains"]
+            evidence_state["unresolved_evidence"]
         ),
 
         "safety_flags": deepcopy(
             evidence_state["safety_flags"]
         ),
-
-        "unresolved_evidence": deepcopy(
-            evidence_state[
-                "unresolved_evidence"
-            ]
-        ),
-
-        "summary": evidence_completion_summary(
-            evidence_state
-        ),
     }
 
 
-# ============================================================
-# EVIDENCE HISTORY
-# ============================================================
-
-def get_evidence_history(
+def get_evidence_for_tutor(
     evidence_state: Dict[str, Any],
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """
-    Return the chronological evidence audit trail.
+    Return a clean copy for the future Tutor Mode 2.0 assessment engine.
     """
 
-    return deepcopy(
-        evidence_state.get(
-            "history",
-            []
-        )
-    )
+    return {
+        "client_name": evidence_state.get("client_name"),
+        "condition": evidence_state.get("condition"),
+        "domains": deepcopy(evidence_state["domains"]),
+        "safety_flags": deepcopy(evidence_state["safety_flags"]),
+        "unresolved_evidence": deepcopy(
+            evidence_state["unresolved_evidence"]
+        ),
+        "summary": evidence_completion_summary(evidence_state),
+    }

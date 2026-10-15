@@ -251,6 +251,16 @@ psychological_care
 ------------------
 Actual psychological treatment/care.
 
+hypnosis_control_concern
+------------------------
+Use this dedicated domain for a client's concern about losing control,
+remaining aware, or being able to guide themselves during hypnosis or
+hypnotherapy. This is an informational concern, not by itself evidence
+of self-harm risk, a contraindication, a referral requirement, or a
+safeguarding concern. Do not classify it as "risk" or "psychological_care"
+unless the client separately establishes evidence that genuinely belongs
+to those domains.
+
 psychiatric_care
 ----------------
 Actual psychiatric treatment/care.
@@ -867,6 +877,47 @@ def _evidence_is_supported_by_client(
 
 
 # ============================================================
+# HYPNOSIS CONTROL-CONCERN DETECTION
+# ============================================================
+
+def _contains_hypnosis_control_concern(text: Any) -> bool:
+    """
+    Identify a control/awareness concern specifically linked to hypnosis.
+    This is an evidence domain, not a safety escalation rule.
+    """
+    value = _normalise_text(text)
+
+    hypnosis_terms = (
+        "hypnosis",
+        "hypnotic",
+        "hypnotherapy",
+        "hypnotised",
+        "hypnotized",
+        "hypnotise",
+        "hypnotize",
+    )
+
+    control_terms = (
+        "losing control",
+        "lose control",
+        "losing my control",
+        "control during hypnosis",
+        "control during hypnotherapy",
+        "being controlled",
+        "stay in control",
+        "remain in control",
+        "guide myself",
+        "aware of what's happening",
+        "aware of what is happening",
+    )
+
+    return (
+        any(term in value for term in hypnosis_terms)
+        and any(term in value for term in control_terms)
+    )
+
+
+# ============================================================
 # SAFETY DOMAIN CORRECTION
 # ============================================================
 
@@ -917,6 +968,13 @@ def _correct_safety_domain(
     ):
 
         item["domain"] = "safeguarding"
+        return item
+
+    # A hypnosis-control concern is informational by itself.
+    # Only route it here after genuine self-harm and safeguarding
+    # language have already had priority.
+    if _contains_hypnosis_control_concern(combined):
+        item["domain"] = "hypnosis_control_concern"
 
     return item
 
