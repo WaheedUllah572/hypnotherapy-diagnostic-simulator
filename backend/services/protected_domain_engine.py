@@ -251,40 +251,29 @@ def detect_domain(question: str) -> Optional[str]:
     text = (question or "").lower().strip()
 
     # ========================================================
-    # HYPNOSIS CONTROL CONCERN
-    #
-    # This must be detected before generic protected domains.
-    #
-    # Example:
-    #
-    # "Are you worried about losing control during hypnosis?"
-    #
-    # -> risk
-    #
-    # But:
-    #
-    # "What are you expecting from hypnosis?"
-    #
-    # -> None
-    #
-    # "Have you had hypnosis before?"
-    #
-    # -> previous_hypnosis
-    # ========================================================
-
-    for pattern in HYPNOSIS_CONTROL_PATTERNS:
-
-        if pattern in text:
-            return "risk"
-
-    # ========================================================
     # RISK FIRST
+    #
+    # Explicit self-harm, suicide, or harm-to-others language
+    # must retain priority even if a question also mentions
+    # control during hypnosis.
     # ========================================================
 
     for keyword in PROTECTED_DOMAINS["risk"]:
 
         if keyword in text:
             return "risk"
+
+    # ========================================================
+    # HYPNOSIS CONTROL CONCERN
+    #
+    # This is a protected informational domain, NOT the general
+    # risk domain. It must not by itself trigger risk escalation.
+    # ========================================================
+
+    for pattern in HYPNOSIS_CONTROL_PATTERNS:
+
+        if pattern in text:
+            return "hypnosis_control_concern"
 
     # ========================================================
     # PREVIOUS HYPNOSIS EXPERIENCE
@@ -299,7 +288,7 @@ def detect_domain(question: str) -> Optional[str]:
     #     -> NOT previous_hypnosis
     #
     # "Are you worried about losing control during hypnosis?"
-    #     -> risk
+    #     -> hypnosis_control_concern
     #
     # "What are you expecting from hypnosis?"
     #     -> NOT previous_hypnosis
@@ -548,22 +537,6 @@ def detect_risk_question_type(
     ).lower().strip()
 
     # --------------------------------------------------------
-    # HYPNOSIS CONTROL CONCERN
-    #
-    # This MUST be checked before general risk.
-    #
-    # It is intentionally separate from self-harm,
-    # suicide, and harm-to-others questions.
-    # --------------------------------------------------------
-
-    if any(
-        x in text
-        for x in HYPNOSIS_CONTROL_PATTERNS
-    ):
-
-        return "hypnosis_control_concern"
-
-    # --------------------------------------------------------
     # SELF-HARM / SUICIDAL THOUGHTS
     # --------------------------------------------------------
 
@@ -689,6 +662,21 @@ def detect_risk_question_type(
         return "harm_to_others"
 
     # --------------------------------------------------------
+    # HYPNOSIS CONTROL CONCERN
+    #
+    # Check only after explicit self-harm, suicide-attempt,
+    # self-harm-history, and harm-to-others patterns so that
+    # genuine safety concerns retain priority.
+    # --------------------------------------------------------
+
+    if any(
+        x in text
+        for x in HYPNOSIS_CONTROL_PATTERNS
+    ):
+
+        return "hypnosis_control_concern"
+
+    # --------------------------------------------------------
     # GENERAL RISK
     # --------------------------------------------------------
 
@@ -704,6 +692,21 @@ def get_uncertain_response(
     question: str,
     persona: Dict[str, Any]
 ) -> str:
+
+    # ========================================================
+    # HYPNOSIS CONTROL CONCERN
+    #
+    # This is an informational concern about awareness/autonomy
+    # during hypnosis. It is not evidence of self-harm or danger.
+    # ========================================================
+
+    if domain == "hypnosis_control_concern":
+
+        return (
+            "I'm concerned about losing control during hypnosis. "
+            "I want to make sure I'm aware of what's happening "
+            "and can still guide myself through the process."
+        )
 
     # ========================================================
     # RISK
@@ -962,16 +965,8 @@ def process_protected_question(
             }
 
     # --------------------------------------------------------
-    # RISK IS ALWAYS INTERPRETED BY EXACT QUESTION TYPE
-    #
-    # This includes:
-    #
-    # - self_harm_thoughts
-    # - suicide_attempt
-    # - self_harm_history
-    # - harm_to_others
-    # - hypnosis_control_concern
-    # - general_risk
+    # The dedicated hypnosis-control domain is handled separately
+    # from risk. Actual risk questions retain their exact-type routing.
     # --------------------------------------------------------
 
     response = get_uncertain_response(
